@@ -1,11 +1,13 @@
-from data_management.io.base_file_reader import BaseReader
 import datetime as dt
-import numpy as np
-import pandas as pd
-import os
-import logging
 import glob
 import json
+import logging
+import os
+
+import numpy as np
+import pandas as pd
+
+from data_management.io.base_file_reader import BaseReader
 
 
 class DSCOVRRTReader(BaseReader):

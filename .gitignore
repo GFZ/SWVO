@@ -12,3 +12,4 @@ temp/
 build/
 dist/
 data_management.egg-info/
+venv/

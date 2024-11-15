@@ -1,28 +1,29 @@
 import os
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Tuple
-from datetime import datetime, timedelta
 
 import pandas as pd
 
+
 class KpEnsemble(object):
 
-    ENV_VAR_NAME = 'KP_ENSEMBLE_FORECAST_DIR'
+    ENV_VAR_NAME = "KP_ENSEMBLE_OUTPUT_DIR"
 
-    def __init__(self, data_dir:str|Path=None):
+    def __init__(self, data_dir: str | Path = None):
         if data_dir is None:
 
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(f'Necessary environment variable {self.ENV_VAR_NAME} not set!')
+                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
         self.data_dir = Path(data_dir)
 
         if not self.data_dir.exists():
-            raise FileNotFoundError(f'Data directory {self.data_dir} does not exist! Impossible to retrive data!')
+            raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrive data!")
 
-    def read(self, start_time:datetime, end_time:datetime) -> list:
+    def read(self, start_time: datetime, end_time: datetime) -> list:
 
         if start_time is None:
             start_time = datetime.utcnow().replace(microsecond=0, minute=0, second=0)
@@ -45,8 +46,8 @@ class KpEnsemble(object):
             df["file_name"] = file
             df.loc[df["kp"].isna(), "file_name"] = None
 
-            df = df.truncate(before=start_time-timedelta(hours=2.9999), after=end_time+timedelta(hours=2.9999))
+            df = df.truncate(before=start_time - timedelta(hours=2.9999), after=end_time + timedelta(hours=2.9999))
 
             data.append(df)
-            
+
         return data

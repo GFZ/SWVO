@@ -1,11 +1,13 @@
-from data_management.io.base_file_reader import BaseReader
-import json
 import datetime as dt
 import glob
+import json
+import logging
+import os
+
 import numpy as np
 import pandas as pd
-import os
-import logging
+
+from data_management.io.base_file_reader import BaseReader
 
 
 class SwiftReader(BaseReader):

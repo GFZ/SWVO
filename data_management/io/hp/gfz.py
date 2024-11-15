@@ -1,40 +1,45 @@
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Tuple, List
 from shutil import rmtree
+from typing import List, Tuple
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import wget
 
 
 class HpGFZ(object):
 
-    ENV_VAR_NAME = 'RT_HP_GFZ_STREAM_DIR'
+    ENV_VAR_NAME = "RT_HP_GFZ_STREAM_DIR"
 
     START_YEAR = 1985
     URL = "ftp://ftp.gfz-potsdam.de/pub/home/obs/Hpo/"
 
-    def __init__(self, index:str, data_dir:str|Path=None):
+    def __init__(self, index: str, data_dir: str | Path = None):
+        
+        self.index = index
+        assert (
+            self.index == "hp30" or self.index == "hp60"
+        ), "Enountered invalid index: {self.index}. Possible options are: hp30, hp60!"
 
         if data_dir is None:
 
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(f'Necessary environment variable {self.ENV_VAR_NAME} not set!')
+                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self.index = index
         self.index_number = index[2:]
 
         (self.data_dir / str(self.index)).mkdir(exist_ok=True)
 
-        assert self.index == 'hp30' or self.index == 'hp60', 'Enountered invalid index: {self.index}. Possible options are: hp30, hp60!'
 
-    def download_and_process(self, start_time:datetime, end_time:datetime, reprocess_files:bool=False, verbose:bool=False):
+    def download_and_process(
+        self, start_time: datetime, end_time: datetime, reprocess_files: bool = False, verbose: bool = False
+    ):
 
         temporary_dir = Path("./temp_hp_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
@@ -45,7 +50,9 @@ class HpGFZ(object):
 
             for file_path, time_interval in zip(file_paths, time_intervals):
 
-                filenames_download = [f"Hp{self.index_number}/Hp{self.index_number}_ap{self.index_number}_{str(time_interval[0].year)}.txt"]
+                filenames_download = [
+                    f"Hp{self.index_number}/Hp{self.index_number}_ap{self.index_number}_{str(time_interval[0].year)}.txt"
+                ]
 
                 # there is a separate nowcast file
                 if time_interval[0].year == datetime.now(timezone.utc).year:
@@ -54,13 +61,13 @@ class HpGFZ(object):
                 for filename_download in filenames_download:
 
                     if verbose:
-                        print(f'Downloading file {self.URL + filename_download} ...')
+                        print(f"Downloading file {self.URL + filename_download} ...")
 
                     wget.download(self.URL + filename_download, str(temporary_dir))
-                    print('')
+                    print("")
 
                     if verbose:
-                        print(f'Processing file ...')
+                        print(f"Processing file ...")
 
                     if file_path.exists():
                         if reprocess_files:
@@ -68,42 +75,48 @@ class HpGFZ(object):
                         else:
                             continue
 
-                filenames_download = [x[5:] for x in filenames_download] # strip of folder of filename
+                filenames_download = [x[5:] for x in filenames_download]  # strip of folder of filename
 
                 processed_df = self._process_single_file(temporary_dir, filenames_download)
                 processed_df.to_csv(file_path, index=True, header=False)
 
         finally:
             rmtree(temporary_dir)
-        
-    def read(self, start_time:datetime, end_time:datetime, download:bool=False) -> pd.DataFrame:
 
-        if start_time < datetime(self.START_YEAR, 1, 1):
-            print("Start date chosen falls behind the mission starting year. Moving start date to first"
-                  " available mission files...")
-            start_time = datetime(self.START_YEAR, 1, 1)
+    def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
+
+        if start_time < datetime(self.START_YEAR, 1, 1).replace(tzinfo=timezone.utc):
+            print(
+                "Start date chosen falls behind the mission starting year. Moving start date to first"
+                " available mission files..."
+            )
+            start_time = datetime(self.START_YEAR, 1, 1,tzinfo=timezone.utc)
 
         assert start_time < end_time
 
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
 
         # initialize data frame with NaNs
-        t = pd.date_range(datetime(start_time.year, start_time.month, start_time.day),
-                          datetime(end_time.year, end_time.month, end_time.day, 23, 59, 59),
-                          freq=timedelta(minutes=int(self.index_number)))
+        t = pd.date_range(
+            datetime(start_time.year, start_time.month, start_time.day),
+            datetime(end_time.year, end_time.month, end_time.day, 23, 59, 59),
+            freq=timedelta(minutes=int(self.index_number)),
+        )
 
         data_out = pd.DataFrame(index=t)
         data_out[self.index] = np.array([np.nan] * len(t))
 
         for file_path, time_interval in zip(file_paths, time_intervals):
 
-            if not file_path.exists():
+            print(f"Processing file {file_path} ...")
+
+            if not file_path.expanduser().exists():
                 if download:
                     self.download_and_process(start_time, end_time)
 
             # if we request a date in the future, the file will still not be found here
-            if not file_path.exists():
-                print(f'File {file_path} not found, filling with NaNs')
+            if not file_path.expanduser().exists():
+                print(f"File {file_path} not found, filling with NaNs")
                 continue
             else:
                 df_one_file = self._read_single_file(file_path)
@@ -111,11 +124,15 @@ class HpGFZ(object):
             # combine the new file with the old ones, replace all values present in df_one_file in data_out
             data_out = df_one_file.combine_first(data_out)
 
-        data_out = data_out.truncate(before=start_time-timedelta(minutes=int(self.index_number)-0.01), after=end_time+timedelta(minutes=int(self.index_number)+0.01))
+        data_out.index = data_out.index.tz_localize("UTC")
+        data_out = data_out.truncate(
+            before=start_time - timedelta(minutes=int(self.index_number) - 0.01),
+            after=end_time + timedelta(minutes=int(self.index_number) + 0.01),
+        )
 
         return data_out
 
-    def _get_processed_file_list(self, start_time:datetime, end_time:datetime) -> Tuple[List, List]:
+    def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
 
         file_paths = []
         time_intervals = []
@@ -132,30 +149,30 @@ class HpGFZ(object):
             interval_end = datetime(current_time.year, 12, 31, 23, 59, 59)
 
             time_intervals.append((interval_start, interval_end))
-            current_time = datetime(current_time.year+1, 1, 1, 0, 0, 0)
+            current_time = datetime(current_time.year + 1, 1, 1, 0, 0, 0)
 
         return file_paths, time_intervals
 
     def _process_single_file(self, temp_dir, filenames) -> pd.DataFrame:
-        
+
         data_total = pd.DataFrame()
 
         # combine nowcast and yearly file
         for filename in filenames:
-        
+
             data = {self.index: [], "timestamp": []}
-        
+
             with open(temp_dir / filename) as f:
                 for line in f.readlines():
                     if line[0] == "#":
                         continue
                     line = line.split(" ")
                     line = [x for x in line if x != ""]
-                    
-                    year    = line[0]
-                    month   = line[1]
-                    day     = line[2]
-                    hour    = line[3][0:2]
+
+                    year = line[0]
+                    month = line[1]
+                    day = line[2]
+                    hour = line[3][0:2]
 
                     if int(line[3][3:4]) == 0:
                         minute = 0
@@ -184,11 +201,13 @@ class HpGFZ(object):
         df.drop(labels=["t"], axis=1, inplace=True)
 
         return df
-    
+
+
 class Hp30GFZ(HpGFZ):
-    def __init__(self, data_dir:str|Path=None):
-        super().__init__('hp30', data_dir)
+    def __init__(self, data_dir: str | Path = None):
+        super().__init__("hp30", data_dir)
+
 
 class Hp60GFZ(HpGFZ):
-    def __init__(self, data_dir:str|Path=None):
-        super().__init__('hp60', data_dir)
+    def __init__(self, data_dir: str | Path = None):
+        super().__init__("hp60", data_dir)

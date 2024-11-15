@@ -1,42 +1,93 @@
-
 import os
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from shutil import rmtree
+from typing import List, Tuple
+
+import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from typing import Tuple, List
 import wget
 
-from shutil import rmtree
-import numpy as np
 
 class OMNILowRes(object):
 
-    ENV_VAR_NAME = 'OMNI_LOW_RES_STREAM_DIR'
+    ENV_VAR_NAME = "OMNI_LOW_RES_STREAM_DIR"
 
     URL = "https://spdf.gsfc.nasa.gov/pub/data/omni/low_res_omni/"
 
-    HEADER = ["year", "day", "hour", "BarRotNumber", "id_imf", "id_sw", "%points_imfavg", "%points_plasmaavg",
-              "B_mag_avg", "bavg", "lat_angle_avg_field", "lon_angle_avg_field", "bx_gse_gsm", "by_gse", "bz_gse",
-              "by_gsm",
-              "bz_gsm", "sigma_mod_B", "sigma_B", "sigma_Bx", "sigma_By", "sigma_Bz", "temperature", "proton_density",
-              "speed", "speed_angle_lon", "speed_angle_lat", "alpha_proton_ratio", "flow_pressure", "sigma_T",
-              "sigma_N", "sigma_V", "sigma_phi_V", "sigma_theta_V", "sigma_alpha_proton_ratio", "e", "plasma_beta",
-              "alfven_mach_n", "Kp", "sunspot_n", "dst", "ae", "p_flux_1", "p_flux_2", "p_flux_4", "p_flux_10",
-              "p_flux_30", "p_flux_60", "flag", "ap", "f107", "pc", "al", "au", "magnetosonic_mach_n"]
+    HEADER = [
+        "year",
+        "day",
+        "hour",
+        "BarRotNumber",
+        "id_imf",
+        "id_sw",
+        "%points_imfavg",
+        "%points_plasmaavg",
+        "B_mag_avg",
+        "bavg",
+        "lat_angle_avg_field",
+        "lon_angle_avg_field",
+        "bx_gse_gsm",
+        "by_gse",
+        "bz_gse",
+        "by_gsm",
+        "bz_gsm",
+        "sigma_mod_B",
+        "sigma_B",
+        "sigma_Bx",
+        "sigma_By",
+        "sigma_Bz",
+        "temperature",
+        "proton_density",
+        "speed",
+        "speed_angle_lon",
+        "speed_angle_lat",
+        "alpha_proton_ratio",
+        "flow_pressure",
+        "sigma_T",
+        "sigma_N",
+        "sigma_V",
+        "sigma_phi_V",
+        "sigma_theta_V",
+        "sigma_alpha_proton_ratio",
+        "e",
+        "plasma_beta",
+        "alfven_mach_n",
+        "Kp",
+        "sunspot_n",
+        "dst",
+        "ae",
+        "p_flux_1",
+        "p_flux_2",
+        "p_flux_4",
+        "p_flux_10",
+        "p_flux_30",
+        "p_flux_60",
+        "flag",
+        "ap",
+        "f107",
+        "pc",
+        "al",
+        "au",
+        "magnetosonic_mach_n",
+    ]
 
-    def __init__(self, data_dir:str|Path=None):
-       
+    def __init__(self, data_dir: str | Path = None):
+
         if data_dir is None:
 
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(f'Necessary environment variable {self.ENV_VAR_NAME} not set!')
+                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-    def download_and_process(self, start_time:datetime, end_time:datetime, reprocess_files:bool=False, verbose:bool=False):
+    def download_and_process(
+        self, start_time: datetime, end_time: datetime, reprocess_files: bool = False, verbose: bool = False
+    ):
 
         temporary_dir = Path("./temp_omni_low_res_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
@@ -53,23 +104,24 @@ class OMNILowRes(object):
                         file_path.unlink()
                     else:
                         continue
-                
+
                 if verbose:
-                    print(f'Downloading file {self.URL + filename} ...')
+                    print(f"Downloading file {self.URL + filename} ...")
 
                 wget.download(self.URL + filename, str(temporary_dir))
-                print('')
+                print("")
 
                 if verbose:
-                    print(f'Processing file ...')
+                    print(f"Processing file ...")
 
                 processed_df = self._process_single_file(temporary_dir / filename)
                 processed_df.to_csv(file_path, index=True, header=True)
-                
-        finally:
-                rmtree(temporary_dir)
 
-    def _get_processed_file_list(self, start_time:datetime, end_time:datetime) -> Tuple[List, List]:
+        finally:
+            rmtree(temporary_dir)
+
+
+    def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
 
         file_paths = []
         time_intervals = []
@@ -86,16 +138,17 @@ class OMNILowRes(object):
             interval_end = datetime(current_time.year, 12, 31, 23, 59, 59)
 
             time_intervals.append((interval_start, interval_end))
-            current_time = datetime(current_time.year+1, 1, 1, 0, 0, 0)
+            current_time = datetime(current_time.year + 1, 1, 1, 0, 0, 0)
 
         return file_paths, time_intervals
 
     def _process_single_file(self, file_path):
 
-        data = pd.read_csv(file_path, sep=r'\s+', names=self.HEADER)
+        data = pd.read_csv(file_path, sep=r"\s+", names=self.HEADER)
         data["timestamp"] = data["year"].map(str).apply(lambda x: x + "-01-01 ")
         data["timestamp"] = data["year"].map(str).apply(lambda x: x + "-01-01 ") + data["hour"].map(str).apply(
-            lambda x: x.zfill(2))
+            lambda x: x.zfill(2)
+        )
         data["timestamp"] = pd.to_datetime(data["timestamp"])
         data["timestamp"] = data["timestamp"] + data["day"].apply(lambda x: timedelta(days=int(x) - 1))
         data.set_index("timestamp", inplace=True)
@@ -108,9 +161,50 @@ class OMNILowRes(object):
         df = pd.DataFrame(index=data.index)
         df["dst"] = data["dst"]
         df["kp"] = data["Kp"] / 10
+        df["f107"] = data["f107"]
 
         # change rounded numbers to be equal to 1/3 or 2/3 to be consistent with other Kp products
-        df.loc[round(df["kp"] % 1, 2) == 0.7, "kp"] = round(df.loc[round(df["kp"] % 1, 2) == 0.7, "kp"]) + 2/3
-        df.loc[round(df["kp"] % 1, 2) == 0.3, "kp"] = round(df.loc[round(df["kp"] % 1, 2) == 0.3, "kp"]) + 1/3
+        df.loc[round(df["kp"] % 1, 2) == 0.7, "kp"] = round(df.loc[round(df["kp"] % 1, 2) == 0.7, "kp"]) - 1 / 3
+        df.loc[round(df["kp"] % 1, 2) == 0.3, "kp"] = round(df.loc[round(df["kp"] % 1, 2) == 0.3, "kp"]) + 1 / 3
+
+        return df
+
+    def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
+
+        START_YEAR = 1963
+
+        if start_time < datetime(START_YEAR, 1, 1).replace(tzinfo=timezone.utc):
+            print("Start date chosen falls behind the existing data. Moving start date to first" " available mission files...")
+            start_time = datetime(START_YEAR, 1, 1,tzinfo=timezone.utc)
+
+        assert start_time < end_time
+
+        file_paths, _ = self._get_processed_file_list(start_time, end_time)
+
+        dfs = []
+
+        for file_path in file_paths:
+
+            if not file_path.exists():
+                if download:
+                    self.download_and_process(start_time, end_time)
+                else:
+                    raise FileNotFoundError(f"File {file_path} not found")
+
+            dfs.append(self._read_single_file(file_path))
+
+        data_out = pd.concat(dfs)
+
+        return data_out
+
+    def _read_single_file(self, file_path) -> pd.DataFrame:
+
+        df = pd.read_csv(file_path)
+
+        df["t"] = pd.to_datetime(df["timestamp"])
+        df.index = df["t"]
+
+        df["file_name"] = file_path
+        df.loc[df["kp"].isna(), "file_name"] = None
 
         return df

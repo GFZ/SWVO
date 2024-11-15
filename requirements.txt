@@ -1,11 +1,11 @@
 #	pip install -r requirements.txt or through setuptools
 #
 
-numpy==1.19.3
-pandas==1.4.1
-matplotlib==3.5.1
-pytest==7.1.0
-pytest-mock==3.3.1
-pytest-cov==3.0.0
-wget==3.2
-deprecation==2.1.0
+numpy
+pandas
+matplotlib
+pytest
+pytest-mock
+pytest-cov
+wget
+deprecation

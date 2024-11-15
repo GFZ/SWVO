@@ -1,9 +1,11 @@
-from data_management.io.base_file_reader import BaseReader
 import datetime as dt
+import logging
+import os
+
 import numpy as np
 import pandas as pd
-import os
-import logging
+
+from data_management.io.base_file_reader import BaseReader
 
 
 class ACERTReader(BaseReader):
