@@ -13,3 +13,4 @@ data_management.egg-info/
 venv/
 *.ipynb
 set_env_variables.sh
+*.tmp
