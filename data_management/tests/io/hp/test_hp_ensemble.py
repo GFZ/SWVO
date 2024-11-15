@@ -112,5 +112,5 @@ def test_read_with_default_times(instance_type="hp30"):
 
 def test_read_empty_directory(hp30ensemble_instance):
     current_time = datetime.now(timezone.utc)
-    with pytest.raises(AssertionError):
+    with pytest.raises(FileNotFoundError):
         data = hp30ensemble_instance.read(current_time, current_time + timedelta(days=1))

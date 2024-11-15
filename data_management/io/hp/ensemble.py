@@ -45,7 +45,8 @@ class HpEnsemble(object):
         
         data = []
 
-        assert len(file_list) > 0, f"No files found for {self.index} ensemble in {self.data_dir}!"
+        if len(file_list) == 0:
+            raise FileNotFoundError(f"No files found for {self.index} ensemble in {self.data_dir}!")
         
         for file in file_list:
             df = pd.read_csv(file, names=["t", self.index])
