@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Tuple
 
@@ -26,15 +26,18 @@ class KpEnsemble(object):
     def read(self, start_time: datetime, end_time: datetime) -> list:
 
         if start_time is None:
-            start_time = datetime.utcnow().replace(microsecond=0, minute=0, second=0)
+            start_time = datetime.now(timezone.utc).replace(microsecond=0, minute=0, second=0)
 
         if end_time is None:
-            end_time = start_time + timedelta(days=3)
+            end_time = start_time.replace(tzinfo=timezone.utc) + timedelta(days=3)
 
-        str_date = start_time.strftime("%Y%m%dT%H0000")
+        str_date = start_time.strftime("%Y%m%dT%H%M%S")
 
         file_list = sorted(self.data_dir.glob(f"FORECAST_PAGER_SWIFT_swift_{str_date}_ensemble_*.csv"))
 
+        if len(file_list) == 0:
+            raise FileNotFoundError(f"No ensemble files found in {self.data_dir}!")
+        
         data = []
         for file in file_list:
             df = pd.read_csv(file, names=["t", "kp"])
@@ -45,6 +48,8 @@ class KpEnsemble(object):
 
             df["file_name"] = file
             df.loc[df["kp"].isna(), "file_name"] = None
+
+            df.index = df.index.tz_localize("UTC")
 
             df = df.truncate(before=start_time - timedelta(hours=2.9999), after=end_time + timedelta(hours=2.9999))
 
