@@ -78,7 +78,7 @@ class KpSWPC(object):
             if download:
                 self.download_and_process(start_time)
             else:
-                raise FileNotFoundError(f"File {file_path} not found")
+                print(f"File {file_path} not found")
 
         data_out = self._read_single_file(file_path)
         data_out = data_out.truncate(before=start_time - timedelta(hours=2.9999), after=end_time + timedelta(hours=2.9999))

@@ -202,7 +202,7 @@ def test_read_missing_years_warning(f107_instance, test_year, should_warn, capfd
         assert not warning_records
 
     captured = capfd.readouterr()
-    assert f"File not found: {expected_file_path}" in captured.out
+    assert (f"File {expected_file_path} not found") in captured.out
 
 
 def test_data_update_with_existing_file(f107_instance):

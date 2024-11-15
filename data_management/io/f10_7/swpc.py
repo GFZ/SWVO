@@ -121,7 +121,7 @@ class F107SWPC:
             if any(year in str(path) for year in available_years):
                 available_file_paths.append(path)
             else:
-                print("File not found:", path)
+                print(f"File {path} not found")
 
         for file_path in available_file_paths:
             year_data = pd.read_csv(file_path, parse_dates=["date"])

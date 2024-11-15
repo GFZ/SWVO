@@ -189,7 +189,7 @@ class OMNILowRes(object):
                 if download:
                     self.download_and_process(start_time, end_time)
                 else:
-                    raise FileNotFoundError(f"File {file_path} not found")
+                    print(f"File {file_path} not found")
 
             dfs.append(self._read_single_file(file_path))
 
