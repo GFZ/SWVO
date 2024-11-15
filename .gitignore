@@ -6,9 +6,7 @@ __pycache__/
 temp/
 *.mp4
 *.png
-*.csv
 *.wdc
-*.dat
 build/
 dist/
 data_management.egg-info/
