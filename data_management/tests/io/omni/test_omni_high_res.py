@@ -53,7 +53,7 @@ def test_download_and_process(omni_high_res, mocker):
 def test_read_without_download(omni_high_res, mocker):
     start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)
     end_time = datetime(2021, 12, 31, tzinfo=timezone.utc)
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(ValueError): #value error is raised when no files are found hence no concatenation is possible
         omni_high_res.read(start_time, end_time, download=False)
 
 
