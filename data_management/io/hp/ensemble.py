@@ -42,12 +42,12 @@ class HpEnsemble(object):
         start_date = start_time
         str_date = start_date.strftime("%Y%m%dT%H%M%S")
         file_list = sorted(self.data_dir.glob(f"FORECAST_{self.index.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_*.csv"))
-        
+
         data = []
 
         if len(file_list) == 0:
             raise FileNotFoundError(f"No files found for {self.index} ensemble in {self.data_dir}!")
-        
+
         for file in file_list:
             df = pd.read_csv(file, names=["t", self.index])
 

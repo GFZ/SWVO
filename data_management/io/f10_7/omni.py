@@ -15,6 +15,7 @@ class F107OMNI(OMNILowRes):
         data_out = super().read(start_time, end_time, download=download)
 
         df = pd.DataFrame(index=data_out.index)
+
         df["f107"] = data_out["f107"]
 
         # we return it just every 24 hours
