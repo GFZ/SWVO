@@ -130,6 +130,12 @@ class OMNIHighRes(object):
 
         assert cadence_min == 1 or cadence_min == 5, "Only 1 or 5 minute cadence can be chosen for high resolution omni data."
 
+        if not start_time.tzinfo:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+
+        if not end_time.tzinfo:
+            end_time = end_time.replace(tzinfo=timezone.utc)
+
         if start_time < datetime(self.START_YEAR, 1, 1, tzinfo=timezone.utc):
             print("Start date chosen falls behind the existing data. Moving start date to first" " available mission files...")
             start_time = datetime(self.START_YEAR, 1, 1, tzinfo=timezone.utc)
@@ -152,6 +158,11 @@ class OMNIHighRes(object):
             dfs.append(self._read_single_file(file_path))
 
         data_out = pd.concat(dfs)
+
+        if not data_out.empty:
+            if not data_out.index.tzinfo:
+                data_out.index = data_out.index.tz_localize("UTC")
+
         data_out = data_out.truncate(
             before=start_time - timedelta(minutes=cadence_min - 0.0000001),
             after=end_time + timedelta(minutes=cadence_min + 0.0000001),

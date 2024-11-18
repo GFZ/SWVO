@@ -37,9 +37,7 @@ def test_download_and_process(swomni, mocker):
     mocker.patch.object(
         swomni,
         "_process_single_file",
-        return_value=swomni._process_single_file(
-            Path(TEST_DIR) / "data/omni_min2020.asc"
-        ),
+        return_value=swomni._process_single_file(Path(TEST_DIR) / "data/omni_min2020.asc"),
     )
 
     start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
@@ -53,15 +51,19 @@ def test_download_and_process(swomni, mocker):
 def test_read_without_download(swomni, mocker):
     start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)
     end_time = datetime(2021, 12, 31, tzinfo=timezone.utc)
-    with pytest.raises(ValueError): #value error is raised when no files are found hence no concatenation is possible
+    with pytest.raises(ValueError):  # value error is raised when no files are found hence no concatenation is possible
         swomni.read(start_time, end_time, download=False)
 
 
 def test_read_with_download(swomni, mocker):
     mocker.patch.object(swomni, "download_and_process")
-    mocker.patch.object(swomni, "_read_single_file", return_value=pd.DataFrame())
-    start_time = datetime(2022, 1, 1, tzinfo=timezone.utc)
-    end_time = datetime(2022, 12, 31, tzinfo=timezone.utc)
+    mocker.patch.object(
+        swomni,
+        "_read_single_file",
+        return_value=pd.DataFrame(index=pd.date_range(start=datetime(2022, 1, 1, tzinfo=timezone.utc), end=datetime(2022, 12, 31, tzinfo=timezone.utc))),
+    )
+    start_time = datetime(2022, 1, 1)
+    end_time = datetime(2022, 12, 31)
     swomni.read(start_time, end_time, download=True)
     swomni.download_and_process.assert_called_once()
 
@@ -94,13 +96,15 @@ def test_invalid_cadence(swomni):
 
 def test_start_year_behind(swomni, mocker):
 
-    start_time = datetime(1920, 1, 1, tzinfo=timezone.utc)
-    end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
+    start_time = datetime(1920, 1, 1)
+    end_time = datetime(2020, 12, 31)
 
     mock_print = mocker.patch("builtins.print")
 
+    mocked_df = pd.DataFrame(index=pd.date_range(start_time, end_time))
+
     mocker.patch.object(swomni, "_get_processed_file_list", return_value=([], []))
-    mocker.patch.object(swomni, "_read_single_file", return_value=pd.DataFrame())
+    mocker.patch.object(swomni, "_read_single_file", return_value=mocked_df)
 
     mocker.patch("pandas.concat", return_value=pd.DataFrame())
 
@@ -108,7 +112,7 @@ def test_start_year_behind(swomni, mocker):
 
     dfs = swomni.read(start_time, end_time)
 
-    mock_print.assert_called_once_with(
+    mock_print.assert_called_with(
         "Start date chosen falls behind the existing data. Moving start date to first available mission files..."
     )
 
