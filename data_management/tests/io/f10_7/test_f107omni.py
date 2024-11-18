@@ -78,8 +78,8 @@ def test_read_with_download(f107omni, mock_f107omni_data, mocker):
     mocker.patch.object(f107omni, "_read_single_file", return_value=mock_f107omni_data)
     mocker.patch.object(f107omni, "download_and_process")
 
-    start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
-    end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
+    start_time = datetime(2020, 1, 1)
+    end_time = datetime(2020, 12, 31)
 
     df = f107omni.read(start_time, end_time, download=True)
     f107omni.download_and_process.assert_called_once()
@@ -88,6 +88,7 @@ def test_read_with_download(f107omni, mock_f107omni_data, mocker):
     assert all(df["f107"] == 150.0)
     assert all(idx.hour == 0 for idx in df.index)
     assert all(idx.tzinfo is not None for idx in df.index)
+    assert all(idx.tzinfo is timezone.utc for idx in df.index)
 
 
 def test_process_single_file(f107omni):
