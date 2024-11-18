@@ -94,6 +94,7 @@ def test_read_with_download(kp_swpc_instance):
     assert data.index[-1] <= end_time + timedelta(hours=3)
     assert data["kp"].min() >= 0
     assert data["kp"].max() <= 9
+    assert data.index.tzinfo == timezone.utc
 
     decimals = (data["kp"] % 1).unique()
     for decimal in decimals:

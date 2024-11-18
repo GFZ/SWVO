@@ -66,6 +66,12 @@ class KpSWPC(object):
 
     def read(self, start_time: datetime, end_time: datetime = None, download: bool = False) -> pd.DataFrame:
 
+        if not start_time.tzinfo:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+        if end_time is not None and not end_time.tzinfo:
+            end_time = end_time.replace(tzinfo=timezone.utc)
+
+
         if end_time is None:
             end_time = start_time + timedelta(days=3)
 
