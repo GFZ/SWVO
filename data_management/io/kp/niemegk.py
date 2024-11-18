@@ -83,6 +83,13 @@ class KpNiemegk(object):
             rmtree(temporary_dir)
 
     def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
+        
+        if not start_time.tzinfo:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+
+        if not end_time.tzinfo:
+            end_time = end_time.replace(tzinfo=timezone.utc)
+
 
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
 
@@ -110,6 +117,8 @@ class KpNiemegk(object):
 
             # combine the new file with the old ones, replace all values present in df_one_file in data_out
             data_out = df_one_file.combine_first(data_out)
+
+        data_out.index = data_out.index.tz_localize(timezone.utc) 
 
         data_out = data_out.truncate(before=start_time - timedelta(hours=2.9999), after=end_time + timedelta(hours=2.9999))
 
