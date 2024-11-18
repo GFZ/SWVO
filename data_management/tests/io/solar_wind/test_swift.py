@@ -191,7 +191,7 @@ def test_read_ensemble(swift_instance, create_mock_swift_files):
 
 def test_read_with_missing_gsm_files(swift_instance, create_mock_swift_files, caplog):
 
-    base_date = datetime.now(timezone.utc).replace(microsecond=0, minute=0, second=0)
+    base_date = datetime.now().replace(microsecond=0, minute=0, second=0)
     task_dir = create_mock_swift_files(base_date, num_tasks=1)
 
     gsm_file = next(task_dir.rglob("gsm_*.json"))

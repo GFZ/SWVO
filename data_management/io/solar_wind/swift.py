@@ -29,8 +29,11 @@ class SWSWIFTEnsemble(object):
             raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrieve data!")
 
     def read(self, start_time: datetime, end_time: datetime) -> list:
-
-        print(start_time)
+        
+        if start_time and not start_time.tzinfo:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+        if end_time and not end_time.tzinfo:
+            end_time = end_time.replace(tzinfo=timezone.utc)
 
         if start_time is None:
             start_time = datetime.now(timezone.utc).replace(microsecond=0, minute=0, second=0)
