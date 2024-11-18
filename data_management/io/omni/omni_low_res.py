@@ -173,6 +173,12 @@ class OMNILowRes(object):
 
         START_YEAR = 1963
 
+        if not start_time.tzinfo:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+
+        if not end_time.tzinfo:
+            end_time = end_time.replace(tzinfo=timezone.utc)
+
         if start_time < datetime(START_YEAR, 1, 1).replace(tzinfo=timezone.utc):
             print("Start date chosen falls behind the existing data. Moving start date to first" " available mission files...")
             start_time = datetime(START_YEAR, 1, 1,tzinfo=timezone.utc)
@@ -195,6 +201,10 @@ class OMNILowRes(object):
             dfs.append(self._read_single_file(file_path))
 
         data_out = pd.concat(dfs)
+
+        if not data_out.empty:
+            if not data_out.index.tzinfo:
+                data_out.index = data_out.index.tz_localize("UTC")
 
         return data_out
 

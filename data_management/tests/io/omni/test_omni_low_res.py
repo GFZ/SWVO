@@ -36,9 +36,7 @@ def test_download_and_process(omni_low_res, mocker):
     mocker.patch.object(
         omni_low_res,
         "_process_single_file",
-        return_value=omni_low_res._process_single_file(
-            Path(TEST_DIR) / "data/omni2_2020.dat"
-        ),
+        return_value=omni_low_res._process_single_file(Path(TEST_DIR) / "data/omni2_2020.dat"),
     )
 
     start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
@@ -52,13 +50,17 @@ def test_download_and_process(omni_low_res, mocker):
 def test_read_without_download(omni_low_res, mocker):
     start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)
     end_time = datetime(2021, 12, 31, tzinfo=timezone.utc)
-    with pytest.raises(ValueError): #value error is raised when no files are found hence no concatenation is possible
+    with pytest.raises(ValueError):  # value error is raised when no files are found hence no concatenation is possible
         omni_low_res.read(start_time, end_time, download=False)
 
 
 def test_read_with_download(omni_low_res, mocker):
     mocker.patch.object(omni_low_res, "download_and_process")
-    mocker.patch.object(omni_low_res, "_read_single_file", return_value=pd.DataFrame())
+    mocker.patch.object(
+        omni_low_res,
+        "_read_single_file",
+        return_value=pd.DataFrame(index=pd.date_range(start=datetime(2022, 1, 1), end=datetime(2022, 12, 31))),
+    )
     start_time = datetime(2022, 1, 1, tzinfo=timezone.utc)
     end_time = datetime(2022, 12, 31, tzinfo=timezone.utc)
     omni_low_res.read(start_time, end_time, download=True)
@@ -82,20 +84,22 @@ def test_read_single_file(omni_low_res):
 
 def test_start_year_behind(omni_low_res, mocker):
 
-    start_time = datetime(1920, 1, 1, tzinfo=timezone.utc)
-    end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
+    start_time = datetime(1920, 1, 1)
+    end_time = datetime(2020, 12, 31)
 
     mock_print = mocker.patch("builtins.print")
 
+    mocked_df = pd.DataFrame(index=pd.date_range(start_time, end_time))
+
     mocker.patch.object(omni_low_res, "_get_processed_file_list", return_value=([], []))
-    mocker.patch.object(omni_low_res, "_read_single_file", return_value=pd.DataFrame())
+    mocker.patch.object(omni_low_res, "_read_single_file", return_value=mocked_df)
 
     mocker.patch("pandas.concat", return_value=pd.DataFrame())
     mocker.patch.object(pd.DataFrame, "truncate", return_value=pd.DataFrame())
 
     dfs = omni_low_res.read(start_time, end_time)
 
-    mock_print.assert_called_once_with(
+    mock_print.assert_called_with(
         "Start date chosen falls behind the existing data. Moving start date to first available mission files..."
     )
 
