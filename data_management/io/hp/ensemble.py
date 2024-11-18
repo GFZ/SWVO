@@ -33,6 +33,12 @@ class HpEnsemble(object):
 
     def read(self, start_time: datetime, end_time: datetime) -> list:
 
+        if start_time and not start_time.tzinfo:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+        if end_time and not end_time.tzinfo:
+            end_time = end_time.replace(tzinfo=timezone.utc)
+
+
         if start_time is None:
             start_time = datetime.now(timezone.utc).replace(microsecond=0, minute=0, second=0)
 

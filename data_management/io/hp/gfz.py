@@ -85,6 +85,11 @@ class HpGFZ(object):
 
     def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
 
+        if not start_time.tzinfo:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+        if not end_time.tzinfo:
+            end_time = end_time.replace(tzinfo=timezone.utc)
+
         if start_time < datetime(self.START_YEAR, 1, 1).replace(tzinfo=timezone.utc):
             print(
                 "Start date chosen falls behind the mission starting year. Moving start date to first"

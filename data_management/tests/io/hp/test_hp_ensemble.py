@@ -65,7 +65,7 @@ def test_read_with_ensemble_data(instance_type, index_name):
     instance_class = Hp30Ensemble if instance_type == "hp30" else Hp60Ensemble
     instance = instance_class(data_dir=ensemble_dir)
 
-    current_time = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    current_time = datetime.now().replace(minute=0, second=0, microsecond=0)
     str_date = current_time.strftime("%Y%m%dT%H%M%S")
 
     for i in range(3):
@@ -91,8 +91,8 @@ def test_read_with_ensemble_data(instance_type, index_name):
         assert isinstance(df.index, pd.DatetimeIndex)
         assert df.index.tz == timezone.utc
         assert not df.empty
-        assert df.index[0] >= current_time - timedelta(minutes=float(instance.index_number) - 0.01)
-        assert df.index[-1] <= current_time + timedelta(days=1) + timedelta(minutes=float(instance.index_number) + 0.01)
+        assert df.index[0] >= current_time.replace(tzinfo=timezone.utc) - timedelta(minutes=float(instance.index_number) - 0.01)
+        assert df.index[-1] <= current_time.replace(tzinfo=timezone.utc) + timedelta(days=1) + timedelta(minutes=float(instance.index_number) + 0.01)
 
 
 def test_read_with_default_times(instance_type="hp30"):
