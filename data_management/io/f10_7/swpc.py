@@ -4,7 +4,7 @@ import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Tuple
-
+import logging
 import pandas as pd
 import wget
 
@@ -107,12 +107,12 @@ class F107SWPC:
         missing_files = [year for year in years_requested if str(year) not in available_years and year < current_year]
 
         if missing_files:
-            warnings.warn(f"Data for year(s) {', '.join(map(str, missing_files))} not found.", UserWarning)
+            logging.warning(f"Data for year(s) {', '.join(map(str, missing_files))} not found.")
 
             if len(available_years) != 0:
-                warnings.warn(f"Only data for {', '.join(available_years)} are available.", UserWarning)
+                logging.warning(f"Only data for {', '.join(available_years)} are available.")
             else:
-                warnings.warn("No data available. Set `download` to `True`", UserWarning)
+                logging.warning("No data available. Set `download` to `True`")
 
         dfs = []
 
@@ -121,7 +121,7 @@ class F107SWPC:
             if any(year in str(path) for year in available_years):
                 available_file_paths.append(path)
             else:
-                print(f"File {path} not found")
+                logging.warning(f"File {path} not found")
 
         for file_path in available_file_paths:
             year_data = pd.read_csv(file_path, parse_dates=["date"])

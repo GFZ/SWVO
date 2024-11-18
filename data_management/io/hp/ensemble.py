@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Tuple
 
+import logging
 import pandas as pd
 
 
@@ -52,7 +53,9 @@ class HpEnsemble(object):
         data = []
 
         if len(file_list) == 0:
-            raise FileNotFoundError(f"No files found for {self.index} ensemble in {self.data_dir}!")
+            msg = f"No {self.index} ensemble file found for requested date {start_date}"
+            logging.error(msg)
+            raise FileNotFoundError(msg)
 
         for file in file_list:
             df = pd.read_csv(file, names=["t", self.index])

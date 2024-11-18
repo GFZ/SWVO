@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
 from typing import List, Tuple
-
+import logging
 import numpy as np
 import pandas as pd
 import wget
@@ -84,7 +84,7 @@ class KpSWPC(object):
             if download:
                 self.download_and_process(start_time)
             else:
-                print(f"File {file_path} not found")
+                logging.warning(f"File {file_path} not found")
 
         data_out = self._read_single_file(file_path)
         data_out.index = data_out.index.tz_localize("UTC")

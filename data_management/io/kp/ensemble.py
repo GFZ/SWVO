@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Tuple
 
 import pandas as pd
-
+import logging
 
 class KpEnsemble(object):
 
@@ -41,7 +41,9 @@ class KpEnsemble(object):
         file_list = sorted(self.data_dir.glob(f"FORECAST_PAGER_SWIFT_swift_{str_date}_ensemble_*.csv"))
 
         if len(file_list) == 0:
-            raise FileNotFoundError(f"No ensemble files found in {self.data_dir}!")
+            msg = f"No ensemble files found for requested date {start_time}"
+            logging.error(msg)
+            raise FileNotFoundError(msg)
         
         data = []
         for file in file_list:

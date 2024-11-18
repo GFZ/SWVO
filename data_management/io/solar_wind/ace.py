@@ -4,6 +4,8 @@ from pathlib import Path
 from shutil import rmtree
 from typing import List, Tuple
 
+import logging
+
 import numpy as np
 import pandas as pd
 import wget
@@ -128,7 +130,7 @@ class SWACE(object):
                 self.download_and_process(file_date, verbose=False)
 
             if not file_path.exists():
-                print(f"File {file_path} not found")
+                logging.warning(f"File {file_path} not found")
                 continue
 
             df_one_day = self._read_single_file(file_path)

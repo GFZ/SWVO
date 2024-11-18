@@ -7,6 +7,7 @@ from typing import List, Tuple
 import numpy as np
 import pandas as pd
 import wget
+import logging
 
 
 class HpGFZ(object):
@@ -91,7 +92,7 @@ class HpGFZ(object):
             end_time = end_time.replace(tzinfo=timezone.utc)
 
         if start_time < datetime(self.START_YEAR, 1, 1).replace(tzinfo=timezone.utc):
-            print(
+            logging.warning(
                 "Start date chosen falls behind the mission starting year. Moving start date to first"
                 " available mission files..."
             )
@@ -113,7 +114,7 @@ class HpGFZ(object):
 
         for file_path, time_interval in zip(file_paths, time_intervals):
 
-            print(f"Processing file {file_path} ...")
+            logging.info(f"Processing file {file_path} ...")
 
             if not file_path.expanduser().exists():
                 if download:
@@ -121,7 +122,7 @@ class HpGFZ(object):
 
             # if we request a date in the future, the file will still not be found here
             if not file_path.expanduser().exists():
-                print(f"File {file_path} not found, filling with NaNs")
+                logging.warning(f"File {file_path} not found, filling with NaNs")
                 continue
             else:
                 df_one_file = self._read_single_file(file_path)

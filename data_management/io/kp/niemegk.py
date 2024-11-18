@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
 from typing import List, Tuple
-
+import logging
 import numpy as np
 import pandas as pd
 import wget
@@ -110,7 +110,7 @@ class KpNiemegk(object):
 
             # if we request a date in the future, the file will still not be found here
             if not file_path.exists():
-                print(f"File {file_path} not found, filling with NaNs")
+                logging.warning(f"File {file_path} not found")
                 continue
             else:
                 df_one_file = self._read_single_file(file_path)

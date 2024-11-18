@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
 from typing import List, Tuple
+import logging
 
 import numpy as np
 import pandas as pd
@@ -137,7 +138,7 @@ class OMNIHighRes(object):
             end_time = end_time.replace(tzinfo=timezone.utc)
 
         if start_time < datetime(self.START_YEAR, 1, 1, tzinfo=timezone.utc):
-            print("Start date chosen falls behind the existing data. Moving start date to first" " available mission files...")
+            logging.warning("Start date chosen falls behind the existing data. Moving start date to first" " available mission files...")
             start_time = datetime(self.START_YEAR, 1, 1, tzinfo=timezone.utc)
 
         assert start_time < end_time
@@ -152,7 +153,7 @@ class OMNIHighRes(object):
                 if download:
                     self.download_and_process(start_time, end_time, cadence_min=cadence_min)
                 else:
-                    print(f"File {file_path} not found")
+                    logging.warning(f"File {file_path} not found")
                     continue
 
             dfs.append(self._read_single_file(file_path))
