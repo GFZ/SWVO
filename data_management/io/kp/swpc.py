@@ -81,6 +81,7 @@ class KpSWPC(object):
                 print(f"File {file_path} not found")
 
         data_out = self._read_single_file(file_path)
+        data_out.index = data_out.index.tz_localize("UTC")
         data_out = data_out.truncate(before=start_time - timedelta(hours=2.9999), after=end_time + timedelta(hours=2.9999))
 
         return data_out
