@@ -56,7 +56,7 @@ def test_initialization_with_nonexistent_directory():
 
 def test_read_with_ensemble_data(kp_ensemble_instance):
 
-    current_time = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    current_time = datetime.now().replace(minute=0, second=0, microsecond=0)
     str_date = current_time.strftime("%Y%m%dT%H0000")
 
     for i in range(3):
@@ -84,8 +84,8 @@ def test_read_with_ensemble_data(kp_ensemble_instance):
         assert isinstance(df.index, pd.DatetimeIndex)
         assert not df.empty
 
-        assert df.index[0] >= current_time - timedelta(hours=3)
-        assert df.index[-1] <= current_time + timedelta(days=1) + timedelta(hours=3)
+        assert df.index[0] >= current_time.replace(tzinfo=timezone.utc) - timedelta(hours=3)
+        assert df.index[-1] <= current_time.replace(tzinfo=timezone.utc) + timedelta(days=1) + timedelta(hours=3)
 
 
 def test_read_with_default_times(kp_ensemble_instance):
@@ -108,7 +108,7 @@ def test_read_with_default_times(kp_ensemble_instance):
 
 
 def test_read_empty_directory(kp_ensemble_instance):
-    current_time = datetime.now(timezone.utc)
+    current_time = datetime.now()
     with pytest.raises(FileNotFoundError):
         data = kp_ensemble_instance.read(current_time, current_time + timedelta(days=1))
 
