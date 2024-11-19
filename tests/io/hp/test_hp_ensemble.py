@@ -65,7 +65,7 @@ def test_read_with_ensemble_data(instance_type, index_name):
     instance_class = Hp30Ensemble if instance_type == "hp30" else Hp60Ensemble
     instance = instance_class(data_dir=ensemble_dir)
 
-    current_time = datetime.now().replace(minute=0, second=0, microsecond=0)
+    current_time = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     str_date = current_time.strftime("%Y%m%dT%H%M%S")
 
     for i in range(3):
@@ -79,6 +79,7 @@ def test_read_with_ensemble_data(instance_type, index_name):
 
         filename = f"FORECAST_{index_name.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_{i+1}.csv"
         file_path = instance.data_dir / filename
+        print(file_path)
         df.to_csv(file_path, index=False, header=False)
 
     data = instance.read(current_time, current_time + timedelta(days=1))
