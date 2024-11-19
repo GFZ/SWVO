@@ -21,7 +21,7 @@ stages:
 unittest:
   stage: unit-tests
   tags:
-    - Test IO
+    - testing
   script:
     - cd /builds/pager-wp8/data_management/
     - echo "Running unittests for data_management"
