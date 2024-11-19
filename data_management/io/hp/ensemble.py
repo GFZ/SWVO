@@ -34,20 +34,20 @@ class HpEnsemble(object):
 
     def read(self, start_time: datetime, end_time: datetime) -> list:
 
-        if start_time and not start_time.tzinfo:
+        if start_time is not None and not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
-        if end_time and not end_time.tzinfo:
+        if end_time is not None and not end_time.tzinfo:
             end_time = end_time.replace(tzinfo=timezone.utc)
 
 
         if start_time is None:
-            start_time = datetime.now(timezone.utc).replace(microsecond=0, minute=0, second=0)
+            start_time = datetime.now(timezone.utc)
 
         if end_time is None:
             end_time = start_time.replace(tzinfo=timezone.utc) + timedelta(days=3)
 
-        start_date = start_time
-        str_date = start_date.strftime("%Y%m%dT%H%M%S")
+        start_date = start_time.replace(microsecond=0, minute=0, second=0)
+        str_date = start_date.strftime("%Y%m%dT%H0000")
         file_list = sorted(self.data_dir.glob(f"FORECAST_{self.index.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_*.csv"))
 
         data = []
