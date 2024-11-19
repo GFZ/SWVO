@@ -112,10 +112,7 @@ def test_read_with_default_times(instance_type="hp30"):
 
 
 def test_read_empty_directory(hp30ensemble_instance):
-    for files in hp30ensemble_instance.data_dir.glob(f"FORECAST_HP30_SWIFT_DRIVEN_swift*"):
-        files.unlink()
-
-    current_time = datetime.now(timezone.utc)
+    current_time = datetime.now() #do not add timezone in order to return empty file list
     
     with pytest.raises(FileNotFoundError):
         _ = hp30ensemble_instance.read(current_time, current_time + timedelta(days=1))

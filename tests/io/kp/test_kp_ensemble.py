@@ -56,7 +56,7 @@ def test_initialization_with_nonexistent_directory():
 
 def test_read_with_ensemble_data(kp_ensemble_instance):
 
-    current_time = datetime.now().replace(minute=0, second=0, microsecond=0)
+    current_time = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     str_date = current_time.strftime("%Y%m%dT%H0000")
 
     for i in range(3):
@@ -108,10 +108,8 @@ def test_read_with_default_times(kp_ensemble_instance):
 
 
 def test_read_empty_directory(kp_ensemble_instance):
-    for files in DATA_DIR.glob("*"):
-        files.unlink()
     
-    current_time = datetime.now()
+    current_time = datetime.now() #do not add timezone in order to return empty file list
 
     with pytest.raises(FileNotFoundError):
         _ = kp_ensemble_instance.read(current_time, current_time + timedelta(days=1))
