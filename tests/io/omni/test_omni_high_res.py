@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from data_management.io.omni.omni_high_res import OMNIHighRes
 import pandas as pd
 
+from unittest.mock import patch
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
@@ -37,9 +38,7 @@ def test_download_and_process(omni_high_res, mocker):
     mocker.patch.object(
         omni_high_res,
         "_process_single_file",
-        return_value=omni_high_res._process_single_file(
-            Path(TEST_DIR) / "data/omni_min2020.asc"
-        ),
+        return_value=omni_high_res._process_single_file(Path(TEST_DIR) / "data/omni_min2020.asc"),
     )
 
     start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
@@ -53,7 +52,7 @@ def test_download_and_process(omni_high_res, mocker):
 def test_read_without_download(omni_high_res, mocker):
     start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)
     end_time = datetime(2021, 12, 31, tzinfo=timezone.utc)
-    with pytest.raises(ValueError): #value error is raised when no files are found hence no concatenation is possible
+    with pytest.raises(ValueError):  # value error is raised when no files are found hence no concatenation is possible
         omni_high_res.read(start_time, end_time, download=False)
 
 
@@ -97,24 +96,21 @@ def test_start_year_behind(omni_high_res, mocker):
     start_time = datetime(1920, 1, 1, tzinfo=timezone.utc)
     end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
 
-    mock_print = mocker.patch("builtins.print")
-
-    mocker.patch.object(
-        omni_high_res, "_get_processed_file_list", return_value=([], [])
-    )
+    mocker.patch.object(omni_high_res, "_get_processed_file_list", return_value=([], []))
     mocker.patch.object(omni_high_res, "_read_single_file", return_value=pd.DataFrame())
 
     mocker.patch("pandas.concat", return_value=pd.DataFrame())
 
     mocker.patch.object(pd.DataFrame, "truncate", return_value=pd.DataFrame())
 
-    dfs = omni_high_res.read(start_time, end_time)
+    with patch("logging.Logger.warning") as mock_warning:
 
-    mock_print.assert_called_once_with(
-        "Start date chosen falls behind the existing data. Moving start date to first available mission files..."
-    )
+        dfs = omni_high_res.read(start_time, end_time)
+        mock_warning.assert_any_call(
+            "Start date chosen falls behind the existing data. Moving start date to first available mission files..."
+        )
 
-    assert len(dfs) == 0, "Expected dfs list to be empty since no files are found."
+        assert len(dfs) == 0, "Expected dfs list to be empty since no files are found."
 
 
 def test_remove_processed_file():

@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from data_management.io.kp import KpOMNI
 import pandas as pd
 
+from unittest.mock import patch
+
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
 
@@ -108,9 +110,7 @@ def test_read_single_file(kp_omni):
 def test_start_year_behind(kp_omni, mocker, mock_kp_omni_data):
     start_time = datetime(1920, 1, 1, tzinfo=timezone.utc)
     end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
-
-    mock_print = mocker.patch("builtins.print")
-
+    
     mocker.patch("pathlib.Path.exists", return_value=True)
     mocker.patch.object(
         kp_omni, "_get_processed_file_list", return_value=([Path("dummy.csv")], [])
@@ -127,14 +127,17 @@ def test_start_year_behind(kp_omni, mocker, mock_kp_omni_data):
     mocker.patch("pandas.concat", return_value=df)
     mocker.patch.object(pd.DataFrame, "truncate", return_value=df)
 
-    result_df = kp_omni.read(start_time, end_time)
+    with patch("logging.Logger.warning") as mock_warning:
+        result_df = kp_omni.read(start_time, end_time)
 
-    mock_print.assert_called_once_with(
-        "Start date chosen falls behind the existing data. Moving start date to first"
-        " available mission files..."
-    )
+        mock_warning.assert_any_call(
+            "Start date chosen falls behind the existing data. Moving start date to first" " available mission files..."
+        )
 
     assert result_df.empty, "Expected resulting DataFrame to be empty"
+
+
+
 
 
 def test_remove_processed_file():

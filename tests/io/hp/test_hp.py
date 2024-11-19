@@ -2,9 +2,7 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 import pandas as pd
-import numpy as np
-from unittest.mock import mock_open
-import wget
+from unittest.mock import mock_open, patch
 
 from data_management.io.hp.gfz import HpGFZ, Hp30GFZ, Hp60GFZ
 
@@ -75,15 +73,16 @@ def test_start_year_behind(hp30gfz, mocker, mock_hp_data):
     start_time = datetime(1980, 1, 1)
     end_time = datetime(2020, 12, 31)
 
-    mock_print = mocker.patch("builtins.print")
     mocker.patch("pathlib.Path.exists", return_value=True)
     mocker.patch.object(hp30gfz, "_read_single_file", return_value=mock_hp_data)
 
-    df = hp30gfz.read(start_time, end_time)
+    with patch("logging.Logger.warning") as mock_warning:
 
-    mock_print.assert_any_call(
-        "Start date chosen falls behind the mission starting year. Moving start date to first available mission files..."
-    )
+        _ = hp30gfz.read(start_time, end_time)
+        mock_warning.assert_any_call(
+            "Start date chosen falls behind the mission starting year. Moving start date to first"
+            " available mission files..."
+        )
 
 
 def test_process_single_file(hp30gfz, tmp_path, mocker):

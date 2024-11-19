@@ -226,8 +226,6 @@ def test_cleanup_after_download(swace_instance, mock_download_response):
 )
 def test_invalid_value_handling(field, invalid_value, expected):
     
-    swace = SWACE(data_dir=DATA_DIR)
-
     data = pd.DataFrame({field: [invalid_value]})
 
     if field in SWACE.MAG_FIELDS:

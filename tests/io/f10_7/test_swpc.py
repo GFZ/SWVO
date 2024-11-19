@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 import pandas as pd
 import pytest
+import logging
 
 from data_management.io.f10_7.swpc import F107SWPC
 
@@ -88,9 +89,7 @@ def test_get_processed_file_list(f107_instance):
     start_time = datetime(2020, 1, 1)
     end_time = datetime(2022, 12, 31)
 
-    file_paths, time_intervals = f107_instance._get_processed_file_list(
-        start_time, end_time
-    )
+    file_paths, time_intervals = f107_instance._get_processed_file_list(start_time, end_time)
 
     assert len(file_paths) == 3
     assert all(str(path).startswith(str(MOCK_DATA_PATH)) for path in file_paths)
@@ -131,16 +130,19 @@ def test_read_f107_file(f107_instance, sample_f107_data):
 
 
 def test_read_with_no_data(f107_instance):
-
     start_time = datetime(2020, 1, 1)
     end_time = datetime(2020, 12, 31)
 
-    with pytest.warns(UserWarning):
+    with patch('logging.Logger.warning') as mock_warning:
         data = f107_instance.read(start_time, end_time, download=False)
+        
+        mock_warning.assert_any_call("Data for year(s) 2020 not found.")
+        mock_warning.assert_any_call("No data available. Set `download` to `True`")
+        
+        assert isinstance(data, pd.DataFrame)
+        assert len(data) == 0
+        assert all(col in data.columns for col in ["date", "f107"])
 
-    assert isinstance(data, pd.DataFrame)
-    assert len(data) == 0
-    assert all(col in data.columns for col in ["date", "f107"])
 
 
 def test_read_invalid_time_range(f107_instance):
@@ -174,35 +176,23 @@ def test_read_with_existing_data(f107_instance):
     assert all(col in data.columns for col in ["date", "f107"])
 
 
-@pytest.mark.parametrize("test_year,should_warn", [(2019, True), (2025, False)])
-def test_read_missing_years_warning(f107_instance, test_year, should_warn, capfd):
-
+@pytest.mark.parametrize("test_year", [2019, 2025])
+def test_read_missing_years_warning(f107_instance, test_year):
     start_time = datetime(test_year, 1, 1)
     end_time = datetime(test_year, 12, 31)
-
     expected_file_path = MOCK_DATA_PATH / f"SWPC_F107_{test_year}.csv"
 
-    if should_warn:
+    with patch("logging.Logger.warning") as mock_warning:
 
-        with pytest.warns(UserWarning) as warning_records:
-            f107_instance.read(start_time, end_time, download=False)
+        f107_instance.read(start_time, end_time, download=False)
 
-        warning_messages = [str(w.message) for w in warning_records]
-        assert any(
-            f"Data for year(s) {test_year} not found" in msg for msg in warning_messages
-        )
-        assert any(
-            "No data available. Set `download` to `True`" in msg
-            for msg in warning_messages
-        )
-    else:
+        if test_year == 2019:
+            mock_warning.assert_any_call(f"Data for year(s) {test_year} not found.")
+            mock_warning.assert_any_call("No data available. Set `download` to `True`")
+            mock_warning.assert_any_call(f"File {expected_file_path} not found")
 
-        with pytest.warns(None) as warning_records:
-            f107_instance.read(start_time, end_time, download=False)
-        assert not warning_records
-
-    captured = capfd.readouterr()
-    assert (f"File {expected_file_path} not found") in captured.out
+        if test_year == 2025:
+            mock_warning.assert_any_call(f"File {expected_file_path} not found")
 
 
 def test_data_update_with_existing_file(f107_instance):
@@ -232,7 +222,7 @@ def test_cleanup_after_download(f107_instance):
     assert not temp_dir.exists(), "Temporary directory should be cleaned up"
 
 
-def test_read_with_partial_data(f107_instance):
+def test_read_with_partial_data(f107_instance, caplog):
 
     sample_data = pd.DataFrame(
         {
@@ -247,9 +237,14 @@ def test_read_with_partial_data(f107_instance):
     start_time = datetime(2020, 12, 1)
     end_time = datetime(2021, 1, 31)
 
-    with pytest.warns(UserWarning):
+    with patch('logging.Logger.warning') as mock_warning:
         data = f107_instance.read(start_time, end_time)
+        
+        mock_warning.assert_any_call("Data for year(s) 2021 not found.")
+        mock_warning.assert_any_call("Only data for 2020 are available.")
+        mock_warning.assert_any_call("File test_data/mock_f107/SWPC_F107_2021.csv not found")
+        
 
-    assert isinstance(data, pd.DataFrame)
-    assert len(data) > 0
-    assert all(col in data.columns for col in ["date", "f107"])
+        assert isinstance(data, pd.DataFrame)
+        assert len(data) > 0
+        assert all(col in data.columns for col in ["date", "f107"])

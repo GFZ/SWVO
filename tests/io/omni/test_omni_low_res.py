@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from data_management.io.omni.omni_low_res import OMNILowRes
 import pandas as pd
 
+from unittest.mock import patch
+
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
 
@@ -87,8 +89,6 @@ def test_start_year_behind(omni_low_res, mocker):
     start_time = datetime(1920, 1, 1)
     end_time = datetime(2020, 12, 31)
 
-    mock_print = mocker.patch("builtins.print")
-
     mocked_df = pd.DataFrame(index=pd.date_range(start_time, end_time))
 
     mocker.patch.object(omni_low_res, "_get_processed_file_list", return_value=([], []))
@@ -97,13 +97,14 @@ def test_start_year_behind(omni_low_res, mocker):
     mocker.patch("pandas.concat", return_value=pd.DataFrame())
     mocker.patch.object(pd.DataFrame, "truncate", return_value=pd.DataFrame())
 
-    dfs = omni_low_res.read(start_time, end_time)
+    with patch("logging.Logger.warning") as mock_warning:
 
-    mock_print.assert_called_with(
-        "Start date chosen falls behind the existing data. Moving start date to first available mission files..."
-    )
+        dfs = omni_low_res.read(start_time, end_time)
+        mock_warning.assert_any_call(
+            "Start date chosen falls behind the existing data. Moving start date to first available mission files..."
+        )
 
-    assert len(dfs) == 0, "Expected dfs list to be empty since no files are found."
+        assert len(dfs) == 0, "Expected dfs list to be empty since no files are found."
 
 
 def test_remove_processed_file():
