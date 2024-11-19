@@ -108,7 +108,10 @@ def test_read_with_default_times(kp_ensemble_instance):
 
 
 def test_read_empty_directory(kp_ensemble_instance):
+    for files in DATA_DIR.glob("*"):
+        files.unlink()
+    
     current_time = datetime.now()
-    with pytest.raises(FileNotFoundError):
-        data = kp_ensemble_instance.read(current_time, current_time + timedelta(days=1))
 
+    with pytest.raises(FileNotFoundError):
+        _ = kp_ensemble_instance.read(current_time, current_time + timedelta(days=1))
