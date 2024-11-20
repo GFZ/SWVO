@@ -26,6 +26,7 @@ unittest:
   script:
     - cd /builds/pager-wp8/data_management/
     - echo "Running unittests for data_management"
+    - conda activate deploy
     - python -m pytest -s tests/io/
   rules:
     - if: ($CI_COMMIT_BRANCH == $TEST_BRANCH || $CI_COMMIT_BRANCH == $TEST_BRANCH || $CI_COMMIT_BRANCH == $TEST_BRANCH)
