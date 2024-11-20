@@ -25,7 +25,7 @@ ENV_VAR_NAMES = {'DAILY_DOWNLOAD_LOG_DIR': base_path + 'log/',
 
 
 # ENV_VAR_NAMES = {"DAILY_DOWNLOAD_LOG_DIR": "/home/pager/FLAG_DEV/logs/daily_downloads_external_data/"}
-ENV_VAR_NAMES = {"DAILY_DOWNLOAD_LOG_DIR": "/home/pager/FLAG_DEV/code/external_data/data_management_refactoring_sahil_do_not_touch/data/logs"}
+ENV_VAR_NAMES = {"DAILY_DOWNLOAD_LOG_DIR": "/home/pager/FLAG_DEV/code/external_data/data_management/data/logs"}
 
 if __name__ == "__main__":
 
