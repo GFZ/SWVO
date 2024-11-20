@@ -109,11 +109,4 @@ if __name__ == "__main__":
         logging.error("Encountered error while downloading F10.7cm solar wind. Traceback:")
         logging.error(traceback.format_exc())
 
-    logging.info("F10.7 OMNI low resolution...\n")
-    try:
-        F107OMNI().download_and_process(date_yesterday_start, time_now, reprocess_files=True)
-    except:
-        logging.error("Encountered error while downloading F10.7cm solar wind. Traceback:")
-        logging.error(traceback.format_exc())
-
     logging.info("Finished downloading and processing!")

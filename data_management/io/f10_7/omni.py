@@ -10,6 +10,8 @@ class F107OMNI(OMNILowRes):
     def __init__(self, data_dir=None):
         super().__init__(data_dir=data_dir)
 
+    # data is downloaded along with OMNI data, check file name in parent class
+
     def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
 
         data_out = super().read(start_time, end_time, download=download)
