@@ -3,19 +3,23 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 
+import logging
+from typing import List, Type
+
 from data_management.io.solar_wind import SWACE, SWOMNI, SWSWIFTEnsemble
 
 
 def read_solar_wind_from_multiple_models(
     start_time: datetime,
     end_time: datetime,
-    model_order: list = None,
+    model_order: List[Type] = None,
     reduce_ensemble=None,
     synthetic_now_time: datetime = datetime.now(timezone.utc),
 ):
 
     if model_order is None:
         model_order = [SWOMNI(), SWACE(), SWSWIFTEnsemble()]
+        logging.warning("No model order specified, using default order: OMNI, ACE, SWIFT ensemble")
 
     data_out = [pd.DataFrame()]
 

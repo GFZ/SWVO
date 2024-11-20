@@ -3,19 +3,23 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 
+import logging
+from typing import List, Type
+
 from data_management.io.f10_7 import F107OMNI, F107SWPC
 
 
 def read_f107_from_multiple_models(
     start_time: datetime,
     end_time: datetime,
-    model_order: list = None,
+    model_order: List[Type] = None,
     synthetic_now_time: datetime = datetime.now(timezone.utc),
     download=False,
 ):
 
     if model_order is None:
         model_order = [F107OMNI(), F107SWPC()]
+        logging.warning("No model order specified, using default order: OMNI, SWPC")
 
     data_out = [pd.DataFrame()]
 

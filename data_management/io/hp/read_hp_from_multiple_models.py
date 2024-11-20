@@ -3,6 +3,9 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 
+import logging
+from typing import List, Type
+
 from data_management.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ
 
 
@@ -10,7 +13,7 @@ def read_hp_from_multiple_models(
     start_time: datetime,
     end_time: datetime,
     hp_index: str = "hp30",
-    model_order: list = None,
+    model_order: List[Type] = None,
     reduce_ensemble=None,
     synthetic_now_time: datetime = datetime.now(timezone.utc),
     download=False,
@@ -19,7 +22,7 @@ def read_hp_from_multiple_models(
     hp_index = hp_index.lower()
 
     if model_order is None:
-
+        logging.warning("No model order specified, using default order: GFZ, Ensemble")
         if hp_index == "hp30":
             model_order = [Hp30GFZ(), Hp30Ensemble()]
         elif hp_index == "hp60":

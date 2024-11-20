@@ -3,13 +3,16 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 
+import logging
+from typing import List, Type
+
 from data_management.io.kp import KpEnsemble, KpNiemegk, KpOMNI, KpSWPC
 
 
 def read_kp_from_multiple_models(
     start_time: datetime,
     end_time: datetime,
-    model_order: list = None,
+    model_order: List[Type] = None,
     reduce_ensemble=None,
     synthetic_now_time: datetime = datetime.now(timezone.utc),
     download=False,
@@ -17,6 +20,7 @@ def read_kp_from_multiple_models(
 
     if model_order is None:
         model_order = [KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()]
+        logging.warning("No model order specified, using default order: OMNI, Niemegk, Ensemble, SWPC")
 
     data_out = [pd.DataFrame()]
 
