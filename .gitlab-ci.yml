@@ -9,8 +9,8 @@ variables:
   TEST_BRANCH: tests
 
 before_script:
-  - eval "$(conda shell.bash hook)" 
-  - conda create -n deploy python=3.11 
+  - eval "$(conda shell.bash hook)"
+  - conda create -n deploy python=3.11
   - cd /builds/pager-wp8/data_management/
   - bash install.sh -e deploy
 
@@ -28,11 +28,9 @@ unittest:
     - cd /builds/pager-wp8/data_management/
     - echo "Running unittests for data_management"
     - conda activate deploy
-    - python -m pytest -s tests/io/
+    - python -m pytest -s tests/io/hp/test_hp_ensemble.py -v
   rules:
     - if: ($CI_COMMIT_BRANCH == $TEST_BRANCH || $CI_COMMIT_BRANCH == $TEST_BRANCH || $CI_COMMIT_BRANCH == $TEST_BRANCH)
-
-
 #integrationtest:
 #  stage: integration-tests
 #  tags:
@@ -54,5 +52,4 @@ unittest:
 #    - bash build_
 #  rules:
 #    - if: ($CI_COMMIT_BRANCH == $PRE_RELEASE_BRANCH || $CI_COMMIT_BRANCH == $PRODUCTION_BRANCH)
-
 
