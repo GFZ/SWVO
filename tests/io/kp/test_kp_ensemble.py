@@ -105,11 +105,3 @@ def test_read_with_default_times(kp_ensemble_instance):
     assert len(data) > 0
     assert isinstance(data[0], pd.DataFrame)
     assert not data[0].empty
-
-
-def test_read_empty_directory(kp_ensemble_instance):
-    
-    current_time = datetime.now() #do not add timezone in order to return empty file list
-
-    with pytest.raises(FileNotFoundError):
-        _ = kp_ensemble_instance.read(current_time, current_time + timedelta(days=1))

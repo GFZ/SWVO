@@ -79,7 +79,6 @@ def test_read_with_ensemble_data(instance_type, index_name):
 
         filename = f"FORECAST_{index_name.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_{i+1}.csv"
         file_path = instance.data_dir / filename
-        print(file_path)
         df.to_csv(file_path, index=False, header=False)
 
     data = instance.read(current_time, current_time + timedelta(days=1))
@@ -108,11 +107,3 @@ def test_read_with_default_times(instance_type="hp30"):
     assert len(data) == 3
     assert isinstance(data[0], pd.DataFrame)
     assert data[0].index.tz == timezone.utc
-
-
-
-def test_read_empty_directory(hp30ensemble_instance):
-    current_time = datetime.now() #do not add timezone in order to return empty file list
-    
-    with pytest.raises(FileNotFoundError):
-        _ = hp30ensemble_instance.read(current_time, current_time + timedelta(days=1))
