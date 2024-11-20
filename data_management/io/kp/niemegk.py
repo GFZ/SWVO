@@ -36,7 +36,7 @@ class KpNiemegk(object):
 
         if start_time.month != datetime.now(timezone.utc).month:
             if verbose:
-                print("We can only download and progress a Kp Niemegk file for the current month!")
+                logging.info("We can only download and progress a Kp Niemegk file for the current month!")
                 return
 
         temporary_dir = Path("./temp_kp_niemegk_wget")
@@ -44,17 +44,16 @@ class KpNiemegk(object):
 
         try:
             if verbose:
-                print(f"Downloading file {self.URL + self.NAME} ...")
+                logging.info(f"Downloading file {self.URL + self.NAME} ...")
 
             wget.download(self.URL + self.NAME, str(temporary_dir))
-            print("")
 
             # check if download was successfull
             if os.stat(str(temporary_dir / self.NAME)).st_size == 0:
                 raise FileNotFoundError(f"Error while downloading file: {self.URL + self.NAME}!")
 
             if verbose:
-                print(f"Processing file ...")
+                logging.info(f"Processing file ...")
             processed_df = self._process_single_file(temporary_dir)
 
             file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
@@ -77,7 +76,7 @@ class KpNiemegk(object):
                 data_single_file.to_csv(file_path, index=True, header=False)
 
                 if verbose:
-                    print(f"Saving processed file {file_path}")
+                    logging.info(f"Saving processed file {file_path}")
 
         finally:
             rmtree(temporary_dir)

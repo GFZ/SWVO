@@ -41,16 +41,15 @@ class F107SWPC:
 
         try:
             if verbose:
-                print("Downloading F10.7 data...")
+                logging.info("Downloading F10.7 data...")
 
             wget.download(self.URL + self.NAME_F107, str(temp_dir))
-            print()
 
             if os.stat(temp_dir / self.NAME_F107).st_size == 0:
                 raise FileNotFoundError(f"Error downloading file: {self.URL + self.NAME_F107}")
 
             if verbose:
-                print("Processing F10.7 data...")
+                logging.info("Processing F10.7 data...")
 
             new_data = self._read_f107_file(temp_dir / self.NAME_F107)
 
@@ -59,7 +58,7 @@ class F107SWPC:
 
                 if file_path.expanduser().exists():
                     if verbose:
-                        print(f"Updating {file_path}...")
+                        logging.info(f"Updating {file_path}...")
 
                     existing_data = pd.read_csv(file_path, parse_dates=["date"])
                     existing_data["date"] = pd.to_datetime(existing_data["date"]).dt.tz_localize(None)
@@ -70,10 +69,10 @@ class F107SWPC:
 
                     if verbose:
                         new_records = len(combined_data) - len(existing_data)
-                        print(f"Added {new_records} new records to {year}")
+                        logging.info(f"Added {new_records} new records to {year}")
                 else:
                     if verbose:
-                        print(f"Creating new file for {year}")
+                        logging.info(f"Creating new file for {year}")
                     combined_data = year_data
 
                 combined_data.to_csv(file_path, index=False)

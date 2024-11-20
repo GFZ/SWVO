@@ -42,7 +42,7 @@ class SWACE(object):
 
         if current_time - request_time > timedelta(hours=2):
             if verbose:
-                print("We can only download and process ACE RT data for the last two hours!")
+                logging.info("We can only download and process ACE RT data for the last two hours!")
             return
 
         temporary_dir = Path("./temp_sw_ace_wget")
@@ -50,25 +50,23 @@ class SWACE(object):
 
         try:
             if verbose:
-                print(f"Downloading file {self.URL + self.NAME_MAG} ...")
+                logging.info(f"Downloading file {self.URL + self.NAME_MAG} ...")
 
             wget.download(self.URL + self.NAME_MAG, str(temporary_dir))
-            print("")
 
             if os.stat(str(temporary_dir / self.NAME_MAG)).st_size == 0:
                 raise FileNotFoundError(f"Error while downloading file: {self.URL + self.NAME_MAG}!")
 
             if verbose:
-                print(f"Downloading file {self.URL + self.NAME_SWEPAM} ...")
+                logging.info(f"Downloading file {self.URL + self.NAME_SWEPAM} ...")
 
             wget.download(self.URL + self.NAME_SWEPAM, str(temporary_dir))
-            print("")
 
             if os.stat(str(temporary_dir / self.NAME_SWEPAM)).st_size == 0:
                 raise FileNotFoundError(f"Error while downloading file: {self.URL + self.NAME_SWEPAM}!")
 
             if verbose:
-                print(f"Processing file ...")
+                logging.info(f"Processing file ...")
             processed_df = self._process_single_file(temporary_dir)
 
             unique_dates = np.unique(processed_df.index.date)
@@ -83,14 +81,14 @@ class SWACE(object):
 
                 if file_path.exists():
                     if verbose:
-                        print(f"Found previous file for {date}. Loading and combining ...")
+                        logging.info(f"Found previous file for {date}. Loading and combining ...")
                     previous_df = self._read_single_file(file_path)
 
                     previous_df.drop("file_name", axis=1, inplace=True)
                     day_data = day_data.combine_first(previous_df)
 
                 if verbose:
-                    print(f"Saving processed file for {date}")
+                    logging.info(f"Saving processed file for {date}")
                 day_data.to_csv(file_path, index=True, header=True)
 
         finally:

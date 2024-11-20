@@ -107,13 +107,12 @@ class OMNILowRes(object):
                         continue
 
                 if verbose:
-                    print(f"Downloading file {self.URL + filename} ...")
+                    logging.info(f"Downloading file {self.URL + filename} ...")
 
                 wget.download(self.URL + filename, str(temporary_dir))
-                print("")
 
                 if verbose:
-                    print(f"Processing file ...")
+                    logging.info(f"Processing file ...")
 
                 processed_df = self._process_single_file(temporary_dir / filename)
                 processed_df.to_csv(file_path, index=True, header=True)

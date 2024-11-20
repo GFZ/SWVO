@@ -62,13 +62,12 @@ class HpGFZ(object):
                 for filename_download in filenames_download:
 
                     if verbose:
-                        print(f"Downloading file {self.URL + filename_download} ...")
+                        logging.info(f"Downloading file {self.URL + filename_download} ...")
 
                     wget.download(self.URL + filename_download, str(temporary_dir))
-                    print("")
 
                     if verbose:
-                        print(f"Processing file ...")
+                        logging.info(f"Processing file ...")
 
                     if file_path.exists():
                         if reprocess_files:

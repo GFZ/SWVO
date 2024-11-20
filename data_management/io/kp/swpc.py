@@ -47,19 +47,18 @@ class KpSWPC(object):
 
         try:
             if verbose:
-                print(f"Downloading file {self.URL + self.NAME} ...")
+                logging.info(f"Downloading file {self.URL + self.NAME} ...")
 
             wget.download(self.URL + self.NAME, str(temporary_dir))
-            print("")
 
             if verbose:
-                print(f"Processing file ...")
+                logging.info(f"Processing file ...")
             processed_df = self._process_single_file(temporary_dir)
 
             processed_df.to_csv(file_path, index=False, header=False)
 
             if verbose:
-                print(f"Saving processed file {file_path}")
+                logging.info(f"Saving processed file {file_path}")
 
         finally:
             rmtree(temporary_dir)
