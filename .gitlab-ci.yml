@@ -6,11 +6,11 @@ variables:
   PRE_RELEASE_BRANCH: PAGER-alpha
   DEVELOPMENT_BRANCH: PAGER-dev
   REGISTER: localhost
-  TEST_BRANCH: tests
 
 before_script:
+  - conda create -n deploy python=3.11 
   - cd /builds/pager-wp8/data_management/
-  - bash install.sh
+  - bash install.sh -e deploy
 
 stages:
   - unit-tests
@@ -21,25 +21,13 @@ stages:
 unittest:
   stage: unit-tests
   tags:
-    - testing
+    - Deployment
   script:
-    - cd /builds/pager-wp8/data_management/
+    - cd /builds/pager-wp8/data_management/tests/unittests
     - echo "Running unittests for data_management"
-    - python -m pytest -s tests/io/
+    - pytest .
   rules:
-    - if: ($CI_COMMIT_BRANCH == $TEST_BRANCH || $CI_COMMIT_BRANCH == $TEST_BRANCH || $CI_COMMIT_BRANCH == $TEST_BRANCH)
-
-
-# unittest:
-#   stage: unit-tests
-#   tags:
-#     - Deployment
-#   script:
-#     - cd /builds/pager-wp8/data_management/tests/unittests
-#     - echo "Running unittests for data_management"
-#     - pytest .
-#   rules:
-#     - if: ($CI_COMMIT_BRANCH == $PRE_RELEASE_BRANCH || $CI_COMMIT_BRANCH == $DEVELOPMENT_BRANCH || $CI_COMMIT_BRANCH == $PRODUCTION_BRANCH)
+    - if: ($CI_COMMIT_BRANCH == $PRE_RELEASE_BRANCH || $CI_COMMIT_BRANCH == $DEVELOPMENT_BRANCH || $CI_COMMIT_BRANCH == $PRODUCTION_BRANCH)
 
 #integrationtest:
 #  stage: integration-tests
