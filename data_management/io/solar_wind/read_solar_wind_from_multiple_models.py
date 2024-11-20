@@ -6,7 +6,7 @@ import pandas as pd
 from data_management.io.solar_wind import SWACE, SWOMNI, SWSWIFTEnsemble
 
 
-def read_solar_wind_with_backups(
+def read_solar_wind_from_multiple_models(
     start_time: datetime,
     end_time: datetime,
     model_order: list = None,

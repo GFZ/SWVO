@@ -3,43 +3,41 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 
-from data_management.io.kp import KpEnsemble, KpNiemegk, KpOMNI, KpSWPC
+from data_management.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ
 
 
-def read_kp_with_backups(
+def read_hp_from_multiple_models(
     start_time: datetime,
     end_time: datetime,
+    hp_index: str = "hp30",
     model_order: list = None,
     reduce_ensemble=None,
     synthetic_now_time: datetime = datetime.now(timezone.utc),
     download=False,
 ):
 
+    hp_index = hp_index.lower()
+
     if model_order is None:
-        model_order = [KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()]
+
+        if hp_index == "hp30":
+            model_order = [Hp30GFZ(), Hp30Ensemble()]
+        elif hp_index == "hp60":
+            model_order = [Hp60GFZ(), Hp60Ensemble()]
+        else:
+            raise ValueError(f"Requested {hp_index} index does not exist! Possible options: hp30, hp60")
 
     data_out = [pd.DataFrame()]
 
     for model in model_order:
 
-        if isinstance(model, KpOMNI):
-            print("Reading omni...")
+        if isinstance(model, model_order[0].__class__):
+            print(f"Reading {hp_index}...")
             data_one_model = [model.read(start_time, end_time, download=download)]
-            model_label = "omni"
+            model_label = model.__class__.__name__
 
-        if isinstance(model, KpNiemegk):
-            print("Reading niemegk...")
-            data_one_model = [model.read(start_time, end_time, download=download)]
-            model_label = "niemegk"
-
-        # Forecasting models are called with synthetic now time
-        if isinstance(model, KpSWPC):
-            print("Reading swpc...")
-            data_one_model = [model.read(synthetic_now_time.replace(hour=0, minute=0, second=0), end_time, download=download)]
-            model_label = "swpc"
-
-        if isinstance(model, KpEnsemble):
-            print("Reading PAGER Kp ensemble...")
+        if isinstance(model, model_order[1].__class__):
+            print(f"Reading {hp_index} ensemble...")
 
             # we are trying to read the most recent file; it this fails, we go one step back (1 hour) and see if this file is present
 
@@ -66,11 +64,11 @@ def read_kp_with_backups(
 
                     data_curr_time = []
                     for ie in range(num_ens_members):
-                        data_curr_time.append(data_one_model[ie].loc[data_one_model[ie].index[it], "kp"])
+                        data_curr_time.append(data_one_model[ie].loc[data_one_model[ie].index[it], hp_index])
 
                     kp_mean_ensembles.append(np.mean(data_curr_time))
 
-                data_one_model = [pd.DataFrame(index=data_one_model[0].index, data={"kp": kp_mean_ensembles})]
+                data_one_model = [pd.DataFrame(index=data_one_model[0].index, data={hp_index: kp_mean_ensembles})]
 
             elif reduce_ensemble is None:
                 data_out = data_out * num_ens_members
@@ -79,10 +77,10 @@ def read_kp_with_backups(
         # we making it a list in case of ensemble members
         for i, _ in enumerate(data_one_model):
             data_one_model[i]["model"] = model_label
-            data_one_model[i].loc[data_one_model[i]["kp"].isna(), "model"] = None
+            data_one_model[i].loc[data_one_model[i][hp_index].isna(), "model"] = None
             data_out[i] = data_out[i].combine_first(data_one_model[i])
 
-            if data_out[i]["kp"].isna().sum() > 0:
+            if data_out[i][hp_index].isna().sum() > 0:
                 any_nans_found = True
 
         # if no NaNs are present anymore, we don't have to read backups

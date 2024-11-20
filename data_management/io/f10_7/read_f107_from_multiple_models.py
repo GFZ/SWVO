@@ -6,7 +6,7 @@ import pandas as pd
 from data_management.io.f10_7 import F107OMNI, F107SWPC
 
 
-def read_f107_with_backups(
+def read_f107_from_multiple_models(
     start_time: datetime,
     end_time: datetime,
     model_order: list = None,

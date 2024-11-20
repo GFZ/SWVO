@@ -4,9 +4,9 @@ import pandas as pd
 
 from data_management.io.kp import KpNiemegk, KpSWPC, KpOMNI
 from data_management.io.omni import OMNILowRes, OMNIHighRes
-from data_management.io.kp import read_kp_with_backups
+from data_management.io.kp import read_kp_from_multiple_models
 from data_management.io.hp import Hp30GFZ, Hp60GFZ, Hp30Ensemble
-from data_management.io.solar_wind import SWACE, SWOMNI, read_solar_wind_with_backups
+from data_management.io.solar_wind import SWACE, SWOMNI, read_solar_wind_from_multiple_models
 
 from matplotlib import pyplot as plt
 
@@ -38,7 +38,7 @@ end_time = datetime(end_time.year, end_time.month, end_time.day) - timedelta(sec
 
 #print(Hp30Ensemble().read(datetime.today(), datetime.today()+timedelta(hours=30)))
 
-# data_kp_all = read_kp_with_backups(datetime.today()-timedelta(days=12), datetime.today()+timedelta(days=2))
+# data_kp_all = read_kp_from_multiple_models(datetime.today()-timedelta(days=12), datetime.today()+timedelta(days=2))
 # print(data_kp_all[0])
 # print(data_kp_all[0].loc["2024-09-21 11:00:00", "file_name"])
 
@@ -61,7 +61,7 @@ end_time = datetime(end_time.year, end_time.month, end_time.day) - timedelta(sec
 #print(SWACE().read(datetime.today()-timedelta(hours=4), datetime.today()+timedelta(hours=3)))
 
 
-data_sw_all = read_solar_wind_with_backups(datetime.now(timezone.utc)-timedelta(hours=2), datetime.now(timezone.utc)+timedelta(hours=1))
+data_sw_all = read_solar_wind_from_multiple_models(datetime.now(timezone.utc)-timedelta(hours=2), datetime.now(timezone.utc)+timedelta(hours=1))
 #with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
 print(data_sw_all[0])
 
