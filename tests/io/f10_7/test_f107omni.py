@@ -84,6 +84,7 @@ def test_read_with_download(f107omni, mock_f107omni_data, mocker):
 
     assert not df.empty
     assert all(df["f107"] == 150.0)
+    assert "f107" in df.columns
     assert all(idx.hour == 0 for idx in df.index)
     assert all(idx.tzinfo is not None for idx in df.index)
     assert all(idx.tzinfo is timezone.utc for idx in df.index)
@@ -94,6 +95,7 @@ def test_process_single_file(f107omni):
     df = f107omni._process_single_file(file)
     assert isinstance(df, pd.DataFrame)
     assert len(df) > 0
+    assert "f107" in df.columns
 
 
 def test_read_single_file(f107omni):
@@ -102,6 +104,7 @@ def test_read_single_file(f107omni):
     df = f107omni._read_single_file(csv_file)
     assert isinstance(df, pd.DataFrame)
     assert len(df) > 0
+    assert "f107" in df.columns
 
 
 def test_start_year_behind(f107omni, mocker, mock_f107omni_data):

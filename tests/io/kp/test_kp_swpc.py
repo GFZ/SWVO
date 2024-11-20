@@ -146,4 +146,5 @@ def test_read_default_end_time(kp_swpc_instance):
 
     assert isinstance(data, pd.DataFrame)
     assert not data.empty
+    assert "kp" in data.columns
     assert data.index[-1] <= current_time + timedelta(days=3) + timedelta(hours=3)

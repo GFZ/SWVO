@@ -104,4 +104,5 @@ def test_read_with_default_times(kp_ensemble_instance):
     assert isinstance(data, list)
     assert len(data) > 0
     assert isinstance(data[0], pd.DataFrame)
+    assert all("kp" in i.columns for i in data)
     assert not data[0].empty

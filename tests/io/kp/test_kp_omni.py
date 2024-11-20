@@ -87,6 +87,7 @@ def test_read_with_download(kp_omni, mock_kp_omni_data, mocker):
     kp_omni.download_and_process.assert_called_once()
 
     assert not df.empty
+    assert "kp" in df.columns
     assert all(df["kp"] == 150.0)
     assert all(idx.hour % 3== 0 for idx in df.index)
     assert all(idx.tzinfo is not None for idx in df.index)
@@ -97,6 +98,7 @@ def test_process_single_file(kp_omni):
     df = kp_omni._process_single_file(file)
     assert isinstance(df, pd.DataFrame)
     assert len(df) > 0
+    assert "kp" in df.columns
 
 
 def test_read_single_file(kp_omni):
@@ -105,6 +107,7 @@ def test_read_single_file(kp_omni):
     df = kp_omni._read_single_file(csv_file)
     assert isinstance(df, pd.DataFrame)
     assert len(df) > 0
+    assert "kp" in df.columns
 
 
 def test_start_year_behind(kp_omni, mocker, mock_kp_omni_data):

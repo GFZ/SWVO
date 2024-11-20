@@ -77,6 +77,7 @@ def test_process_single_file(swomni):
     file = Path(TEST_DIR) / "data/omni_min2020.asc"
     df = swomni._process_single_file(file)
     assert isinstance(df, pd.DataFrame)
+    assert all(column in df.columns for column in ["bavg", "by_gsm", "bz_gsm", "speed", "proton_density", "temperature", "bx_gsm"])
     assert len(df) > 0
 
 
@@ -85,6 +86,7 @@ def test_read_single_file(swomni):
     csv_file = Path(TEST_DIR) / "data/OMNI_HIGH_RES_1min_2020.csv"
     df = swomni._read_single_file(csv_file)
     assert isinstance(df, pd.DataFrame)
+    assert all(column in df.columns for column in ["bavg", "by_gsm", "bz_gsm", "speed", "proton_density", "temperature", "bx_gsm"])
     assert len(df) > 0
 
 

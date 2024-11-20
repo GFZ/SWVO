@@ -67,6 +67,7 @@ def test_read_with_download(hp30gfz, mocker, mock_hp_data):
     # hp30gfz.download_and_process.assert_called_once_with(start_time, end_time)
     assert not df.empty
     assert df.index.tz == timezone.utc
+    assert "hp30" in df.columns
 
 
 def test_start_year_behind(hp30gfz, mocker, mock_hp_data):
@@ -100,6 +101,7 @@ def test_process_single_file(hp30gfz, tmp_path, mocker):
     assert len(df) == 3
     assert df.index[0] == pd.Timestamp("2020-01-01 00:00:00")
     assert df.iloc[0]["hp30"] == 15.0
+    assert "hp30" in df.columns
 
 
 def test_get_processed_file_list(hp30gfz):

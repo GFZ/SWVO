@@ -72,7 +72,9 @@ def test_read_with_download(omni_low_res, mocker):
 def test_process_single_file(omni_low_res):
     file = Path(TEST_DIR) / "data/omni2_2020.dat"
     df = omni_low_res._process_single_file(file)
+
     assert isinstance(df, pd.DataFrame)
+    assert all(column in df.columns for column in ["kp", "dst", "f107"])
     assert len(df) > 0
 
 
@@ -81,6 +83,7 @@ def test_read_single_file(omni_low_res):
     csv_file = Path(TEST_DIR) / "data/OMNI_LOW_RES_2020.csv"
     df = omni_low_res._read_single_file(csv_file)
     assert isinstance(df, pd.DataFrame)
+    assert all(column in df.columns for column in ["kp", "dst", "f107"])
     assert len(df) > 0
 
 

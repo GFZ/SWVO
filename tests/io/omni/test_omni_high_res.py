@@ -70,6 +70,7 @@ def test_process_single_file(omni_high_res):
     df = omni_high_res._process_single_file(file)
     assert isinstance(df, pd.DataFrame)
     assert len(df) > 0
+    assert all(column in df.columns for column in ["bavg", "by_gsm", "bz_gsm", "speed", "proton_density", "temperature", "bx_gsm"])
 
 
 def test_read_single_file(omni_high_res):
@@ -77,6 +78,7 @@ def test_read_single_file(omni_high_res):
     csv_file = Path(TEST_DIR) / "data/OMNI_HIGH_RES_1min_2020.csv"
     df = omni_high_res._read_single_file(csv_file)
     assert isinstance(df, pd.DataFrame)
+    assert all(column in df.columns for column in ["bavg", "by_gsm", "bz_gsm", "speed", "proton_density", "temperature", "bx_gsm"])
     assert len(df) > 0
 
 

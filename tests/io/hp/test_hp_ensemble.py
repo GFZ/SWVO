@@ -106,4 +106,5 @@ def test_read_with_default_times(instance_type="hp30"):
     assert isinstance(data, list)
     assert len(data) == 3
     assert isinstance(data[0], pd.DataFrame)
+    assert all("hp30" in i.columns for i in data)
     assert data[0].index.tz == timezone.utc
