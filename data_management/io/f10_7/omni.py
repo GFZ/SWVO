@@ -24,6 +24,7 @@ class F107OMNI(OMNILowRes):
         df = pd.DataFrame(index=data_out.index)
 
         df["f107"] = data_out["f107"]
+        df["file_name"] = data_out["file_name"]
 
         # we return it just every 24 hours
         df.drop(df[data_out.index.hour % 24 != 0].index, axis=0, inplace=True)

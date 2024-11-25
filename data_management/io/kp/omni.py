@@ -23,7 +23,7 @@ class KpOMNI(OMNILowRes):
             end_time = end_time.replace(tzinfo=timezone.utc)
 
         df["kp"] = data_out["kp"]
-
+        df["file_name"] = data_out["file_name"]
         # we return it just every 3 hours
         df.drop(df[data_out.index.hour % 3 != 0].index, axis=0, inplace=True)
         df = df.truncate(before=start_time - timedelta(hours=2.9999), after=end_time + timedelta(hours=2.9999))
