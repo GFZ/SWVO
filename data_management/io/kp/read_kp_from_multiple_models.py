@@ -27,23 +27,22 @@ def read_kp_from_multiple_models(
     for model in model_order:
 
         if isinstance(model, KpOMNI):
-            print("Reading omni...")
+            print(f"Reading omni from {start_time} to {end_time}")
             data_one_model = [model.read(start_time, end_time, download=download)]
             model_label = "omni"
 
         if isinstance(model, KpNiemegk):
-            print("Reading niemegk...")
+            print(f"Reading niemegk from {start_time} to {end_time}")
             data_one_model = [model.read(start_time, end_time, download=download)]
             model_label = "niemegk"
 
         # Forecasting models are called with synthetic now time
         if isinstance(model, KpSWPC):
-            print("Reading swpc...")
+            print(f"Reading swpc from {synthetic_now_time} to {end_time}")
             data_one_model = [model.read(synthetic_now_time.replace(hour=0, minute=0, second=0), end_time, download=download)]
             model_label = "swpc"
 
         if isinstance(model, KpEnsemble):
-            print("Reading PAGER Kp ensemble...")
 
             # we are trying to read the most recent file; it this fails, we go one step back (1 hour) and see if this file is present
 
@@ -57,7 +56,8 @@ def read_kp_from_multiple_models(
                 target_time = target_time.replace(hour=0, minute=0, second=0)
 
                 data_one_model = model.read(target_time, end_time)
-
+            
+            print(f"Reading PAGER Kp ensemble from {target_time} to {end_time}")
             model_label = "ensemble"
 
             num_ens_members = len(data_one_model)
@@ -89,6 +89,7 @@ def read_kp_from_multiple_models(
             if data_out[i]["kp"].isna().sum() > 0:
                 any_nans_found = True
 
+        logging.info(f"Found {data_out[0]['kp'].isna().sum()} NaNs in {model_label}")
         # if no NaNs are present anymore, we don't have to read backups
         if not any_nans_found:
             break
