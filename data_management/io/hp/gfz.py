@@ -35,6 +35,8 @@ class HpGFZ(object):
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.index_number = index[2:]
 
+        logging.info(f"{self.index.upper()} GFZ data directory: {self.data_dir}")
+        
         (self.data_dir / str(self.index)).mkdir(exist_ok=True)
 
 

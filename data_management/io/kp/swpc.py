@@ -28,6 +28,8 @@ class KpSWPC(object):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
+        logging.info(f"Kp SWPC  data directory: {self.data_dir}")
+
     def download_and_process(self, target_date: datetime, reprocess_files: bool = False, verbose: bool = False):
 
         if target_date.date() < datetime.now(timezone.utc).date():

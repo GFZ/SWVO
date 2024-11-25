@@ -34,6 +34,8 @@ class SWACE(object):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
+        logging.info(f"ACE data directory: {self.data_dir}")
+
     def download_and_process(self, request_time: datetime, verbose: bool = False):
         """
         Download and process ACE data, splitting data across midnight into appropriate day files.

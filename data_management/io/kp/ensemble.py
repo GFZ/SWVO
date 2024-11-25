@@ -20,6 +20,8 @@ class KpEnsemble(object):
 
         self.data_dir = Path(data_dir)
 
+        logging.info(f"Kp Ensemble data directory: {self.data_dir}")
+
         if not self.data_dir.exists():
             raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrive data!")
 

@@ -30,6 +30,8 @@ class KpNiemegk(object):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
+        logging.info(f"Kp Niemegk  data directory: {self.data_dir}")
+
     def download_and_process(
         self, start_time: datetime, end_time: datetime, reprocess_files: bool = False, verbose: bool = False
     ):

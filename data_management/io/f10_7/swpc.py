@@ -15,6 +15,7 @@ class F107SWPC:
     NAME_F107 = "daily-solar-indices.txt"
 
     def __init__(self, data_dir: str | Path = None):
+
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
@@ -22,6 +23,8 @@ class F107SWPC:
 
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
+
+        logging.info(f"SWPC F10.7 data directory: {self.data_dir}")
 
     def _get_processed_file_list(
         self, start_time: datetime, end_time: datetime
