@@ -24,6 +24,7 @@ def mock_f107omni_data():
         {
             "t": test_dates,
             "f107": [150.0] * len(test_dates),
+            "file_name": "some_file",
             "timestamp": test_dates.strftime("%Y-%m-%d %H:%M:%S"),
         }
     )
@@ -118,6 +119,7 @@ def test_start_year_behind(f107omni, mocker, mock_f107omni_data):
     df = pd.DataFrame(
         {
             "f107": [],
+            "file_name": [],
         }
     )
     df.index = pd.DatetimeIndex([])

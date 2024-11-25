@@ -26,6 +26,7 @@ def mock_kp_omni_data():
         {
             "t": test_dates,
             "kp": [150.0] * len(test_dates),
+            "file_name": "some_file",
             "timestamp": test_dates.strftime("%Y-%m-%d %H:%M:%S"),
         }
     )
@@ -123,6 +124,7 @@ def test_start_year_behind(kp_omni, mocker, mock_kp_omni_data):
     df = pd.DataFrame(
         {
             "kp": [],
+            "file_name": [],
         }
     )
     df.index = pd.DatetimeIndex([])
