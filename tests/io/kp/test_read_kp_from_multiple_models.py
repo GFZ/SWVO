@@ -38,7 +38,6 @@ def sample_times():
 
 def test_basic_historical_read(sample_times):
 
-    print(ENV_VAR_NAMES["RT_KP_SWPC_STREAM_DIR"])
     data = read_kp_from_multiple_models(
         start_time=sample_times["past_start"],
         end_time=sample_times["past_end"],
@@ -58,7 +57,7 @@ def test_basic_forecast_read(sample_times):
     data = read_kp_from_multiple_models(
         start_time=sample_times["future_start"],
         end_time=sample_times["future_end"],
-        model_order=[KpEnsemble(), KpSWPC()],
+        model_order=[KpEnsemble(data_dir=f"{str(DATA_DIR)}/ensemble"), KpSWPC()],
         synthetic_now_time=sample_times["now"],
     )
 
@@ -73,7 +72,7 @@ def test_ensemble_reduce_mean(sample_times):
     data = read_kp_from_multiple_models(
         start_time=sample_times["future_start"],
         end_time=sample_times["future_end"],
-        model_order=[KpEnsemble()],
+        model_order=[KpEnsemble(data_dir=f"{str(DATA_DIR)}/ensemble")],
         reduce_ensemble="mean",
         synthetic_now_time=sample_times["now"],
     )
@@ -89,7 +88,7 @@ def test_full_ensemble(sample_times):
     data = read_kp_from_multiple_models(
         start_time=sample_times["future_start"],
         end_time=sample_times["future_end"],
-        model_order=[KpEnsemble()],
+        model_order=[KpEnsemble(data_dir=f"{str(DATA_DIR)}/ensemble")],
         reduce_ensemble=None,
         synthetic_now_time=sample_times["now"],
     )
@@ -107,7 +106,7 @@ def test_time_ordering(sample_times):
     data = read_kp_from_multiple_models(
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
-        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
+        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(data_dir=f"{str(DATA_DIR)}/ensemble"), KpSWPC()],
         synthetic_now_time=sample_times["now"],
     )
 
@@ -126,7 +125,7 @@ def test_time_boundaries(sample_times):
     data = read_kp_from_multiple_models(
         start_time=start,
         end_time=end,
-        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
+        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(data_dir=f"{str(DATA_DIR)}/ensemble"), KpSWPC()],
         synthetic_now_time=sample_times["now"],
     )
 
@@ -148,7 +147,7 @@ def test_kp_value_range(sample_times):
     data = read_kp_from_multiple_models(
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
-        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
+        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(data_dir=f"{str(DATA_DIR)}/ensemble"), KpSWPC()],
         synthetic_now_time=sample_times["now"],
     )
 
@@ -165,7 +164,7 @@ def test_model_transition(sample_times):
     data = read_kp_from_multiple_models(
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
-        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
+        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(data_dir=f"{str(DATA_DIR)}/ensemble"), KpSWPC()],
         synthetic_now_time=sample_times["now"],
     )
 
