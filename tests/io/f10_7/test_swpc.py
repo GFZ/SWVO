@@ -141,7 +141,7 @@ def test_read_with_no_data(f107_instance):
         
         assert isinstance(data, pd.DataFrame)
         assert len(data) == 0
-        assert all(col in data.columns for col in ["date", "f107"])
+        assert all(col in data.columns for col in ["f107"])
 
 
 
@@ -173,7 +173,7 @@ def test_read_with_existing_data(f107_instance):
 
     assert isinstance(data, pd.DataFrame)
     assert len(data) > 0
-    assert all(col in data.columns for col in ["date", "f107"])
+    assert all(col in data.columns for col in ["f107"])
 
 
 @pytest.mark.parametrize("test_year", [2019, 2025])
@@ -247,4 +247,4 @@ def test_read_with_partial_data(f107_instance, caplog):
 
         assert isinstance(data, pd.DataFrame)
         assert len(data) > 0
-        assert all(col in data.columns for col in ["date", "f107"])
+        assert all(col in data.columns for col in ["f107"])

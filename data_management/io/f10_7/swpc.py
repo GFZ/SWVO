@@ -96,6 +96,11 @@ class F107SWPC:
 
         assert start_time < end_time, "start_time must be before end_time"
 
+        if not start_time.tzinfo:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+        if not end_time.tzinfo:
+            end_time = end_time.replace(tzinfo=timezone.utc)
+
         current_year = datetime.now().year
         file_paths, file_intervals = self._get_processed_file_list(start_time, end_time)
 
@@ -130,7 +135,12 @@ class F107SWPC:
             dfs.append(year_data)
 
         if not dfs:
-            return pd.DataFrame(columns=["date", "f107"])
+            return pd.DataFrame(columns=["f107"])
 
         data_out = pd.concat(dfs)
+
+        data_out.index = pd.to_datetime(data_out["date"])
+        data_out = data_out.drop(columns=["date"])
+        data_out.index = data_out.index.tz_localize("UTC")
+        data_out = data_out.truncate(before=start_time, after=end_time)
         return data_out
