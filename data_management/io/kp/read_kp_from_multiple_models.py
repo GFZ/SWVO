@@ -98,7 +98,7 @@ def read_kp_from_multiple_models(
             if data_out[i]["kp"].isna().sum() > 0:
                 any_nans_found = True
 
-        logging.info(f"Found {data_out[0]['kp'].isna().sum()} NaNs in {model_label}")
+            logging.info(f"Found {data_out[i]['kp'].isna().sum()} NaNs in {model_label}")
         # if no NaNs are present anymore, we don't have to read backups
         if not any_nans_found:
             break

@@ -50,6 +50,8 @@ def test_basic_historical_read(sample_times):
     assert isinstance(data, pd.DataFrame)
     assert "kp" in data.columns
     assert "model" in data.columns
+    assert data.loc["2024-11-22 18:00:00+00:00"].model == "omni"
+    assert data.loc["2024-11-22 21:00:00+00:00"].model == "niemegk"
     assert not data["kp"].isna().all()
     assert not data["file_name"].isna().all()
 
@@ -67,6 +69,7 @@ def test_basic_forecast_read(sample_times):
     assert all("kp" in d.columns for d in data)
     assert all("model" in d.columns for d in data)
     assert all(not d["file_name"].isna().all() for d in data)
+    assert all(all(d.model == "ensemble") for d in data)
 
 
 def test_ensemble_reduce_mean(sample_times):
