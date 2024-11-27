@@ -29,12 +29,21 @@ def read_kp_from_multiple_models(
         if isinstance(model, KpOMNI):
             print(f"Reading omni from {start_time} to {end_time}")
             data_one_model = [model.read(start_time, end_time, download=download)]
+
+            for i, _ in enumerate(data_one_model):
+                data_one_model[i].loc[synthetic_now_time:end_time, "kp"] = np.nan
             model_label = "omni"
+            logging.info(f"Setting NaNs in OMNI from {synthetic_now_time} to {end_time}")
 
         if isinstance(model, KpNiemegk):
             print(f"Reading niemegk from {start_time} to {end_time}")
             data_one_model = [model.read(start_time, end_time, download=download)]
+            
+            for i, _ in enumerate(data_one_model):
+                data_one_model[i].loc[synthetic_now_time:end_time, "kp"] = np.nan
+            
             model_label = "niemegk"
+            logging.info(f"Setting NaNs in Niemegk from {synthetic_now_time} to {end_time}")
 
         # Forecasting models are called with synthetic now time
         if isinstance(model, KpSWPC):

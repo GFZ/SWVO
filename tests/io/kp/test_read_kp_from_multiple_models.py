@@ -12,16 +12,18 @@ TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
 
 
-ENV_VAR_NAMES = {
-    "OMNI_LOW_RES_STREAM_DIR": f"{str(DATA_DIR)}",
-    "KP_ENSEMBLE_OUTPUT_DIR": f"{str(DATA_DIR)}/ensemble",
-    "RT_KP_NIEMEGK_STREAM_DIR": f"{str(DATA_DIR)}/Niemegk",
-    "RT_KP_SWPC_STREAM_DIR": f"{str(DATA_DIR)}/SWPC",
-}
+@pytest.fixture(scope="session", autouse=True)
+def set_env_var():
+    ENV_VAR_NAMES = {
+        "OMNI_LOW_RES_STREAM_DIR": f"{str(DATA_DIR)}",
+        "KP_ENSEMBLE_OUTPUT_DIR": f"{str(DATA_DIR)}/ensemble",
+        "RT_KP_NIEMEGK_STREAM_DIR": f"{str(DATA_DIR)}/Niemegk",
+        "RT_KP_SWPC_STREAM_DIR": f"{str(DATA_DIR)}/SWPC",
+    }
 
 
-for key, var in ENV_VAR_NAMES.items():
-    os.environ[key] = ENV_VAR_NAMES[key]
+    for key, var in ENV_VAR_NAMES.items():
+        os.environ[key] = ENV_VAR_NAMES[key]
 
 
 @pytest.fixture
@@ -57,7 +59,7 @@ def test_basic_forecast_read(sample_times):
     data = read_kp_from_multiple_models(
         start_time=sample_times["future_start"],
         end_time=sample_times["future_end"],
-        model_order=[KpEnsemble(data_dir=f"{str(DATA_DIR)}/ensemble"), KpSWPC()],
+        model_order=[KpEnsemble(), KpSWPC()],
         synthetic_now_time=sample_times["now"],
     )
 
@@ -72,7 +74,7 @@ def test_ensemble_reduce_mean(sample_times):
     data = read_kp_from_multiple_models(
         start_time=sample_times["future_start"],
         end_time=sample_times["future_end"],
-        model_order=[KpEnsemble(data_dir=f"{str(DATA_DIR)}/ensemble")],
+        model_order=[KpEnsemble()],
         reduce_ensemble="mean",
         synthetic_now_time=sample_times["now"],
     )
@@ -88,7 +90,7 @@ def test_full_ensemble(sample_times):
     data = read_kp_from_multiple_models(
         start_time=sample_times["future_start"],
         end_time=sample_times["future_end"],
-        model_order=[KpEnsemble(data_dir=f"{str(DATA_DIR)}/ensemble")],
+        model_order=[KpEnsemble()],
         reduce_ensemble=None,
         synthetic_now_time=sample_times["now"],
     )
@@ -106,15 +108,12 @@ def test_time_ordering(sample_times):
     data = read_kp_from_multiple_models(
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
-        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(data_dir=f"{str(DATA_DIR)}/ensemble"), KpSWPC()],
+        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
         synthetic_now_time=sample_times["now"],
     )
 
-    if isinstance(data, list):
-        for d in data:
-            assert d.index.is_monotonic_increasing
-    else:
-        assert data.index.is_monotonic_increasing
+    for d in data:
+        assert d.index.is_monotonic_increasing
 
 
 def test_time_boundaries(sample_times):
@@ -125,7 +124,7 @@ def test_time_boundaries(sample_times):
     data = read_kp_from_multiple_models(
         start_time=start,
         end_time=end,
-        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(data_dir=f"{str(DATA_DIR)}/ensemble"), KpSWPC()],
+        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
         synthetic_now_time=sample_times["now"],
     )
 
@@ -142,12 +141,21 @@ def test_invalid_time_range(sample_times):
         )
 
 
+def test_date_more_than_3_days_in_future(sample_times):
+    with pytest.raises(ValueError, match="We can only read 3 days at a time of Kp SWPC!"):
+        read_kp_from_multiple_models(
+            start_time=sample_times["now"] - timedelta(days=6),
+            end_time=sample_times["now"] + timedelta(days=4),
+            synthetic_now_time=sample_times["now"],
+        )
+
+
 def test_kp_value_range(sample_times):
 
     data = read_kp_from_multiple_models(
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
-        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(data_dir=f"{str(DATA_DIR)}/ensemble"), KpSWPC()],
+        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
         synthetic_now_time=sample_times["now"],
     )
 
@@ -164,21 +172,14 @@ def test_model_transition(sample_times):
     data = read_kp_from_multiple_models(
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
-        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(data_dir=f"{str(DATA_DIR)}/ensemble"), KpSWPC()],
+        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
         synthetic_now_time=sample_times["now"],
     )
 
-    if not isinstance(data, list):
+    assert all([df.loc["2024-11-25 00:00:00+00:00"].model == "ensemble" for df in data])
+    assert all([df.loc["2024-11-24 21:00:00+00:00"].model == "niemegk" for df in data])
+    assert not all([df.loc["2024-11-24 21:00:00+00:00"].model == "omni" for df in data])
 
-        models = data["model"].unique()
-        assert len(models) > 1, "Should have data from multiple models"
-
-        for model in models:
-            if model is not None:
-                model_data = data[data["model"] == model]["kp"]
-                if len(model_data) > 1:
-                    jumps = abs(model_data.diff()).dropna()
-                    assert (jumps <= 3).all(), f"Large jumps found in {model} data"
 
 
 def test_data_consistency(sample_times):

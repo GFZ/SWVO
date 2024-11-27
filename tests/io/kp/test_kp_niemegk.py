@@ -20,8 +20,8 @@ def setup_and_cleanup():
 
     yield
 
-    # if TEST_DIR.exists():
-    #     shutil.rmtree(TEST_DIR)
+    if TEST_DIR.exists():
+        shutil.rmtree(TEST_DIR)
 
 
 @pytest.fixture
