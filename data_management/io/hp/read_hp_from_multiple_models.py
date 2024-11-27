@@ -6,7 +6,7 @@ import pandas as pd
 import logging
 from typing import List, Type
 
-from data_management.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ
+from data_management.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ, HpGFZ, HpEnsemble
 
 
 def read_hp_from_multiple_models(
@@ -34,13 +34,16 @@ def read_hp_from_multiple_models(
 
     for model in model_order:
 
-        if isinstance(model, model_order[0].__class__):
-            print(f"Reading {hp_index}...")
+        if isinstance(model, HpGFZ):
+            print(model_order[0].__class__)
+            print(f"Reading {hp_index} from {start_time} to {end_time}")
             data_one_model = [model.read(start_time, end_time, download=download)]
             model_label = model.__class__.__name__
 
-        if isinstance(model, model_order[1].__class__):
-            print(f"Reading {hp_index} ensemble...")
+            for i, _ in enumerate(data_one_model):
+                data_one_model[i].loc[synthetic_now_time:end_time, hp_index] = np.nan
+
+        if isinstance(model, HpEnsemble):
 
             # we are trying to read the most recent file; it this fails, we go one step back (1 hour) and see if this file is present
 
@@ -56,6 +59,8 @@ def read_hp_from_multiple_models(
                 data_one_model = model.read(target_time, end_time)
 
             model_label = "ensemble"
+
+            print(f"Reading {hp_index} ensemble {target_time} to {end_time}")
 
             num_ens_members = len(data_one_model)
 
@@ -85,6 +90,8 @@ def read_hp_from_multiple_models(
 
             if data_out[i][hp_index].isna().sum() > 0:
                 any_nans_found = True
+
+            logging.info(f"Found {data_out[i][hp_index].isna().sum()} NaNs in {model_label}")
 
         # if no NaNs are present anymore, we don't have to read backups
         if not any_nans_found:
