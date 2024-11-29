@@ -164,7 +164,7 @@ class OMNIHighRes(object):
         if not data_out.empty:
             if not data_out.index.tzinfo:
                 data_out.index = data_out.index.tz_localize("UTC")
-
+                
         data_out = data_out.truncate(
             before=start_time - timedelta(minutes=cadence_min - 0.0000001),
             after=end_time + timedelta(minutes=cadence_min + 0.0000001),

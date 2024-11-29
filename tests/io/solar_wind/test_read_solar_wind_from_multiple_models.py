@@ -1,0 +1,156 @@
+import pytest
+from datetime import datetime, timezone, timedelta
+import pandas as pd
+import numpy as np
+import os
+from data_management.io.solar_wind import SWOMNI, SWACE, SWSWIFTEnsemble, read_solar_wind_from_multiple_models
+from pathlib import Path
+
+from unittest.mock import patch
+
+TEST_DIR = os.path.dirname(__file__)
+DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
+
+
+@pytest.fixture(scope="session", autouse=True)
+def set_env_var():
+    ENV_VAR_NAMES = {
+        "OMNI_HIGH_RES_STREAM_DIR": f"{str(DATA_DIR)}",
+        "SWIFT_ENSEMBLE_OUTPUT_DIR": f"{str(DATA_DIR)}/ensemble",
+        "RT_SW_ACE_STREAM_DIR": f"{str(DATA_DIR)}/ACE_RT",
+    }
+
+    for key, var in ENV_VAR_NAMES.items():
+        os.environ[key] = ENV_VAR_NAMES[key]
+
+
+@pytest.fixture
+def sample_times():
+    now = datetime(2024, 11, 25).replace(tzinfo=timezone.utc, minute=0, second=0, microsecond=0)
+    return {
+        "past_start": now - timedelta(days=5),
+        "past_end": now - timedelta(days=2),
+        "future_start": now + timedelta(days=1),
+        "future_end": now + timedelta(days=3),
+        "now": now,
+    }
+
+
+@pytest.fixture
+def expected_columns():
+    return [
+        "proton_density",
+        "speed",
+        "bavg",
+        "temperature",
+        "bx_gsm",
+        "by_gsm",
+        "bz_gsm",
+        "file_name",
+    ]
+
+
+def test_basic_historical_read(sample_times, expected_columns):
+
+    data = read_solar_wind_from_multiple_models(
+        start_time=sample_times["past_start"],
+        end_time=sample_times["past_end"],
+        model_order=[SWOMNI(), SWACE()],
+        synthetic_now_time=sample_times["now"],
+    )
+
+    print(data)
+
+    assert isinstance(data, pd.DataFrame)
+    assert all(col in data.columns for col in expected_columns)
+    assert data.loc["2024-11-22 18:00:00+00:00"].model == "omni"
+    assert data.loc["2024-11-23 00:00:00+00:00"].model == "ace"
+    assert not data["file_name"].isna().all()
+
+
+def test_basic_forecast_read(sample_times, expected_columns):
+
+    data = read_solar_wind_from_multiple_models(
+        start_time=sample_times["future_start"],
+        end_time=sample_times["future_end"],
+        model_order=[SWSWIFTEnsemble()],
+        synthetic_now_time=sample_times["now"],
+    )
+    assert all(isinstance(d, pd.DataFrame) for d in data)
+    assert all(not d["file_name"].isna().all() for d in data)
+
+    assert all(all(d.model == "swift") for d in data)
+    for d in data:
+        assert all(col in d.columns for col in expected_columns)
+
+
+def test_full_ensemble(sample_times, expected_columns):
+
+    data = read_solar_wind_from_multiple_models(
+        start_time=sample_times["future_start"],
+        end_time=sample_times["future_end"],
+        model_order=[SWSWIFTEnsemble()],
+        reduce_ensemble=None,
+        synthetic_now_time=sample_times["now"],
+    )
+
+    assert isinstance(data, list)
+    assert len(data) > 1
+    assert all(isinstance(d, pd.DataFrame) for d in data)
+    assert all(not d["file_name"].isna().all() for d in data)
+    for d in data:
+        assert all(col in d.columns for col in expected_columns)
+
+
+def test_time_ordering(sample_times, expected_columns):
+
+    data = read_solar_wind_from_multiple_models(
+        start_time=sample_times["past_start"],
+        end_time=sample_times["future_end"],
+        model_order=[SWOMNI(), SWACE(), SWSWIFTEnsemble()],
+        synthetic_now_time=sample_times["now"],
+    )
+
+    for d in data:
+        assert d.index.is_monotonic_increasing
+        assert all(col in d.columns for col in expected_columns)
+
+
+def test_time_boundaries(sample_times):
+
+    start = sample_times["past_start"]
+    end = sample_times["future_end"]
+
+    data = read_solar_wind_from_multiple_models(
+        start_time=start,
+        end_time=end,
+        model_order=[SWOMNI(), SWSWIFTEnsemble()],
+        synthetic_now_time=sample_times["now"],
+    )
+
+    for d in data:
+        assert d.index.min() >= start
+        assert d.index.max() <= end
+
+
+def test_invalid_time_range(sample_times):
+
+    with pytest.raises(AssertionError):
+        read_solar_wind_from_multiple_models(
+            start_time=sample_times["future_end"], end_time=sample_times["past_start"], model_order=[SWOMNI()]
+        )
+
+
+def test_data_consistency(sample_times):
+
+    params = {
+        "start_time": sample_times["past_start"],
+        "end_time": sample_times["past_end"],
+        "model_order": [SWOMNI(), SWACE(), SWSWIFTEnsemble()],
+        "synthetic_now_time": sample_times["now"],
+    }
+
+    data1 = read_solar_wind_from_multiple_models(**params)
+    data2 = read_solar_wind_from_multiple_models(**params)
+
+    pd.testing.assert_frame_equal(data1, data2)

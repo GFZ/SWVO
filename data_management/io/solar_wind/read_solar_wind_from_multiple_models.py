@@ -31,7 +31,7 @@ def read_solar_wind_from_multiple_models(
             data_one_model = [model.read(start_time, end_time, cadence_min=1, download=download)]
 
             for i, _ in enumerate(data_one_model):
-                data_one_model[i].loc[synthetic_now_time:end_time, "kp"] = np.nan
+                data_one_model[i].loc[synthetic_now_time:end_time] = np.nan
             model_label = "omni"
             logging.info(f"Setting NaNs in OMNI from {synthetic_now_time} to {end_time}")
 
@@ -40,7 +40,7 @@ def read_solar_wind_from_multiple_models(
             data_one_model = [model.read(start_time, end_time, download=download)]
             data_one_model[0].bfill(inplace=True)
             for i, _ in enumerate(data_one_model):
-                data_one_model[i].loc[synthetic_now_time:end_time, "kp"] = np.nan
+                data_one_model[i].loc[synthetic_now_time:end_time] = np.nan
             model_label = "ace"
             logging.info(f"Setting NaNs in ACE from {synthetic_now_time} to {end_time}")
 
@@ -93,7 +93,7 @@ def read_solar_wind_from_multiple_models(
 
             model_label = "swift"
 
-            # num_ens_members = len(data_one_model)
+            num_ens_members = len(data_one_model)
 
             # if reduce_ensemble == "mean":
 
@@ -108,8 +108,8 @@ def read_solar_wind_from_multiple_models(
 
             #     data_one_model = [pd.DataFrame(index=data_one_model[0].index, data={"kp": kp_mean_ensembles})]
 
-            # elif reduce_ensemble is None:
-            #     data_out = data_out * num_ens_members
+            if reduce_ensemble is None:
+                data_out = data_out * num_ens_members
 
         any_nans_found = False
         # we making it a list in case of ensemble memblers
