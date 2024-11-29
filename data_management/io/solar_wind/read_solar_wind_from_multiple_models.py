@@ -15,6 +15,7 @@ def read_solar_wind_from_multiple_models(
     model_order: List[Type] = None,
     reduce_ensemble=None,
     synthetic_now_time: datetime = datetime.now(timezone.utc),
+    download=False,
 ):
 
     if model_order is None:
@@ -26,15 +27,23 @@ def read_solar_wind_from_multiple_models(
     for model in model_order:
 
         if isinstance(model, SWOMNI):
-            print("Reading omni...")
-            data_one_model = [model.read(start_time, end_time, cadence_min=1, download=True)]
+            print(f"Reading omni from {start_time} to {end_time}")
+            data_one_model = [model.read(start_time, end_time, cadence_min=1, download=download)]
+
+            for i, _ in enumerate(data_one_model):
+                data_one_model[i].loc[synthetic_now_time:end_time, "kp"] = np.nan
             model_label = "omni"
+            logging.info(f"Setting NaNs in OMNI from {synthetic_now_time} to {end_time}")
 
         if isinstance(model, SWACE):
-            print("Reading ACE...")
-            data_one_model = [model.read(start_time, end_time, download=True)]
-            data_one_model[0].fillna(method="bfill", inplace=True)
+            print(f"Reading ACE from {start_time} to {end_time}")
+            data_one_model = [model.read(start_time, end_time, download=download)]
+            data_one_model[0].bfill(inplace=True)
+            for i, _ in enumerate(data_one_model):
+                data_one_model[i].loc[synthetic_now_time:end_time, "kp"] = np.nan
             model_label = "ace"
+            logging.info(f"Setting NaNs in ACE from {synthetic_now_time} to {end_time}")
+
 
         if isinstance(model, SWSWIFTEnsemble):
             print("Reading PAGER SWIFT ensemble...")
@@ -54,7 +63,7 @@ def read_solar_wind_from_multiple_models(
                 if len(data_one_model) > 0:
                     # interpolate to common index
 
-                    for ie in range(len(data_one_model)):
+                    for ie, _ in enumerate(data_one_model):
 
                         df_common_index = pd.DataFrame(
                             index=pd.date_range(
@@ -84,33 +93,35 @@ def read_solar_wind_from_multiple_models(
 
             model_label = "swift"
 
-            num_ens_members = len(data_one_model)
+            # num_ens_members = len(data_one_model)
 
-            if reduce_ensemble == "mean":
+            # if reduce_ensemble == "mean":
 
-                kp_mean_ensembles = []
+            #     kp_mean_ensembles = []
 
-                for it in range(len(data_one_model[0].index)):
-                    data_curr_time = []
-                    for ie in range(num_ens_members):
-                        data_curr_time.append(data_one_model[ie].loc[data_one_model[ie].index[it], "kp"])
+            #     for it, _ in enumerate(data_one_model[0].index):
+            #         data_curr_time = []
+            #         for ie in range(num_ens_members):
+            #             data_curr_time.append(data_one_model[ie].loc[data_one_model[ie].index[it], "kp"])
 
-                    kp_mean_ensembles.append(np.mean(data_curr_time))
+            #         kp_mean_ensembles.append(np.mean(data_curr_time))
 
-                data_one_model = [pd.DataFrame(index=data_one_model[0].index, data={"kp": kp_mean_ensembles})]
+            #     data_one_model = [pd.DataFrame(index=data_one_model[0].index, data={"kp": kp_mean_ensembles})]
 
-            elif reduce_ensemble is None:
-                data_out = data_out * num_ens_members
+            # elif reduce_ensemble is None:
+            #     data_out = data_out * num_ens_members
 
         any_nans_found = False
         # we making it a list in case of ensemble memblers
-        for i in range(len(data_one_model)):
+        for i, _ in enumerate(data_one_model):
             data_one_model[i]["model"] = model_label
             data_one_model[i].loc[data_one_model[i].isna().any(axis=1), "model"] = None
             data_out[i] = data_out[i].combine_first(data_one_model[i])
 
             if data_out[i].isna().any(axis=1).sum() > 0:
                 any_nans_found = True
+
+            logging.info(f"Found {data_out[i].isna().sum()} NaNs in {model_label}")
 
         # if no NaNs are present anymore, we don't have to read backups
         if not any_nans_found:
