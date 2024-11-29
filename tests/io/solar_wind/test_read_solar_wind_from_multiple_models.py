@@ -59,8 +59,6 @@ def test_basic_historical_read(sample_times, expected_columns):
         synthetic_now_time=sample_times["now"],
     )
 
-    print(data)
-
     assert isinstance(data, pd.DataFrame)
     assert all(col in data.columns for col in expected_columns)
     assert data.loc["2024-11-22 18:00:00+00:00"].model == "omni"
