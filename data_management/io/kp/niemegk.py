@@ -130,8 +130,8 @@ class KpNiemegk(object):
         file_paths = []
         time_intervals = []
 
-        current_time = datetime(start_time.year, start_time.month, start_time.day, 0, 0, 0)
-        end_time = datetime(end_time.year, end_time.month, end_time.day, 0, 0, 0) + timedelta(days=1)
+        current_time = datetime(start_time.year, start_time.month, start_time.day, 0, 0, 0, tzinfo=timezone.utc)
+        end_time = datetime(end_time.year, end_time.month, end_time.day, 0, 0, 0, tzinfo=timezone.utc) + timedelta(days=1)
 
         while current_time <= end_time:
 
@@ -139,7 +139,7 @@ class KpNiemegk(object):
             file_paths.append(file_path)
 
             interval_start = current_time - timedelta(days=self.DAYS_TO_SAVE_EACH_FILE - 1)
-            interval_end = datetime(current_time.year, current_time.month, current_time.day, 23, 59, 59)
+            interval_end = datetime(current_time.year, current_time.month, current_time.day, 23, 59, 59, tzinfo=timezone.utc)
 
             time_intervals.append((interval_start, interval_end))
             current_time += timedelta(days=1)
