@@ -101,6 +101,7 @@ class KpNiemegk(object):
             freq=timedelta(hours=3),
         )
         data_out = pd.DataFrame(index=t)
+        data_out.index = data_out.index.tz_localize(timezone.utc) 
         data_out["kp"] = np.array([np.nan] * len(t))
 
         for file_path, time_interval in zip(file_paths, time_intervals):
@@ -119,7 +120,6 @@ class KpNiemegk(object):
             # combine the new file with the old ones, replace all values present in df_one_file in data_out
             data_out = df_one_file.combine_first(data_out)
 
-        data_out.index = data_out.index.tz_localize(timezone.utc) 
 
         data_out = data_out.truncate(before=start_time - timedelta(hours=2.9999), after=end_time + timedelta(hours=2.9999))
 
@@ -153,6 +153,8 @@ class KpNiemegk(object):
         df["t"] = pd.to_datetime(df["t"])
         df.index = df["t"]
         df.drop(labels=["t"], axis=1, inplace=True)
+        if not df.index.tzinfo:
+            df.index = df.index.tz_localize(timezone.utc)
 
         df["file_name"] = file_path
         df.loc[df["kp"].isna(), "file_name"] = None
@@ -189,6 +191,7 @@ class KpNiemegk(object):
         data = pd.DataFrame({"kp": kp, "t": timestamp})
         data.index.rename("t", inplace=True)
         data.index = data["t"]
+        data.index = data.index.tz_localize(timezone.utc) 
         data.drop(labels=["t"], axis=1, inplace=True)
         data.dropna(inplace=True)
 

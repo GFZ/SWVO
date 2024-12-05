@@ -69,8 +69,8 @@ def test_get_processed_file_list():
     assert file_paths[0].name == "NIEMEGK_KP_NOWCAST_20240101.csv"
     assert file_paths[-1].name == "NIEMEGK_KP_NOWCAST_20240104.csv"
 
-    assert time_intervals[0][0] == datetime(2023, 12, 30)
-    assert time_intervals[0][1] == datetime(2024, 1, 1, 23, 59, 59)
+    assert time_intervals[0][0] == datetime(2023, 12, 30, tzinfo=timezone.utc)
+    assert time_intervals[0][1] == datetime(2024, 1, 1, 23, 59, 59, tzinfo=timezone.utc)
 
 
 def test_download_and_process_current_month(kp_niemegk_instance):
