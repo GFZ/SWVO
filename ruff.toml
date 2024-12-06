@@ -1,0 +1,5 @@
+line-length = 120
+ignore = ["G004"] # allowing f-strings in logging statements
+
+[lint]
+select = ["ALL"]
