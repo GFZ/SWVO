@@ -1,22 +1,51 @@
+from __future__ import annotations
+
+import logging
 from datetime import datetime, timedelta, timezone
+from typing import Literal
 
 import numpy as np
 import pandas as pd
 
-import logging
-from typing import List, Type
-
 from data_management.io.solar_wind import SWACE, SWOMNI, SWSWIFTEnsemble
 
+SWModel = SWACE | SWOMNI | SWSWIFTEnsemble
 
-def read_solar_wind_from_multiple_models(
+
+def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     start_time: datetime,
     end_time: datetime,
-    model_order: List[Type] = None,
-    reduce_ensemble=None,
-    synthetic_now_time: datetime = datetime.now(timezone.utc),
-    download=False,
-):
+    model_order: list[SWModel] | None = None,
+    reduce_ensemble: str | None = None,
+    synthetic_now_time: datetime | None = None,
+    *,
+    download: bool = False,
+) -> pd.DataFrame|list[pd.DataFrame]:
+    """Read solar wind data from multiple models.
+
+    The model order represents the priorities of models.
+    The first model in the model order is read. If there are still NaNs in the resulting data,
+    the next model will be read. And so on. In the case of reading ensemble predictions, a list
+    will be returned, otherwise a plain data frame will be returned.
+
+    :param start_time: Start time of the data request.
+    :type start_time: datetime
+    :param end_time: End time of the data request.
+    :type end_time: datetime
+    :param model_order: Order in which data will be read from the models, defaults to [OMNI, ACE, SWIFT]
+    :type model_order: list | None, optional
+    :param reduce_ensemble: The method to reduce ensembles to a single time series, defaults to None
+    :type reduce_ensemble: Literal[&quot;mean&quot;] | None, optional
+    :param synthetic_now_time: Time, which represents &quot;now&quot;.
+    After this time, no data will be taken from historical models (OMNI, ACE), defaults to None
+    :type synthetic_now_time: datetime | None, optional
+    :param download: Flag which decides whether new data should be downloaded, defaults to False
+    :type download: bool, optional
+    :return: A data frame or a list of data frames containing data for the requested period.
+    :rtype: pd.DataFrame | list[pd.DataFrame]
+    """
+    if synthetic_now_time is None:
+        synthetic_now_time = datetime.now(timezone.utc)
 
     if model_order is None:
         model_order = [SWOMNI(), SWACE(), SWSWIFTEnsemble()]
@@ -25,109 +54,169 @@ def read_solar_wind_from_multiple_models(
     data_out = [pd.DataFrame()]
 
     for model in model_order:
+        data_one_model, model_label = _read_from_model(
+            model,
+            start_time,
+            end_time,
+            synthetic_now_time,
+            reduce_ensemble,
+            download=download,
+        )
 
-        if isinstance(model, SWOMNI):
-            print(f"Reading omni from {start_time} to {end_time}")
-            data_one_model = [model.read(start_time, end_time, cadence_min=1, download=download)]
-
-            for i, _ in enumerate(data_one_model):
-                data_one_model[i].loc[synthetic_now_time:end_time] = np.nan
-            model_label = "omni"
-            logging.info(f"Setting NaNs in OMNI from {synthetic_now_time} to {end_time}")
-
-        if isinstance(model, SWACE):
-            print(f"Reading ACE from {start_time} to {end_time}")
-            data_one_model = [model.read(start_time, end_time, download=download)]
-            data_one_model[0].bfill(inplace=True)
-            for i, _ in enumerate(data_one_model):
-                data_one_model[i].loc[synthetic_now_time:end_time] = np.nan
-            model_label = "ace"
-            logging.info(f"Setting NaNs in ACE from {synthetic_now_time} to {end_time}")
-
-
-        if isinstance(model, SWSWIFTEnsemble):
-            print("Reading PAGER SWIFT ensemble...")
-
-            # we are trying to read the most recent file; it this fails, we go one step back (1 day) and see if this file is present
-
-            target_time = synthetic_now_time
-
-            data_one_model = []
-
-            while target_time > (synthetic_now_time - timedelta(days=3)):
-
-                # target_time = target_time.replace(hour=0, minute=0, second=0)
-
-                data_one_model = model.read(target_time, end_time)
-
-                if len(data_one_model) > 0:
-                    # interpolate to common index
-
-                    for ie, _ in enumerate(data_one_model):
-
-                        df_common_index = pd.DataFrame(
-                            index=pd.date_range(
-                                datetime(target_time.year, target_time.month, target_time.day),
-                                datetime(end_time.year, end_time.month, end_time.day, 23, 59, 59),
-                                freq=timedelta(minutes=1),
-                                tz="UTC",
-                            )
-                        )
-                        df_common_index.index.name = data_one_model[ie].index.name
-
-                        for colname, col in data_one_model[ie].items():
-                            if col.dtype == "object":
-                                # this is the filename column
-                                df_common_index[colname] = col.iloc[0]
-                            else:
-                                df_common_index[colname] = np.interp(df_common_index.index, data_one_model[ie].index, col)
-
-                        data_one_model[ie] = df_common_index
-                        data_one_model[ie] = data_one_model[ie].truncate(
-                            before=start_time - timedelta(minutes=0.999999), after=end_time + timedelta(minutes=0.999999)
-                        )
-
-                    break
-
-                target_time -= timedelta(days=1)
-
-            model_label = "swift"
-
-            num_ens_members = len(data_one_model)
-
-            # if reduce_ensemble == "mean":
-
-            #     kp_mean_ensembles = []
-
-            #     for it, _ in enumerate(data_one_model[0].index):
-            #         data_curr_time = []
-            #         for ie in range(num_ens_members):
-            #             data_curr_time.append(data_one_model[ie].loc[data_one_model[ie].index[it], "kp"])
-
-            #         kp_mean_ensembles.append(np.mean(data_curr_time))
-
-            #     data_one_model = [pd.DataFrame(index=data_one_model[0].index, data={"kp": kp_mean_ensembles})]
-
-            if reduce_ensemble is None:
-                data_out = data_out * num_ens_members
-
-        any_nans_found = False
-        # we making it a list in case of ensemble memblers
-        for i, _ in enumerate(data_one_model):
-            data_one_model[i]["model"] = model_label
-            data_one_model[i].loc[data_one_model[i].isna().any(axis=1), "model"] = None
-            data_out[i] = data_out[i].combine_first(data_one_model[i])
-
-            if data_out[i].isna().any(axis=1).sum() > 0:
-                any_nans_found = True
-
-            logging.info(f"Found {data_out[i].isna().sum()} NaNs in {model_label}")
-
-        # if no NaNs are present anymore, we don't have to read backups
-        if not any_nans_found:
+        data_out = _construct_updated_data_frame(data_out, data_one_model, model_label)
+        if not _any_nans(data_out):
             break
 
     if len(data_out) == 1:
         data_out = data_out[0]
 
     return data_out
+
+
+def _read_from_model(  # noqa: PLR0913
+    model: SWModel,
+    start_time: datetime,
+    end_time: datetime,
+    synthetic_now_time: datetime,
+    reduce_ensemble: str,
+    *,
+    download: bool,
+) -> list[pd.DataFrame] | pd.DataFrame:
+    # Read from historical models
+    if isinstance(model, (SWACE, SWOMNI)):
+        data_one_model, model_label = _read_historical_model(
+            model,
+            start_time,
+            end_time,
+            synthetic_now_time,
+            download=download,
+        )
+
+    # Forecasting models are called with synthetic now time
+    if isinstance(model, SWSWIFTEnsemble):
+        data_one_model = _read_latest_ensemble_files(model, synthetic_now_time, end_time)
+
+        model_label = "swift"
+        num_ens_members = len(data_one_model)
+
+        if num_ens_members > 0 and reduce_ensemble is not None:
+            data_one_model = _reduce_ensembles(data_one_model, reduce_ensemble)
+
+    return data_one_model, model_label
+
+
+def _read_historical_model(
+    model: SWACE | SWOMNI,
+    start_time: datetime,
+    end_time: datetime,
+    synthetic_now_time: datetime,
+    *,
+    download: bool,
+) -> tuple[pd.DataFrame, str]:
+    if isinstance(model, SWOMNI):
+        model_label = "omni"
+    elif isinstance(model, SWACE):
+        model_label = "ace"
+    else:
+        msg = "Encountered invalide model type in read historical model!"
+        raise TypeError(msg)
+
+    logging.info(f"Reading {model_label} from {start_time} to {end_time}")
+
+    data_one_model = model.read(start_time, end_time, download=download)
+    # set nan for 'future' values
+    data_one_model.loc[synthetic_now_time:end_time] = np.nan
+    logging.info(f"Setting NaNs in {model_label} from {synthetic_now_time} to {end_time}")
+
+    return data_one_model, model_label
+
+
+def _read_latest_ensemble_files(
+    model: SWSWIFTEnsemble,
+    synthetic_now_time: datetime,
+    end_time: datetime,
+) -> list[pd.DataFrame]:
+    # we are trying to read the most recent file; it this fails, we go one step back (1 day) and see if this file is present
+
+    target_time = min(synthetic_now_time, end_time)
+
+    data_one_model = []
+
+    while target_time > (synthetic_now_time - timedelta(days=5)):
+        data_one_model = model.read(target_time, end_time)
+
+        if len(data_one_model) == 0:
+            target_time -= timedelta(days=1)
+            continue
+
+        data_one_model = _interpolate_to_common_indices(target_time, end_time, synthetic_now_time, data_one_model)
+        break
+
+    logging.info(f"Reading SWIFT ensemble from {target_time} to {end_time}")
+
+    return data_one_model
+
+def _interpolate_to_common_indices(
+    target_time: datetime, end_time: datetime, synthetic_now_time: datetime, data: list[pd.DataFrame]
+) -> list[pd.DataFrame]:
+    for ie, _ in enumerate(data):
+        df_common_index = pd.DataFrame(
+            index=pd.date_range(
+                datetime(target_time.year, target_time.month, target_time.day, tzinfo=timezone.utc),
+                datetime(end_time.year, end_time.month, end_time.day, 23, 59, 59, tzinfo=timezone.utc),
+                freq=timedelta(minutes=1),
+                tz="UTC",
+            ),
+        )
+        df_common_index.index.name = data[ie].index.name
+
+        for colname, col in data[ie].items():
+            if col.dtype == "object":
+                # this is the filename column
+                df_common_index[colname] = col.iloc[0]
+            else:
+                df_common_index[colname] = np.interp(df_common_index.index, data[ie].index, col)
+
+        data[ie] = df_common_index
+        data[ie] = data[ie].truncate(
+            before=synthetic_now_time - timedelta(minutes=0.999999), after=end_time + timedelta(minutes=0.999999)
+        )
+
+    return data
+
+def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"]) -> pd.DataFrame:
+    """Reduce a list of data frames representing ensemble data to a single data frame using the provided method."""
+    msg = "This reduction method has not been implemented yet!"
+    raise NotImplementedError(msg)
+
+def _construct_updated_data_frame(
+    data: list[pd.DataFrame],
+    data_one_model: list[pd.DataFrame],
+    model_label: str,
+) -> list[pd.DataFrame]:
+    """Construct an updated data frame providing the previous data frame and the data frame of the current model call.
+
+    Also adds the model label to the data frame.
+    """
+    if isinstance(data_one_model, list) and data_one_model == []: # nothing to update
+        return data
+
+    if isinstance(data_one_model, pd.DataFrame):
+        data_one_model = [data_one_model]
+
+    # extend the data we have read so far to match the new ensemble numbers
+    if len(data) == 1 and len(data_one_model) > 1:
+        data = data * len(data_one_model)
+    elif len(data) != len(data_one_model):
+        msg = f"Tried to combine models with different ensemble numbers: {len(data)} and {len(data_one_model)}!"
+        raise ValueError(msg)
+
+    for i, _ in enumerate(data_one_model):
+        data_one_model[i]["model"] = model_label
+        data_one_model[i].loc[data_one_model[i]["bavg"].isna(), "model"] = None
+        data[i] = data[i].combine_first(data_one_model[i])
+
+    return data
+
+def _any_nans(data: list[pd.DataFrame]) -> bool:
+    return any((df.isna().sum() > 0).any() for df in data)

@@ -13,6 +13,66 @@ from data_management.io.kp import KpEnsemble, KpNiemegk, KpOMNI, KpSWPC
 
 KpModel = KpEnsemble | KpNiemegk | KpOMNI | KpSWPC
 
+def read_kp_from_multiple_models(  # noqa: PLR0913
+    start_time: datetime,
+    end_time: datetime,
+    model_order: list[KpModel] | None = None,
+    reduce_ensemble: Literal["mean","median"] | None = None,
+    synthetic_now_time: datetime | None = None,
+    *,
+    download: bool = False,
+) -> pd.DataFrame | list[pd.DataFrame]:
+    """Read Kp data from multiple models.
+
+    The model order represents the priorities of models.
+    The first model in the model order is read. If there are still NaNs in the resulting data,
+    the next model will be read. And so on. In the case of reading ensemble predictions, a list
+    will be returned, otherwise a plain data frame will be returned.
+
+    :param start_time: Start time of the data request.
+    :type start_time: datetime
+    :param end_time: End time of the data request.
+    :type end_time: datetime
+    :param model_order: Order in which data will be read from the models, defaults to [OMNI, Niemegk, Ensemble, SWPC]
+    :type model_order: list | None, optional
+    :param reduce_ensemble: The method to reduce ensembles to a single time series, defaults to None
+    :type reduce_ensemble: Literal[&quot;mean&quot;] | None, optional
+    :param synthetic_now_time: Time, which represents &quot;now&quot;.
+    After this time, no data will be taken from historical models (OMNI, Niemegk), defaults to None
+    :type synthetic_now_time: datetime | None, optional
+    :param download: Flag which decides whether new data should be downloaded, defaults to False
+    :type download: bool, optional
+    :return: A data frame or a list of data frames containing data for the requested period.
+    :rtype: pd.DataFrame | list[pd.DataFrame]
+    """
+    if synthetic_now_time is None:
+        synthetic_now_time = datetime.now(timezone.utc)
+
+    if model_order is None:
+        model_order = [KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()]
+        logging.warning("No model order specified, using default order: OMNI, Niemegk, Ensemble, SWPC")
+
+    data_out = [pd.DataFrame()]
+
+    for model in model_order:
+        data_one_model, model_label = _read_from_model(
+            model,
+            start_time,
+            end_time,
+            synthetic_now_time,
+            reduce_ensemble,
+            download=download,
+        )
+
+        data_out = _construct_updated_data_frame(data_out, data_one_model, model_label)
+        if not _any_nans(data_out):
+            break
+
+    if len(data_out) == 1:
+        data_out = data_out[0]
+
+    return data_out
+
 
 def _read_from_model(  # noqa: PLR0913
     model: KpModel,
@@ -87,22 +147,28 @@ def _read_latest_ensemble_files(
     # we are trying to read the most recent file; it this fails, we go 1 hour back and see if this file is present
 
     target_time = synthetic_now_time
-    data_one_model = model.read(target_time, end_time)
 
-    while len(data_one_model) == 0 and target_time > (synthetic_now_time - timedelta(days=3)):
-        target_time -= timedelta(hours=1)
+    data_one_model = pd.DataFrame(data={"kp": []})
+
+    while target_time > (synthetic_now_time - timedelta(days=3)):
 
         # ONLY READ MIDNIGHT FILE FOR NOW; OTHER FILES BREAK
         target_time = target_time.replace(hour=0, minute=0, second=0)
 
-        data_one_model = model.read(target_time, end_time)
+        try:
+            data_one_model = model.read(target_time, end_time)
+            break
+        except(FileNotFoundError):
+            target_time -= timedelta(hours=1)
+            continue
 
     logging.info(f"Reading PAGER Kp ensemble from {target_time} to {end_time}")
 
     return data_one_model
 
 
-def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"]) -> pd.DataFrame:
+def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean", "median"]) -> pd.DataFrame:
+    """Reduce a list of data frames representing ensemble data to a single data frame using the provided method."""
     if method == "mean":
         kp_mean_ensembles = []
 
@@ -114,6 +180,19 @@ def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"
             kp_mean_ensembles.append(np.mean(data_curr_time))
 
         data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={"kp": kp_mean_ensembles})
+
+    if method == "median":
+        kp_median_ensembles = []
+
+        for it, _ in enumerate(data_ensembles[0].index):
+            data_curr_time = [
+                data_one_ensemble.loc[data_one_ensemble.index[it], "kp"] for data_one_ensemble in data_ensembles
+            ]
+
+            kp_median_ensembles.append(np.median(data_curr_time))
+
+        data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={"kp": kp_median_ensembles})
+
     else:
         msg = "This reduction method has not been implemented yet!"
         raise NotImplementedError(msg)
@@ -126,6 +205,10 @@ def _construct_updated_data_frame(
     data_one_model: list[pd.DataFrame],
     model_label: str,
 ) -> list[pd.DataFrame]:
+    """Construct an updated data frame providing the previous data frame and the data frame of the current model call.
+
+    Also adds the model label to the data frame.
+    """
     if isinstance(data_one_model, pd.DataFrame):
         data_one_model = [data_one_model]
 
@@ -146,64 +229,3 @@ def _construct_updated_data_frame(
 
 def _any_nans(data: list[pd.DataFrame]) -> bool:
     return any(df["kp"].isna().sum() > 0 for df in data)
-
-
-def read_kp_from_multiple_models(  # noqa: PLR0913
-    start_time: datetime,
-    end_time: datetime,
-    model_order: list | None = None,
-    reduce_ensemble: Literal["mean"] | None = None,
-    synthetic_now_time: datetime | None = None,
-    *,
-    download: bool = False,
-) -> pd.DataFrame | list[pd.DataFrame]:
-    """Read Kp data from multiple models.
-
-    The model order represents the priorities of models.
-    The first model in the model order is read. If there are still NaNs in the resulting data,
-    the next model will be read. And so on. In the case of reading ensemble predictions, a list
-    will be returned, otherwise a plain data frame will be returned.
-
-    :param start_time: Start time of the data request.
-    :type start_time: datetime
-    :param end_time: End time of the data request.
-    :type end_time: datetime
-    :param model_order: Order in which data will be read from the models, defaults to [OMNI, Niemegk, Ensemble, SWPC]
-    :type model_order: list | None, optional
-    :param reduce_ensemble: The method to reduce ensembles to a single time series, defaults to None
-    :type reduce_ensemble: Literal[&quot;mean&quot;] | None, optional
-    :param synthetic_now_time: Time, which represents &quot;now&quot;.
-    After this time, no data will be taken from historical models (OMNI, Niemegk), defaults to None
-    :type synthetic_now_time: datetime | None, optional
-    :param download: Flag which decides whether new data should be downloaded, defaults to False
-    :type download: bool, optional
-    :return: A data frame or a list of data frames containing data for the requested period.
-    :rtype: pd.DataFrame | list[pd.DataFrame]
-    """
-    if synthetic_now_time is None:
-        synthetic_now_time = datetime.now(timezone.utc)
-
-    if model_order is None:
-        model_order = [KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()]
-        logging.warning("No model order specified, using default order: OMNI, Niemegk, Ensemble, SWPC")
-
-    data_out = [pd.DataFrame()]
-
-    for model in model_order:
-        data_one_model, model_label = _read_from_model(
-            model,
-            start_time,
-            end_time,
-            synthetic_now_time,
-            reduce_ensemble,
-            download=download,
-        )
-
-        data_out = _construct_updated_data_frame(data_out, data_one_model, model_label)
-        if not _any_nans(data_out):
-            break
-
-    if len(data_out) == 1:
-        data_out = data_out[0]
-
-    return data_out
