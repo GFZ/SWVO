@@ -213,10 +213,10 @@ def _construct_updated_data_frame(
 
     for i, _ in enumerate(data_one_model):
         data_one_model[i]["model"] = model_label
-        data_one_model[i].loc[data_one_model[i]["bavg"].isna(), "model"] = None
+        data_one_model[i].loc[data_one_model[i].isna().any(axis=1), "model"] = None
         data[i] = data[i].combine_first(data_one_model[i])
 
     return data
 
 def _any_nans(data: list[pd.DataFrame]) -> bool:
-    return any((df.isna().sum() > 0).any() for df in data)
+    return any((df.isna().any(axis=None) > 0) for df in data)
