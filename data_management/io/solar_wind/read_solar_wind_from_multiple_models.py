@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from data_management.io.solar_wind import SWACE, SWOMNI, SWSWIFTEnsemble
+from data_management.io.utils import any_nans, construct_updated_data_frame
 
 SWModel = SWACE | SWOMNI | SWSWIFTEnsemble
 
@@ -64,8 +65,8 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
             download=download,
         )
 
-        data_out = _construct_updated_data_frame(data_out, data_one_model, model_label)
-        if not _any_nans(data_out):
+        data_out = construct_updated_data_frame(data_out, data_one_model, model_label)
+        if not any_nans(data_out):
             break
 
     if len(data_out) == 1:
@@ -191,38 +192,3 @@ def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"
     """Reduce a list of data frames representing ensemble data to a single data frame using the provided method."""
     msg = "This reduction method has not been implemented yet!"
     raise NotImplementedError(msg)
-
-
-def _construct_updated_data_frame(
-    data: list[pd.DataFrame],
-    data_one_model: list[pd.DataFrame],
-    model_label: str,
-) -> list[pd.DataFrame]:
-    """
-    Construct an updated data frame providing the previous data frame and the data frame of the current model call.
-
-    Also adds the model label to the data frame.
-    """
-    if isinstance(data_one_model, list) and data_one_model == []:  # nothing to update
-        return data
-
-    if isinstance(data_one_model, pd.DataFrame):
-        data_one_model = [data_one_model]
-
-    # extend the data we have read so far to match the new ensemble numbers
-    if len(data) == 1 and len(data_one_model) > 1:
-        data = data * len(data_one_model)
-    elif len(data) != len(data_one_model):
-        msg = f"Tried to combine models with different ensemble numbers: {len(data)} and {len(data_one_model)}!"
-        raise ValueError(msg)
-
-    for i, _ in enumerate(data_one_model):
-        data_one_model[i]["model"] = model_label
-        data_one_model[i].loc[data_one_model[i].isna().any(axis=1), "model"] = None
-        data[i] = data[i].combine_first(data_one_model[i])
-
-    return data
-
-
-def _any_nans(data: list[pd.DataFrame]) -> bool:
-    return any((df.isna().any(axis=None) > 0) for df in data)

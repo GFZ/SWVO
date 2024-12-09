@@ -50,7 +50,7 @@ class TestHpFromMultipleModels:
         assert hp_index in data.columns
         assert "model" in data.columns
         assert not data[hp_index].isna().all()
-        assert models[0].__name__ in data["model"].unique()
+        assert data["model"].unique() == ["gfz"]
 
     def test_basic_forecast_read(self, sample_times, hp_index, models):
 
@@ -129,7 +129,7 @@ class TestHpFromMultipleModels:
             synthetic_now_time=sample_times["now"],
         )
         assert all([df.loc["2024-11-25 00:00:00+00:00"].model == "ensemble" for df in data])
-        assert all([df.loc["2024-11-24 21:00:00+00:00"].model == models[0].__name__ for df in data])
+        assert all([df.loc["2024-11-24 21:00:00+00:00"].model == "gfz" for df in data])
 
     def test_data_consistency(self, sample_times, hp_index, models):
         params = {

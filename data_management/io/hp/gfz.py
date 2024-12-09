@@ -85,7 +85,7 @@ class HpGFZ:
         if not end_time.tzinfo:
             end_time = end_time.replace(tzinfo=timezone.utc)
 
-        if start_time < datetime(self.START_YEAR, 1, 1).replace(tzinfo=timezone.utc):
+        if start_time < datetime(self.START_YEAR, 1, 1, tzinfo=timezone.utc):
             logging.warning(
                 "Start date chosen falls behind the mission starting year. Moving start date to first"
                 " available mission files..."

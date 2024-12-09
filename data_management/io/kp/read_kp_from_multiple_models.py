@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from data_management.io.kp import KpEnsemble, KpNiemegk, KpOMNI, KpSWPC
+from data_management.io.utils import any_nans, construct_updated_data_frame
 
 KpModel = KpEnsemble | KpNiemegk | KpOMNI | KpSWPC
 
@@ -66,8 +67,8 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
             download=download,
         )
 
-        data_out = _construct_updated_data_frame(data_out, data_one_model, model_label)
-        if not _any_nans(data_out):
+        data_out = construct_updated_data_frame(data_out, data_one_model, model_label)
+        if not any_nans(data_out):
             break
 
     if len(data_out) == 1:
@@ -182,7 +183,7 @@ def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"
 
         data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={"kp": kp_mean_ensembles})
 
-    if method == "median":
+    elif method == "median":
         kp_median_ensembles = []
 
         for it, _ in enumerate(data_ensembles[0].index):
@@ -195,39 +196,7 @@ def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"
         data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={"kp": kp_median_ensembles})
 
     else:
-        msg = "This reduction method has not been implemented yet!"
+        msg = f"This reduction method has not been implemented yet: {method}!"
         raise NotImplementedError(msg)
 
     return data_reduced
-
-
-def _construct_updated_data_frame(
-    data: list[pd.DataFrame],
-    data_one_model: list[pd.DataFrame],
-    model_label: str,
-) -> list[pd.DataFrame]:
-    """
-    Construct an updated data frame providing the previous data frame and the data frame of the current model call.
-
-    Also adds the model label to the data frame.
-    """
-    if isinstance(data_one_model, pd.DataFrame):
-        data_one_model = [data_one_model]
-
-    # extend the data we have read so far to match the new ensemble numbers
-    if len(data) == 1 and len(data_one_model) > 1:
-        data = data * len(data_one_model)
-    elif len(data) != len(data_one_model):
-        msg = f"Tried to combine models with different ensemble numbers: {len(data)} and {len(data_one_model)}"
-        raise ValueError(msg)
-
-    for i, _ in enumerate(data_one_model):
-        data_one_model[i]["model"] = model_label
-        data_one_model[i].loc[data_one_model[i]["kp"].isna(), "model"] = None
-        data[i] = data[i].combine_first(data_one_model[i])
-
-    return data
-
-
-def _any_nans(data: list[pd.DataFrame]) -> bool:
-    return any(df["kp"].isna().sum() > 0 for df in data)
