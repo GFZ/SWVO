@@ -12,6 +12,7 @@ class ACERTReader(BaseReader):
     """
     This class reads
     """
+
     DATA_FIELDS = ["proton_density", "speed", "bx", "by", "bz", "b", "temperature"]
 
     def __init__(self, ace_output_folder="/PAGER/WP6/data/outputs/RBM_Forecast/realtime_stream/ace_realtime_stream/"):
@@ -25,8 +26,7 @@ class ACERTReader(BaseReader):
 
     def _check_data_folder(self):
         if not os.path.exists(self.data_folder):
-            msg = "Data folder {} for WP2 ACE REAL-TIME solar wind output not found...impossible to retrieve data.".format(
-                self.data_folder)
+            msg = f"Data folder {self.data_folder} for WP2 ACE REAL-TIME solar wind output not found...impossible to retrieve data."
             logging.error(msg)
             raise FileNotFoundError(msg)
 
@@ -41,16 +41,31 @@ class ACERTReader(BaseReader):
 
     @staticmethod
     def _read_mag_file(filename):
-        header_mag = ["year", "month", "day", "time", "Discard1", "Discard2",
-                      "status_mag", "bx", "by", "bz", "b", "lat", "lon"]
+        header_mag = [
+            "year",
+            "month",
+            "day",
+            "time",
+            "Discard1",
+            "Discard2",
+            "status_mag",
+            "bx",
+            "by",
+            "bz",
+            "b",
+            "lat",
+            "lon",
+        ]
 
-        data_mag = pd.read_csv(filename, comment='#',
-                               skiprows=2, delim_whitespace=True, names=header_mag, dtype={"time": str})
+        data_mag = pd.read_csv(
+            filename, comment="#", skiprows=2, delim_whitespace=True, names=header_mag, dtype={"time": str}
+        )
 
         data_mag["t"] = data_mag.apply(lambda x: ACERTReader._to_date(x), 1)
         data_mag.index = data_mag["t"]
-        data_mag.drop(["Discard1", "Discard2", "year", "month", "day", "time", "t", "status_mag", "lat", "lon"], 1,
-                      inplace=True)
+        data_mag.drop(
+            ["Discard1", "Discard2", "year", "month", "day", "time", "t", "status_mag", "lat", "lon"], 1, inplace=True
+        )
         for k in ["bx", "by", "bz", "b"]:
             mask = data_mag[k] < -999.0
             data_mag.loc[mask, k] = np.nan
@@ -58,10 +73,21 @@ class ACERTReader(BaseReader):
 
     @staticmethod
     def _read_swepam_file(filename):
-        header_sw = ["year", "month", "day", "time", "Discard1", "Discard2", "status_sw", "proton_density", "speed",
-                     "temperature"]
-        data_sw = pd.read_csv(filename, comment='#',
-                              skiprows=2, delim_whitespace=True, names=header_sw, dtype={"time": str})
+        header_sw = [
+            "year",
+            "month",
+            "day",
+            "time",
+            "Discard1",
+            "Discard2",
+            "status_sw",
+            "proton_density",
+            "speed",
+            "temperature",
+        ]
+        data_sw = pd.read_csv(
+            filename, comment="#", skiprows=2, delim_whitespace=True, names=header_sw, dtype={"time": str}
+        )
         data_sw["t"] = data_sw.apply(lambda x: ACERTReader._to_date(x), 1)
         data_sw.index = data_sw["t"]
         data_sw.drop(["Discard1", "Discard2", "year", "month", "day", "time", "t", "status_sw"], 1, inplace=True)
@@ -97,10 +123,14 @@ class ACERTReader(BaseReader):
                     logging.error(msg)
                     raise KeyError(msg)
 
-        file_swepam = os.path.join(self.data_folder, "{}{}{}_ace_swepam_1m.txt".format(str(date.year), str(date.month).zfill(2),
-                                                                           str(date.day).zfill(2)))
-        file_mag = os.path.join(self.data_folder, "{}{}{}_ace_mag_1m.txt".format(str(date.year), str(date.month).zfill(2),
-                                                                     str(date.day).zfill(2)))
+        file_swepam = os.path.join(
+            self.data_folder,
+            f"{date.year!s}{str(date.month).zfill(2)}{str(date.day).zfill(2)}_ace_swepam_1m.txt",
+        )
+        file_mag = os.path.join(
+            self.data_folder,
+            f"{date.year!s}{str(date.month).zfill(2)}{str(date.day).zfill(2)}_ace_mag_1m.txt",
+        )
         data_swepam = ACERTReader._read_swepam_file(file_swepam)
         data_mag = ACERTReader._read_mag_file(file_mag)
         data = pd.concat([data_swepam, data_mag], 1)

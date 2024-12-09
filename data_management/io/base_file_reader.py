@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
 
-class BaseReader(object):
+class BaseReader:
     def __init__(self):
         self.data_folder = None
 

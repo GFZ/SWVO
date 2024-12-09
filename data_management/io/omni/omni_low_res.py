@@ -1,17 +1,16 @@
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
 from typing import List, Tuple
-import logging
 
 import numpy as np
 import pandas as pd
 import wget
 
 
-class OMNILowRes(object):
-
+class OMNILowRes:
     ENV_VAR_NAME = "OMNI_LOW_RES_STREAM_DIR"
 
     URL = "https://spdf.gsfc.nasa.gov/pub/data/omni/low_res_omni/"
@@ -75,9 +74,7 @@ class OMNILowRes(object):
     ]
 
     def __init__(self, data_dir: str | Path = None):
-
         if data_dir is None:
-
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
@@ -91,7 +88,6 @@ class OMNILowRes(object):
     def download_and_process(
         self, start_time: datetime, end_time: datetime, reprocess_files: bool = False, verbose: bool = False
     ):
-
         temporary_dir = Path("./temp_omni_low_res_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
@@ -99,7 +95,6 @@ class OMNILowRes(object):
             file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
 
             for file_path, time_interval in zip(file_paths, time_intervals):
-
                 filename = "omni2_" + str(time_interval[0].year) + ".dat"
 
                 if file_path.exists():
@@ -122,9 +117,7 @@ class OMNILowRes(object):
         finally:
             rmtree(temporary_dir)
 
-
     def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
-
         file_paths = []
         time_intervals = []
 
@@ -132,7 +125,6 @@ class OMNILowRes(object):
         end_time = datetime(end_time.year, 12, 31, 23, 59, 59)
 
         while current_time < end_time:
-
             file_path = self.data_dir / f"OMNI_LOW_RES_{current_time.strftime('%Y')}.csv"
             file_paths.append(file_path)
 
@@ -145,7 +137,6 @@ class OMNILowRes(object):
         return file_paths, time_intervals
 
     def _process_single_file(self, file_path):
-
         data = pd.read_csv(file_path, sep=r"\s+", names=self.HEADER)
         data["timestamp"] = data["year"].map(str).apply(lambda x: x + "-01-01 ")
         data["timestamp"] = data["year"].map(str).apply(lambda x: x + "-01-01 ") + data["hour"].map(str).apply(
@@ -172,7 +163,6 @@ class OMNILowRes(object):
         return df
 
     def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
-
         START_YEAR = 1963
 
         if not start_time.tzinfo:
@@ -182,8 +172,11 @@ class OMNILowRes(object):
             end_time = end_time.replace(tzinfo=timezone.utc)
 
         if start_time < datetime(START_YEAR, 1, 1).replace(tzinfo=timezone.utc):
-            logging.warning("Start date chosen falls behind the existing data. Moving start date to first" " available mission files...")
-            start_time = datetime(START_YEAR, 1, 1,tzinfo=timezone.utc)
+            logging.warning(
+                "Start date chosen falls behind the existing data. Moving start date to first"
+                " available mission files..."
+            )
+            start_time = datetime(START_YEAR, 1, 1, tzinfo=timezone.utc)
 
         assert start_time < end_time
 
@@ -192,7 +185,6 @@ class OMNILowRes(object):
         dfs = []
 
         for file_path in file_paths:
-
             if not file_path.exists():
                 if download:
                     self.download_and_process(start_time, end_time)
@@ -211,7 +203,6 @@ class OMNILowRes(object):
         return data_out
 
     def _read_single_file(self, file_path) -> pd.DataFrame:
-
         df = pd.read_csv(file_path)
 
         df["t"] = pd.to_datetime(df["timestamp"])

@@ -34,8 +34,7 @@ class HpReader(BaseReader):
 
     def _check_index(self):
         if self.index not in ["hp30", "hp60"]:
-            raise RuntimeError("requested {} index does not exist.."
-                               ".".format(self.index))
+            raise RuntimeError(f"requested {self.index} index does not exist.." ".")
 
     @staticmethod
     def _correct_column_name_for_files_generated_before_2023(df):
@@ -74,10 +73,9 @@ class HpReader(BaseReader):
                 date_found = date
 
         if file_to_read is None:
-            logging.error("File not found in folder {} for the date {} and "
-                          "model name {}".format(self.data_folder,
-                                                 requested_date,
-                                                 model_name))
+            logging.error(
+                f"File not found in folder {self.data_folder} for the date {requested_date} and " f"model name {model_name}"
+            )
             return None, None
 
         if not header:
@@ -93,8 +91,8 @@ class HpReader(BaseReader):
 
         return df, date_found
 
-class HpEnsembleReader(HpReader):
 
+class HpEnsembleReader(HpReader):
     def __init__(self, data_folder, index):
         """
         :param data_folder: The path to data folder of the index output
@@ -103,7 +101,6 @@ class HpEnsembleReader(HpReader):
         :type index: str
         """
         super().__init__(data_folder, index)
-
 
     def _read_ensemble_files(self, folder, requested_date=None, header=False, model_name=None) -> (list, str):
         if requested_date is None:
@@ -124,17 +121,13 @@ class HpEnsembleReader(HpReader):
             data.append(df)
 
         if len(data) == 0:
-            msg = "No ensemble file found for requested date {}".format(
-                requested_date, self.index
-            )
+            msg = f"No ensemble file found for requested date {requested_date}"
             logging.warning(msg)
             return None, None
-        else:
-            return data, requested_date
+        return data, requested_date
 
     def read(self, model_name, requested_date=None, header=False, *args) -> (list, str):
-        data, data_timestamp = self._read_ensemble_files(self.data_folder, requested_date,
-                                                         header=header, model_name=model_name)
+        data, data_timestamp = self._read_ensemble_files(
+            self.data_folder, requested_date, header=header, model_name=model_name
+        )
         return data, data_timestamp
-
-

@@ -1,18 +1,16 @@
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
 from typing import List, Tuple
 
-import logging
-
 import numpy as np
 import pandas as pd
 import wget
 
 
-class SWACE(object):
-
+class SWACE:
     ENV_VAR_NAME = "RT_SW_ACE_STREAM_DIR"
 
     URL = "https://services.swpc.noaa.gov/text/"
@@ -23,9 +21,7 @@ class SWACE(object):
     MAG_FIELDS = ["bx_gsm", "by_gsm", "bz_gsm", "bavg"]
 
     def __init__(self, data_dir: str | Path = None):
-
         if data_dir is None:
-
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
@@ -143,15 +139,13 @@ class SWACE(object):
         return data_out
 
     def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
-
         file_paths = []
         time_intervals = []
 
         current_time = datetime(start_time.year, start_time.month, start_time.day, 0, 0, 0)
-        end_time = datetime(end_time.year, end_time.month, end_time.day, 0, 0, 0) # + timedelta(days=1)
+        end_time = datetime(end_time.year, end_time.month, end_time.day, 0, 0, 0)  # + timedelta(days=1)
 
         while current_time <= end_time:
-
             file_path = self.data_dir / f"ACE_SW_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"
             file_paths.append(file_path)
 
@@ -164,7 +158,6 @@ class SWACE(object):
         return file_paths, time_intervals
 
     def _read_single_file(self, file_path) -> pd.DataFrame:
-
         df = pd.read_csv(file_path, header="infer")
 
         df["t"] = pd.to_datetime(df["t"], utc=True)
@@ -177,7 +170,6 @@ class SWACE(object):
         return df
 
     def _process_single_file(self, temporary_dir: Path) -> pd.DataFrame:
-
         data_mag = self._process_mag_file(temporary_dir)
         data_swepam = self._process_swepam_file(temporary_dir)
 
@@ -215,7 +207,9 @@ class SWACE(object):
         data_mag["t"] = data_mag.apply(lambda x: self._to_date(x), 1)
         data_mag.index = data_mag["t"]
         data_mag.drop(
-            ["Discard1", "Discard2", "year", "month", "day", "time", "t", "status_mag", "lat", "lon"], axis=1, inplace=True
+            ["Discard1", "Discard2", "year", "month", "day", "time", "t", "status_mag", "lat", "lon"],
+            axis=1,
+            inplace=True,
         )
         for k in ["bx_gsm", "by_gsm", "bz_gsm", "bavg"]:
             mask = data_mag[k] < -999.0

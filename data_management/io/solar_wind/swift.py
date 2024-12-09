@@ -9,15 +9,13 @@ import numpy as np
 import pandas as pd
 
 
-class SWSWIFTEnsemble(object):
-
+class SWSWIFTEnsemble:
     PROTON_MASS = 1.67262192369e-27
 
     ENV_VAR_NAME = "SWIFT_ENSEMBLE_OUTPUT_DIR"
 
     def __init__(self, data_dir: str | Path = None):
         if data_dir is None:
-
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
@@ -31,7 +29,6 @@ class SWSWIFTEnsemble(object):
             raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrieve data!")
 
     def read(self, start_time: datetime, end_time: datetime) -> list:
-        
         if start_time and not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
         if end_time and not end_time.tzinfo:
@@ -54,7 +51,10 @@ class SWSWIFTEnsemble(object):
             try:
                 file = list((ensemble_folder / "SWIFT").glob("gsm_*"))[0]
                 data_gsm = self._read_single_file(file)
-                data_gsm = data_gsm.truncate(before=start_time - timedelta(minutes=10), after=end_time + timedelta(minutes=10))
+                data_gsm = data_gsm.truncate(
+                    before=start_time - timedelta(minutes=10),
+                    after=end_time + timedelta(minutes=10),
+                )
 
                 gsm_s.append(data_gsm)
             except IndexError:
@@ -82,7 +82,12 @@ class SWSWIFTEnsemble(object):
         with open(file_name) as f:
             data = json.load(f)
 
-        time = list(map(lambda x: dt.datetime.fromtimestamp(int(x), tz=dt.timezone.utc), data["arrays"]["Unix time"]["data"]))
+        time = list(
+            map(
+                lambda x: dt.datetime.fromtimestamp(int(x), tz=dt.timezone.utc),
+                data["arrays"]["Unix time"]["data"],
+            )
+        )
 
         ux = np.array(data["arrays"]["Vx"]["data"]) / 1000.0
         uy = np.array(data["arrays"]["Vy"]["data"]) / 1000.0

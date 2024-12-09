@@ -52,7 +52,6 @@ class KPReader(BaseReader):
         date_found = None
         files = sorted(glob.glob(folder + "/*"))
         for file in files:
-
             date = file.split("/")[-1]
             date = date.split(".")[0]
             try:
@@ -66,14 +65,13 @@ class KPReader(BaseReader):
                 file_to_read = file
                 date_found = date
                 break
-                
+
             if hours and (requested_date == date):
                 if (model_name is not None) and (model_name not in file):
                     break
-                else:
-                    file_to_read = file
-                    date_found = date
-                    break
+                file_to_read = file
+                date_found = date
+                break
 
         try:
             if not header:
@@ -86,10 +84,10 @@ class KPReader(BaseReader):
             df.drop(labels=["t"], axis=1, inplace=True)
             return df, date_found
         except FileNotFoundError:
-            logging.error("File not found in folder {}...".format(folder))
+            logging.exception(f"File not found in folder {folder}...")
             return None, None
         except ValueError:
-            logging.error("No file found for requested date {}".format(requested_date))
+            logging.exception(f"No file found for requested date {requested_date}")
             return None, None
 
     def read(self, source, requested_date=None, model_name=None, header=False) -> tuple:
@@ -111,17 +109,20 @@ class KPReader(BaseReader):
         """
 
         if source == "niemegk":
-            data, data_timestamp = self._read_single_file(os.path.join(self.data_folder, "NIEMEGK"), requested_date,
-                                                          header=header)
+            data, data_timestamp = self._read_single_file(
+                os.path.join(self.data_folder, "NIEMEGK"), requested_date, header=header
+            )
         elif source == "swpc":
-            data, data_timestamp = self._read_single_file(os.path.join(self.data_folder, "SWPC"), requested_date,
-                                                          header=header)
+            data, data_timestamp = self._read_single_file(
+                os.path.join(self.data_folder, "SWPC"), requested_date, header=header
+            )
         elif source == "l1":
             assert model_name is not None
-            data, data_timestamp = self._read_single_file(os.path.join(self.data_folder, "L1_FORECAST"), requested_date,
-                                                          model_name=model_name, header=header)
+            data, data_timestamp = self._read_single_file(
+                os.path.join(self.data_folder, "L1_FORECAST"), requested_date, model_name=model_name, header=header
+            )
         else:
-            msg = "Source {} requested for reading Kp not available...".format(source)
+            msg = f"Source {source} requested for reading Kp not available..."
             logging.error(msg)
             raise RuntimeError(msg)
 
@@ -163,13 +164,13 @@ class KPEnsembleReader(KPReader):
             data.append(df)
 
         if len(data) == 0:
-            msg = "No Kp ensemble file found for requested date {}".format(requested_date)
+            msg = f"No Kp ensemble file found for requested date {requested_date}"
             logging.warning(msg)
             return None, None
-        else:
-            return data, requested_date
+        return data, requested_date
 
     def read(self, model_name, requested_date=None, header=False, *args) -> (list, str):
-        data, data_timestamp = self._read_ensemble_files(self.data_folder, requested_date,
-                                                         header=header, model_name=model_name)
+        data, data_timestamp = self._read_ensemble_files(
+            self.data_folder, requested_date, header=header, model_name=model_name
+        )
         return data, data_timestamp

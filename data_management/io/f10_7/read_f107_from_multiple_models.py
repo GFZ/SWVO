@@ -1,10 +1,9 @@
-from datetime import datetime, timedelta, timezone
+import logging
+from datetime import datetime, timezone
+from typing import List, Type
 
 import numpy as np
 import pandas as pd
-
-import logging
-from typing import List, Type
 
 from data_management.io.f10_7 import F107OMNI, F107SWPC
 
@@ -16,7 +15,6 @@ def read_f107_from_multiple_models(
     synthetic_now_time: datetime = datetime.now(timezone.utc),
     download=False,
 ):
-
     if model_order is None:
         model_order = [F107OMNI(), F107SWPC()]
         logging.warning("No model order specified, using default order: OMNI, SWPC")
@@ -24,25 +22,24 @@ def read_f107_from_multiple_models(
     data_out = pd.DataFrame()
 
     for model in model_order:
-
         if isinstance(model, F107OMNI):
             print(f"Reading omni from {start_time} to {end_time}")
             data_one_model = model.read(start_time, end_time, download=download)
             model_label = "omni"
-            
-            data_one_model.replace(999.9, np.nan, inplace=True)
-            index_range = pd.date_range(start=synthetic_now_time, end=end_time, freq='d')
-            data_one_model = data_one_model.reindex(data_one_model.index.union(index_range))
 
+            data_one_model.replace(999.9, np.nan, inplace=True)
+            index_range = pd.date_range(start=synthetic_now_time, end=end_time, freq="d")
+            data_one_model = data_one_model.reindex(data_one_model.index.union(index_range))
 
             data_one_model.loc[synthetic_now_time:end_time, "f107"] = np.nan
             data_one_model.fillna({"file_name": np.nan}, inplace=True)
             logging.info(f"Setting NaNs in OMNI from {synthetic_now_time} to {end_time}")
 
-
         if isinstance(model, F107SWPC):
             print(f"Reading swpc from {synthetic_now_time.replace(hour=0, minute=0, second=0)} to {end_time}")
-            data_one_model = model.read(synthetic_now_time.replace(hour=0, minute=0, second=0), end_time, download=download)
+            data_one_model = model.read(
+                synthetic_now_time.replace(hour=0, minute=0, second=0), end_time, download=download
+            )
             model_label = "swpc"
 
         any_nans_found = False

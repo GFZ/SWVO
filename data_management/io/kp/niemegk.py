@@ -1,16 +1,16 @@
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
 from typing import List, Tuple
-import logging
+
 import numpy as np
 import pandas as pd
 import wget
 
 
-class KpNiemegk(object):
-
+class KpNiemegk:
     ENV_VAR_NAME = "RT_KP_NIEMEGK_STREAM_DIR"
 
     URL = "https://kp.gfz-potsdam.de/app/files/"
@@ -19,9 +19,7 @@ class KpNiemegk(object):
     DAYS_TO_SAVE_EACH_FILE = 3
 
     def __init__(self, data_dir: str | Path = None):
-
         if data_dir is None:
-
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
@@ -35,7 +33,6 @@ class KpNiemegk(object):
     def download_and_process(
         self, start_time: datetime, end_time: datetime, reprocess_files: bool = False, verbose: bool = False
     ):
-
         if start_time.month != datetime.now(timezone.utc).month:
             if verbose:
                 logging.info("We can only download and progress a Kp Niemegk file for the current month!")
@@ -61,7 +58,6 @@ class KpNiemegk(object):
             file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
 
             for file_path, time_interval in zip(file_paths, time_intervals):
-
                 if file_path.exists():
                     if reprocess_files:
                         file_path.unlink()
@@ -84,13 +80,11 @@ class KpNiemegk(object):
             rmtree(temporary_dir)
 
     def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
-        
         if not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
 
         if not end_time.tzinfo:
             end_time = end_time.replace(tzinfo=timezone.utc)
-
 
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
 
@@ -101,11 +95,10 @@ class KpNiemegk(object):
             freq=timedelta(hours=3),
         )
         data_out = pd.DataFrame(index=t)
-        data_out.index = data_out.index.tz_localize(timezone.utc) 
+        data_out.index = data_out.index.tz_localize(timezone.utc)
         data_out["kp"] = np.array([np.nan] * len(t))
 
         for file_path, time_interval in zip(file_paths, time_intervals):
-
             if not file_path.exists():
                 if download:
                     self.download_and_process(start_time, end_time)
@@ -114,32 +107,34 @@ class KpNiemegk(object):
             if not file_path.exists():
                 logging.warning(f"File {file_path} not found")
                 continue
-            else:
-                df_one_file = self._read_single_file(file_path)
+            df_one_file = self._read_single_file(file_path)
 
             # combine the new file with the old ones, replace all values present in df_one_file in data_out
             data_out = df_one_file.combine_first(data_out)
 
-
-        data_out = data_out.truncate(before=start_time - timedelta(hours=2.9999), after=end_time + timedelta(hours=2.9999))
+        data_out = data_out.truncate(
+            before=start_time - timedelta(hours=2.9999), after=end_time + timedelta(hours=2.9999)
+        )
 
         return data_out
 
     def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
-
         file_paths = []
         time_intervals = []
 
         current_time = datetime(start_time.year, start_time.month, start_time.day, 0, 0, 0, tzinfo=timezone.utc)
-        end_time = datetime(end_time.year, end_time.month, end_time.day, 0, 0, 0, tzinfo=timezone.utc) + timedelta(days=1)
+        end_time = datetime(end_time.year, end_time.month, end_time.day, 0, 0, 0, tzinfo=timezone.utc) + timedelta(
+            days=1
+        )
 
         while current_time <= end_time:
-
             file_path = self.data_dir / f"NIEMEGK_KP_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"
             file_paths.append(file_path)
 
             interval_start = current_time - timedelta(days=self.DAYS_TO_SAVE_EACH_FILE - 1)
-            interval_end = datetime(current_time.year, current_time.month, current_time.day, 23, 59, 59, tzinfo=timezone.utc)
+            interval_end = datetime(
+                current_time.year, current_time.month, current_time.day, 23, 59, 59, tzinfo=timezone.utc
+            )
 
             time_intervals.append((interval_start, interval_end))
             current_time += timedelta(days=1)
@@ -147,7 +142,6 @@ class KpNiemegk(object):
         return file_paths, time_intervals
 
     def _read_single_file(self, file_path) -> pd.DataFrame:
-
         df = pd.read_csv(file_path, names=["t", "kp"])
 
         df["t"] = pd.to_datetime(df["t"])
@@ -162,7 +156,6 @@ class KpNiemegk(object):
         return df
 
     def _process_single_file(self, temporary_dir: Path) -> pd.DataFrame:
-
         kp = []
         timestamp = []
 
@@ -191,7 +184,7 @@ class KpNiemegk(object):
         data = pd.DataFrame({"kp": kp, "t": timestamp})
         data.index.rename("t", inplace=True)
         data.index = data["t"]
-        data.index = data.index.tz_localize(timezone.utc) 
+        data.index = data.index.tz_localize(timezone.utc)
         data.drop(labels=["t"], axis=1, inplace=True)
         data.dropna(inplace=True)
 

@@ -1,25 +1,21 @@
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Tuple
-import logging
-import numpy as np
+
 import pandas as pd
 import wget
 
 
-class KpSWPC(object):
-
+class KpSWPC:
     ENV_VAR_NAME = "RT_KP_SWPC_STREAM_DIR"
 
     URL = "https://services.swpc.noaa.gov/text/"
     NAME = "3-day-geomag-forecast.txt"
 
     def __init__(self, data_dir: str | Path = None):
-
         if data_dir is None:
-
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
@@ -31,7 +27,6 @@ class KpSWPC(object):
         logging.info(f"Kp SWPC  data directory: {self.data_dir}")
 
     def download_and_process(self, target_date: datetime, reprocess_files: bool = False, verbose: bool = False):
-
         if target_date.date() < datetime.now(timezone.utc).date():
             raise ValueError("We can only download and progress a Kp SWPC file for the current day!")
 
@@ -66,12 +61,10 @@ class KpSWPC(object):
             rmtree(temporary_dir)
 
     def read(self, start_time: datetime, end_time: datetime = None, download: bool = False) -> pd.DataFrame:
-
         if not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
         if end_time is not None and not end_time.tzinfo:
             end_time = end_time.replace(tzinfo=timezone.utc)
-
 
         if end_time is None:
             end_time = start_time + timedelta(days=3)
@@ -89,12 +82,13 @@ class KpSWPC(object):
 
         data_out = self._read_single_file(file_path)
         data_out.index = data_out.index.tz_localize("UTC")
-        data_out = data_out.truncate(before=start_time - timedelta(hours=2.9999), after=end_time + timedelta(hours=2.9999))
+        data_out = data_out.truncate(
+            before=start_time - timedelta(hours=2.9999), after=end_time + timedelta(hours=2.9999)
+        )
 
         return data_out
 
     def _read_single_file(self, file_path) -> pd.DataFrame:
-
         df = pd.read_csv(file_path, names=["t", "kp"])
 
         df["t"] = pd.to_datetime(df["t"])
@@ -107,7 +101,6 @@ class KpSWPC(object):
         return df
 
     def _process_single_file(self, temporary_dir: Path) -> pd.DataFrame:
-
         first_line = None
         dates = None
         year = None

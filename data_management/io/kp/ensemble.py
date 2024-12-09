@@ -1,18 +1,16 @@
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Tuple
 
 import pandas as pd
-import logging
 
-class KpEnsemble(object):
 
+class KpEnsemble:
     ENV_VAR_NAME = "KP_ENSEMBLE_OUTPUT_DIR"
 
     def __init__(self, data_dir: str | Path = None):
         if data_dir is None:
-
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
@@ -26,7 +24,6 @@ class KpEnsemble(object):
             raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrive data!")
 
     def read(self, start_time: datetime, end_time: datetime) -> list:
-
         if start_time is not None and not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
         if end_time is not None and not end_time.tzinfo:
@@ -41,13 +38,16 @@ class KpEnsemble(object):
         start_time = start_time.replace(microsecond=0, minute=0, second=0)
         str_date = start_time.strftime("%Y%m%dT%H0000")
 
-        file_list = sorted(self.data_dir.glob(f"FORECAST_PAGER_SWIFT_swift_{str_date}_ensemble_*.csv"), key=lambda x: int(x.stem.split('_')[-1]))
+        file_list = sorted(
+            self.data_dir.glob(f"FORECAST_PAGER_SWIFT_swift_{str_date}_ensemble_*.csv"),
+            key=lambda x: int(x.stem.split("_")[-1]),
+        )
 
         if len(file_list) == 0:
             msg = f"No ensemble files found for requested date {str_date}"
             logging.error(msg)
             raise FileNotFoundError(msg)
-        
+
         data = []
         for file in file_list:
             df = pd.read_csv(file, names=["t", "kp"])

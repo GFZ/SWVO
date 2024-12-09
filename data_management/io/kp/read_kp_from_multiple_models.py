@@ -13,16 +13,18 @@ from data_management.io.kp import KpEnsemble, KpNiemegk, KpOMNI, KpSWPC
 
 KpModel = KpEnsemble | KpNiemegk | KpOMNI | KpSWPC
 
+
 def read_kp_from_multiple_models(  # noqa: PLR0913
     start_time: datetime,
     end_time: datetime,
     model_order: list[KpModel] | None = None,
-    reduce_ensemble: Literal["mean","median"] | None = None,
+    reduce_ensemble: Literal["mean", "median"] | None = None,
     synthetic_now_time: datetime | None = None,
     *,
     download: bool = False,
 ) -> pd.DataFrame | list[pd.DataFrame]:
-    """Read Kp data from multiple models.
+    """
+    Read Kp data from multiple models.
 
     The model order represents the priorities of models.
     The first model in the model order is read. If there are still NaNs in the resulting data,
@@ -151,14 +153,13 @@ def _read_latest_ensemble_files(
     data_one_model = pd.DataFrame(data={"kp": []})
 
     while target_time > (synthetic_now_time - timedelta(days=3)):
-
         # ONLY READ MIDNIGHT FILE FOR NOW; OTHER FILES BREAK
         target_time = target_time.replace(hour=0, minute=0, second=0)
 
         try:
             data_one_model = model.read(target_time, end_time)
             break
-        except(FileNotFoundError):
+        except FileNotFoundError:
             target_time -= timedelta(hours=1)
             continue
 
@@ -205,7 +206,8 @@ def _construct_updated_data_frame(
     data_one_model: list[pd.DataFrame],
     model_label: str,
 ) -> list[pd.DataFrame]:
-    """Construct an updated data frame providing the previous data frame and the data frame of the current model call.
+    """
+    Construct an updated data frame providing the previous data frame and the data frame of the current model call.
 
     Also adds the model label to the data frame.
     """

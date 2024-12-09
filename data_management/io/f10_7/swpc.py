@@ -1,10 +1,10 @@
+import logging
 import os
 import shutil
-import warnings
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Tuple
-import logging
+
 import pandas as pd
 import wget
 
@@ -15,7 +15,6 @@ class F107SWPC:
     NAME_F107 = "daily-solar-indices.txt"
 
     def __init__(self, data_dir: str | Path = None):
-
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
@@ -86,14 +85,15 @@ class F107SWPC:
 
     def _read_f107_file(self, file_path: Path) -> pd.DataFrame:
         """Reads and processes the F10.7 data file."""
-        data = pd.read_csv(file_path, sep=r"\s+", skiprows=13, usecols=[0, 1, 2, 3], names=["year", "month", "day", "f107"])
+        data = pd.read_csv(
+            file_path, sep=r"\s+", skiprows=13, usecols=[0, 1, 2, 3], names=["year", "month", "day", "f107"]
+        )
 
         data["date"] = pd.to_datetime(data[["year", "month", "day"]].assign(hour=0))
         data = data[["date", "f107"]]
         return data
 
     def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
-
         assert start_time < end_time, "start_time must be before end_time"
 
         if not start_time.tzinfo:

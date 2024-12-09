@@ -1,25 +1,21 @@
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Tuple
 
-import logging
 import pandas as pd
 
 
-class HpEnsemble(object):
-
+class HpEnsemble:
     ENV_VAR_NAME = "PLACEHOLDER; SEE DERIVED CLASSES BELOW"
 
     def __init__(self, index, data_dir: str | Path = None):
-
         self.index = index
         assert (
             self.index == "hp30" or self.index == "hp60"
         ), "Enountered invalid index: {self.index}. Possible options are: hp30, hp60!"
 
         if data_dir is None:
-
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
@@ -35,12 +31,10 @@ class HpEnsemble(object):
         self.index_number = index[2:]
 
     def read(self, start_time: datetime, end_time: datetime) -> list:
-
         if start_time is not None and not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
         if end_time is not None and not end_time.tzinfo:
             end_time = end_time.replace(tzinfo=timezone.utc)
-
 
         if start_time is None:
             start_time = datetime.now(timezone.utc)
@@ -50,7 +44,9 @@ class HpEnsemble(object):
 
         start_date = start_time.replace(microsecond=0, minute=0, second=0)
         str_date = start_date.strftime("%Y%m%dT%H0000")
-        file_list = sorted(self.data_dir.glob(f"FORECAST_{self.index.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_*.csv"))
+        file_list = sorted(
+            self.data_dir.glob(f"FORECAST_{self.index.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_*.csv")
+        )
 
         data = []
 
@@ -78,7 +74,6 @@ class HpEnsemble(object):
 
 
 class Hp30Ensemble(HpEnsemble):
-
     ENV_VAR_NAME = "HP30_ENSEMBLE_FORECAST_DIR"
 
     def __init__(self, data_dir: str | Path = None):
@@ -86,7 +81,6 @@ class Hp30Ensemble(HpEnsemble):
 
 
 class Hp60Ensemble(HpEnsemble):
-
     ENV_VAR_NAME = "HP60_ENSEMBLE_FORECAST_DIR"
 
     def __init__(self, data_dir: str | Path = None):

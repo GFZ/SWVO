@@ -1,12 +1,11 @@
+import logging
 from datetime import datetime, timedelta, timezone
+from typing import List, Type
 
 import numpy as np
 import pandas as pd
 
-import logging
-from typing import List, Type
-
-from data_management.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ, HpGFZ, HpEnsemble
+from data_management.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ, HpEnsemble, HpGFZ
 
 
 def read_hp_from_multiple_models(
@@ -18,7 +17,6 @@ def read_hp_from_multiple_models(
     synthetic_now_time: datetime = datetime.now(timezone.utc),
     download=False,
 ):
-
     hp_index = hp_index.lower()
 
     if model_order is None:
@@ -33,7 +31,6 @@ def read_hp_from_multiple_models(
     data_out = [pd.DataFrame()]
 
     for model in model_order:
-
         if isinstance(model, HpGFZ):
             print(model_order[0].__class__)
             print(f"Reading {hp_index} from {start_time} to {end_time}")
@@ -44,7 +41,6 @@ def read_hp_from_multiple_models(
                 data_one_model[i].loc[synthetic_now_time:end_time, hp_index] = np.nan
 
         if isinstance(model, HpEnsemble):
-
             # we are trying to read the most recent file; it this fails, we go one step back (1 hour) and see if this file is present
 
             target_time = synthetic_now_time
@@ -65,11 +61,9 @@ def read_hp_from_multiple_models(
             num_ens_members = len(data_one_model)
 
             if reduce_ensemble == "mean":
-
                 kp_mean_ensembles = []
 
                 for it, _ in enumerate(data_one_model[0].index):
-
                     data_curr_time = []
                     for ie in range(num_ens_members):
                         data_curr_time.append(data_one_model[ie].loc[data_one_model[ie].index[it], hp_index])

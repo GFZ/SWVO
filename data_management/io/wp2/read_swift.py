@@ -16,6 +16,7 @@ class SwiftReader(BaseReader):
     to read the output produced on a given date. It assumes that SWIFT runs only once a day
     which is the current way in which the SWIFT software is configured.
     """
+
     PROTON_MASS = 1.67262192369e-27
     DATA_FIELDS = ["proton_density", "speed", "b", "temperature", "bx", "by", "bz", "ux", "uy", "uz"]
 
@@ -30,8 +31,7 @@ class SwiftReader(BaseReader):
 
     def _check_data_folder(self):
         if not os.path.exists(self.data_folder):
-            msg = "Data folder {} for WP2 SWIFT output not found...impossible to retrieve data.".format(
-                self.data_folder)
+            msg = f"Data folder {self.data_folder} for WP2 SWIFT output not found...impossible to retrieve data."
             logging.error(msg)
             raise FileNotFoundError(msg)
 
@@ -64,14 +64,26 @@ class SwiftReader(BaseReader):
 
         temperature = np.array(data["arrays"]["Temperature_ion"]["data"])
 
-        speed = np.sqrt(ux ** 2 + uy ** 2 + uz ** 2)
-        b = np.sqrt(bx ** 2 + by ** 2 + bz ** 2)
+        speed = np.sqrt(ux**2 + uy**2 + uz**2)
+        b = np.sqrt(bx**2 + by**2 + bz**2)
 
         n = np.array(data["arrays"]["Rho"]["data"]) / SwiftReader.PROTON_MASS * 1.0e-6
 
-        df = pd.DataFrame({"proton_density": n, "speed": speed, "b": b, "temperature": temperature,
-                           "bx": bx, "by": by, "bz": bz,
-                           "ux": ux, "uy": uy, "uz": uz}, index=time)
+        df = pd.DataFrame(
+            {
+                "proton_density": n,
+                "speed": speed,
+                "b": b,
+                "temperature": temperature,
+                "bx": bx,
+                "by": by,
+                "bz": bz,
+                "ux": ux,
+                "uy": uy,
+                "uz": uz,
+            },
+            index=time,
+        )
         if fields is not None:
             df = df[fields]
         return df
@@ -113,8 +125,8 @@ class SwiftReader(BaseReader):
                 gsm_file = glob.glob(os.path.join(self.data_folder, date_to_string + "*/SWIFT/gsm*"))[0]
                 data_gsm = SwiftReader._read_single_file(gsm_file, fields)
             except IndexError:
-                msg = "GSM SWIFT output file for date {} not found...impossible to read".format(date_to_string)
-                logging.error(msg)
+                msg = f"GSM SWIFT output file for date {date_to_string} not found...impossible to read"
+                logging.exception(msg)
                 raise FileNotFoundError(msg)
         else:
             data_gsm = None
@@ -124,8 +136,8 @@ class SwiftReader(BaseReader):
                 hgc_file = glob.glob(os.path.join(self.data_folder, date_to_string + "*/SWIFT/hgc*"))[0]
                 data_hgc = SwiftReader._read_single_file(hgc_file, fields)
             except IndexError:
-                msg = "HGC SWIFT output file for date {} not found...impossible to read".format(date_to_string)
-                logging.error(msg)
+                msg = f"HGC SWIFT output file for date {date_to_string} not found...impossible to read"
+                logging.exception(msg)
                 raise FileNotFoundError(msg)
         else:
             data_hgc = None
@@ -166,28 +178,30 @@ class SwiftEnsembleReader(SwiftReader):
 
         n_ensemble = self._get_ensemble_number(date_string=date_to_string)
 
-        logging.info("Found {} SWIFT tasks folders...".format(n_ensemble))
+        logging.info(f"Found {n_ensemble} SWIFT tasks folders...")
         gsm_s = []
         hgc_s = []
 
         for n in range(n_ensemble):
             if "gsm" in file_type:
                 try:
-                    gsm_file = glob.glob(os.path.join(self.data_folder,
-                                                      date_to_string + "*/task{}/SWIFT/gsm*".format(n)))[0]
+                    gsm_file = glob.glob(
+                        os.path.join(self.data_folder, date_to_string + f"*/task{n}/SWIFT/gsm*")
+                    )[0]
                     data_gsm = SwiftReader._read_single_file(gsm_file, fields)
                     gsm_s.append(data_gsm)
                 except IndexError:
-                    msg = "GSM SWIFT output file for date {} and task {} not found...impossible to read".format(date_to_string, n)
+                    msg = f"GSM SWIFT output file for date {date_to_string} and task {n} not found...impossible to read"
                     logging.warning(msg)
 
             if "hgc" in file_type:
                 try:
-                    hgc_file = glob.glob(os.path.join(self.data_folder,
-                                                      date_to_string + "*/task{}/SWIFT/hgc*".format(n)))[0]
+                    hgc_file = glob.glob(
+                        os.path.join(self.data_folder, date_to_string + f"*/task{n}/SWIFT/hgc*")
+                    )[0]
                     data_hgc = SwiftReader._read_single_file(hgc_file, fields)
                     hgc_s.append(data_hgc)
                 except IndexError:
-                    msg = "HGC SWIFT output file for date {} and task {} not found...impossible to read".format(date_to_string, n)
+                    msg = f"HGC SWIFT output file for date {date_to_string} and task {n} not found...impossible to read"
                     logging.warning(msg)
         return gsm_s, hgc_s

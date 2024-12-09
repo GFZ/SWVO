@@ -14,11 +14,13 @@ class DSCOVRRTReader(BaseReader):
     """
     This class reads
     """
+
     DATA_FIELDS = ["proton_density", "speed", "bx", "by", "bz", "b", "temperature"]
 
-    def __init__(self,
-                 dscovr_output_folder="/PAGER/WP6/data/outputs/"
-                                      "RBM_Forecast/realtime_stream/dscovr_realtime_stream/json/"):
+    def __init__(
+        self,
+        dscovr_output_folder="/PAGER/WP6/data/outputs/" "RBM_Forecast/realtime_stream/dscovr_realtime_stream/json/",
+    ):
         """
         :param dscovr_output_folder: The path to the output folder of WP2 products.
         :type dscovr_output_folder: str
@@ -29,8 +31,7 @@ class DSCOVRRTReader(BaseReader):
 
     def _check_data_folder(self):
         if not os.path.exists(self.data_folder):
-            msg = "Data folder {} for WP2 DSCOVR REAL-TIME solar wind output not found...impossible to retrieve data.".format(
-                self.data_folder)
+            msg = f"Data folder {self.data_folder} for WP2 DSCOVR REAL-TIME solar wind output not found...impossible to retrieve data."
             logging.error(msg)
             raise FileNotFoundError(msg)
 
@@ -91,16 +92,18 @@ class DSCOVRRTReader(BaseReader):
                     logging.error(msg)
                     raise KeyError(msg)
 
-        files_plasma = glob.glob(os.path.join(self.data_folder, "plasma-1-day-{}{}{}{}*.json".format(str(date.year),
-                                                                                         str(date.month).zfill(2),
-                                                                                         str(date.day).zfill(2),
-                                                                                         str(date.hour).zfill(2),
-                                                                                         str(date.minute).zfill(2))))
-        files_mag = glob.glob(os.path.join(self.data_folder, "mag-1-day-{}{}{}{}*.json".format(str(date.year),
-                                                                                   str(date.month).zfill(2),
-                                                                                   str(date.day).zfill(2),
-                                                                                   str(date.hour).zfill(2),
-                                                                                   str(date.minute).zfill(2))))
+        files_plasma = glob.glob(
+            os.path.join(
+                self.data_folder,
+                f"plasma-1-day-{date.year!s}{str(date.month).zfill(2)}{str(date.day).zfill(2)}{str(date.hour).zfill(2)}*.json",
+            )
+        )
+        files_mag = glob.glob(
+            os.path.join(
+                self.data_folder,
+                f"mag-1-day-{date.year!s}{str(date.month).zfill(2)}{str(date.day).zfill(2)}{str(date.hour).zfill(2)}*.json",
+            )
+        )
 
         data_plasma = DSCOVRRTReader._read_plasma_file(sorted(files_plasma)[0])
         data_mag = DSCOVRRTReader._read_mag_file(sorted(files_mag)[0])

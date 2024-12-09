@@ -20,8 +20,9 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     synthetic_now_time: datetime | None = None,
     *,
     download: bool = False,
-) -> pd.DataFrame|list[pd.DataFrame]:
-    """Read solar wind data from multiple models.
+) -> pd.DataFrame | list[pd.DataFrame]:
+    """
+    Read solar wind data from multiple models.
 
     The model order represents the priorities of models.
     The first model in the model order is read. If there are still NaNs in the resulting data,
@@ -156,6 +157,7 @@ def _read_latest_ensemble_files(
 
     return data_one_model
 
+
 def _interpolate_to_common_indices(
     target_time: datetime, end_time: datetime, synthetic_now_time: datetime, data: list[pd.DataFrame]
 ) -> list[pd.DataFrame]:
@@ -184,21 +186,24 @@ def _interpolate_to_common_indices(
 
     return data
 
+
 def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"]) -> pd.DataFrame:
     """Reduce a list of data frames representing ensemble data to a single data frame using the provided method."""
     msg = "This reduction method has not been implemented yet!"
     raise NotImplementedError(msg)
+
 
 def _construct_updated_data_frame(
     data: list[pd.DataFrame],
     data_one_model: list[pd.DataFrame],
     model_label: str,
 ) -> list[pd.DataFrame]:
-    """Construct an updated data frame providing the previous data frame and the data frame of the current model call.
+    """
+    Construct an updated data frame providing the previous data frame and the data frame of the current model call.
 
     Also adds the model label to the data frame.
     """
-    if isinstance(data_one_model, list) and data_one_model == []: # nothing to update
+    if isinstance(data_one_model, list) and data_one_model == []:  # nothing to update
         return data
 
     if isinstance(data_one_model, pd.DataFrame):
@@ -217,6 +222,7 @@ def _construct_updated_data_frame(
         data[i] = data[i].combine_first(data_one_model[i])
 
     return data
+
 
 def _any_nans(data: list[pd.DataFrame]) -> bool:
     return any((df.isna().any(axis=None) > 0) for df in data)

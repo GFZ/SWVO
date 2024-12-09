@@ -1,17 +1,16 @@
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
 from typing import List, Tuple
-import logging
 
 import numpy as np
 import pandas as pd
 import wget
 
 
-class OMNIHighRes(object):
-
+class OMNIHighRes:
     ENV_VAR_NAME = "OMNI_HIGH_RES_STREAM_DIR"
 
     URL = "https://spdf.gsfc.nasa.gov/pub/data/omni/high_res_omni/"
@@ -71,9 +70,7 @@ class OMNIHighRes(object):
     ]
 
     def __init__(self, data_dir: str | Path = None):
-
         if data_dir is None:
-
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
@@ -92,8 +89,9 @@ class OMNIHighRes(object):
         reprocess_files: bool = False,
         verbose: bool = False,
     ):
-
-        assert cadence_min == 1 or cadence_min == 5, "Only 1 or 5 minute cadence can be chosen for high resolution omni data."
+        assert (
+            cadence_min == 1 or cadence_min == 5
+        ), "Only 1 or 5 minute cadence can be chosen for high resolution omni data."
 
         temporary_dir = Path("./temp_omni_high_res_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
@@ -102,7 +100,6 @@ class OMNIHighRes(object):
             file_paths, time_intervals = self._get_processed_file_list(start_time, end_time, cadence_min)
 
             for file_path, time_interval in zip(file_paths, time_intervals):
-
                 if cadence_min == 1:
                     filename = "omni_min" + str(time_interval[0].year) + ".asc"
                 elif cadence_min == 5:
@@ -128,9 +125,12 @@ class OMNIHighRes(object):
         finally:
             rmtree(temporary_dir)
 
-    def read(self, start_time: datetime, end_time: datetime, cadence_min: float = 1, download: bool = False) -> pd.DataFrame:
-
-        assert cadence_min == 1 or cadence_min == 5, "Only 1 or 5 minute cadence can be chosen for high resolution omni data."
+    def read(
+        self, start_time: datetime, end_time: datetime, cadence_min: float = 1, download: bool = False
+    ) -> pd.DataFrame:
+        assert (
+            cadence_min == 1 or cadence_min == 5
+        ), "Only 1 or 5 minute cadence can be chosen for high resolution omni data."
 
         if not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
@@ -139,7 +139,10 @@ class OMNIHighRes(object):
             end_time = end_time.replace(tzinfo=timezone.utc)
 
         if start_time < datetime(self.START_YEAR, 1, 1, tzinfo=timezone.utc):
-            logging.warning("Start date chosen falls behind the existing data. Moving start date to first" " available mission files...")
+            logging.warning(
+                "Start date chosen falls behind the existing data. Moving start date to first"
+                " available mission files..."
+            )
             start_time = datetime(self.START_YEAR, 1, 1, tzinfo=timezone.utc)
 
         assert start_time < end_time
@@ -149,7 +152,6 @@ class OMNIHighRes(object):
         dfs = []
 
         for file_path in file_paths:
-
             if not file_path.exists():
                 if download:
                     self.download_and_process(start_time, end_time, cadence_min=cadence_min)
@@ -164,7 +166,7 @@ class OMNIHighRes(object):
         if not data_out.empty:
             if not data_out.index.tzinfo:
                 data_out.index = data_out.index.tz_localize("UTC")
-                
+
         data_out = data_out.truncate(
             before=start_time - timedelta(minutes=cadence_min - 0.0000001),
             after=end_time + timedelta(minutes=cadence_min + 0.0000001),
@@ -172,8 +174,9 @@ class OMNIHighRes(object):
 
         return data_out
 
-    def _get_processed_file_list(self, start_time: datetime, end_time: datetime, cadence_min: float) -> Tuple[List, List]:
-
+    def _get_processed_file_list(
+        self, start_time: datetime, end_time: datetime, cadence_min: float
+    ) -> Tuple[List, List]:
         file_paths = []
         time_intervals = []
 
@@ -181,7 +184,6 @@ class OMNIHighRes(object):
         end_time = datetime(end_time.year, 12, 31, 23, 59, 59)
 
         while current_time < end_time:
-
             file_path = self.data_dir / f"OMNI_HIGH_RES_{cadence_min}min_{current_time.strftime('%Y')}.csv"
             file_paths.append(file_path)
 
@@ -194,7 +196,6 @@ class OMNIHighRes(object):
         return file_paths, time_intervals
 
     def _process_single_file(self, file_path):
-
         to_drop = [
             "year",
             "day",
@@ -281,7 +282,6 @@ class OMNIHighRes(object):
         return data
 
     def _read_single_file(self, file_path) -> pd.DataFrame:
-
         df = pd.read_csv(file_path)
 
         df["t"] = pd.to_datetime(df["timestamp"], utc=True)
