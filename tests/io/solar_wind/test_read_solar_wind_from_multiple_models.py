@@ -100,7 +100,7 @@ def test_full_ensemble(sample_times, expected_columns):
         assert all(col in d.columns for col in expected_columns)
 
 
-def test_time_ordering(sample_times, expected_columns):
+def test_time_ordering_and_transition(sample_times, expected_columns):
 
     data = read_solar_wind_from_multiple_models(
         start_time=sample_times["past_start"],
@@ -111,6 +111,8 @@ def test_time_ordering(sample_times, expected_columns):
 
     for d in data:
         assert d.index.is_monotonic_increasing
+        assert d.loc["2024-11-25 00:00:00+00:00"].model == "swift"
+        assert d.loc["2024-11-24 23:59:00+00:00"].model == "omni"
         assert all(col in d.columns for col in expected_columns)
 
 

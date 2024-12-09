@@ -106,7 +106,7 @@ def test_full_ensemble(sample_times):
     assert all(not d["file_name"].isna().all() for d in data)
 
 
-def test_time_ordering(sample_times):
+def test_time_ordering_and_transition(sample_times):
 
     data = read_kp_from_multiple_models(
         start_time=sample_times["past_start"],
@@ -117,6 +117,8 @@ def test_time_ordering(sample_times):
 
     for d in data:
         assert d.index.is_monotonic_increasing
+        assert d.loc["2024-11-25 00:00:00+00:00"].model == "ensemble"
+        assert d.loc["2024-11-24 21:00:00+00:00"].model == "niemegk"
 
 
 def test_time_boundaries(sample_times):
