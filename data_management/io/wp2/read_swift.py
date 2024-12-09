@@ -185,9 +185,7 @@ class SwiftEnsembleReader(SwiftReader):
         for n in range(n_ensemble):
             if "gsm" in file_type:
                 try:
-                    gsm_file = glob.glob(
-                        os.path.join(self.data_folder, date_to_string + f"*/task{n}/SWIFT/gsm*")
-                    )[0]
+                    gsm_file = glob.glob(os.path.join(self.data_folder, date_to_string + f"*/task{n}/SWIFT/gsm*"))[0]
                     data_gsm = SwiftReader._read_single_file(gsm_file, fields)
                     gsm_s.append(data_gsm)
                 except IndexError:
@@ -196,9 +194,7 @@ class SwiftEnsembleReader(SwiftReader):
 
             if "hgc" in file_type:
                 try:
-                    hgc_file = glob.glob(
-                        os.path.join(self.data_folder, date_to_string + f"*/task{n}/SWIFT/hgc*")
-                    )[0]
+                    hgc_file = glob.glob(os.path.join(self.data_folder, date_to_string + f"*/task{n}/SWIFT/hgc*"))[0]
                     data_hgc = SwiftReader._read_single_file(hgc_file, fields)
                     hgc_s.append(data_hgc)
                 except IndexError:

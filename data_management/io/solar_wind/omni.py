@@ -1,5 +1,3 @@
-
-
 from data_management.io.omni import OMNIHighRes
 
 

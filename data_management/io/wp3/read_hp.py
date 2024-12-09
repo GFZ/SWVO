@@ -74,7 +74,8 @@ class HpReader(BaseReader):
 
         if file_to_read is None:
             logging.error(
-                f"File not found in folder {self.data_folder} for the date {requested_date} and " f"model name {model_name}"
+                f"File not found in folder {self.data_folder} for the date {requested_date} and "
+                f"model name {model_name}"
             )
             return None, None
 

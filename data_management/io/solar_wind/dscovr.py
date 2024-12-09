@@ -23,9 +23,7 @@ class DSCOVR:
     def __init__(self, data_dir: str | Path = None):
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(
-                    f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
-                )
+                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
@@ -42,9 +40,7 @@ class DSCOVR:
 
         if current_time - request_time > timedelta(hours=24):
             if verbose:
-                logging.info(
-                    "We can only download DSCOVR data for the last 23 hours and a hour in past!"
-                )
+                logging.info("We can only download DSCOVR data for the last 23 hours and a hour in past!")
             return
 
         temporary_dir = Path("./temp_sw_dscovr_wget")
@@ -57,9 +53,7 @@ class DSCOVR:
             wget.download(self.URL + self.NAME_MAG, str(temporary_dir))
 
             if os.stat(str(temporary_dir / self.NAME_MAG)).st_size == 0:
-                raise FileNotFoundError(
-                    f"Error while downloading file: {self.URL + self.NAME_MAG}!"
-                )
+                raise FileNotFoundError(f"Error while downloading file: {self.URL + self.NAME_MAG}!")
 
             if verbose:
                 logging.info(f"Downloading file {self.URL + self.NAME_SWEPAM} ...")
@@ -67,9 +61,7 @@ class DSCOVR:
             wget.download(self.URL + self.NAME_SWEPAM, str(temporary_dir))
 
             if os.stat(str(temporary_dir / self.NAME_SWEPAM)).st_size == 0:
-                raise FileNotFoundError(
-                    f"Error while downloading file: {self.URL + self.NAME_SWEPAM}!"
-                )
+                raise FileNotFoundError(f"Error while downloading file: {self.URL + self.NAME_SWEPAM}!")
 
             if verbose:
                 logging.info(f"Processing file ...")
@@ -78,26 +70,16 @@ class DSCOVR:
             unique_dates = np.unique(processed_df.index.date)
 
             for date in unique_dates:
-                file_path = (
-                    self.data_dir / f"DSCOVR_SW_NOWCAST_{date.strftime('%Y%m%d')}.csv"
-                )
+                file_path = self.data_dir / f"DSCOVR_SW_NOWCAST_{date.strftime('%Y%m%d')}.csv"
 
-                day_start = datetime.combine(date, datetime.min.time()).replace(
-                    tzinfo=timezone.utc
-                )
-                day_end = datetime.combine(date, datetime.max.time()).replace(
-                    tzinfo=timezone.utc
-                )
+                day_start = datetime.combine(date, datetime.min.time()).replace(tzinfo=timezone.utc)
+                day_end = datetime.combine(date, datetime.max.time()).replace(tzinfo=timezone.utc)
 
-                day_data = processed_df[
-                    (processed_df.index >= day_start) & (processed_df.index <= day_end)
-                ]
+                day_data = processed_df[(processed_df.index >= day_start) & (processed_df.index <= day_end)]
 
                 if file_path.exists():
                     if verbose:
-                        logging.info(
-                            f"Found previous file for {date}. Loading and combining ..."
-                        )
+                        logging.info(f"Found previous file for {date}. Loading and combining ...")
                     previous_df = self._read_single_file(file_path)
 
                     previous_df.drop("file_name", axis=1, inplace=True)
@@ -110,9 +92,7 @@ class DSCOVR:
         finally:
             rmtree(temporary_dir)
 
-    def read(
-        self, start_time: datetime, end_time: datetime, download: bool = False
-    ) -> pd.DataFrame:
+    def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
         """
         Read DSCOVR data for the specified time range.
         """
@@ -142,9 +122,7 @@ class DSCOVR:
 
         for file_path in file_paths:
             if not file_path.exists() or download:
-                file_date = datetime.strptime(
-                    file_path.stem.split("_")[-1], "%Y%m%d"
-                ).replace(tzinfo=timezone.utc)
+                file_date = datetime.strptime(file_path.stem.split("_")[-1], "%Y%m%d").replace(tzinfo=timezone.utc)
                 self.download_and_process(file_date, verbose=False)
 
             if not file_path.exists():
@@ -161,30 +139,19 @@ class DSCOVR:
 
         return data_out
 
-    def _get_processed_file_list(
-        self, start_time: datetime, end_time: datetime
-    ) -> Tuple[List, List]:
+    def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
         file_paths = []
         time_intervals = []
 
-        current_time = datetime(
-            start_time.year, start_time.month, start_time.day, 0, 0, 0
-        )
-        end_time = datetime(
-            end_time.year, end_time.month, end_time.day, 0, 0, 0
-        )  # + timedelta(days=1)
+        current_time = datetime(start_time.year, start_time.month, start_time.day, 0, 0, 0)
+        end_time = datetime(end_time.year, end_time.month, end_time.day, 0, 0, 0)  # + timedelta(days=1)
 
         while current_time <= end_time:
-            file_path = (
-                self.data_dir
-                / f"DSCOVR_SW_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"
-            )
+            file_path = self.data_dir / f"DSCOVR_SW_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"
             file_paths.append(file_path)
 
             interval_start = current_time
-            interval_end = datetime(
-                current_time.year, current_time.month, current_time.day, 23, 59, 59
-            )
+            interval_end = datetime(current_time.year, current_time.month, current_time.day, 23, 59, 59)
 
             time_intervals.append((interval_start, interval_end))
             current_time += timedelta(days=1)
@@ -211,9 +178,7 @@ class DSCOVR:
 
         start_time = data.index.min()
         end_time = data.index.max()
-        complete_range = pd.date_range(
-            start=start_time, end=end_time, freq="1min", tz="UTC"
-        )
+        complete_range = pd.date_range(start=start_time, end=end_time, freq="1min", tz="UTC")
 
         data = data.reindex(complete_range)
         data.index.name = "t"
@@ -263,8 +228,6 @@ class DSCOVR:
             inplace=True,
         )
 
-        data_plasma.rename(
-            columns={"bt": "bavg", "density": "proton_density"}, inplace=True
-        )
+        data_plasma.rename(columns={"bt": "bavg", "density": "proton_density"}, inplace=True)
 
         return data_plasma

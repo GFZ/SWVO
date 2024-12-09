@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 import pandas as pd
 import numpy as np
 import os
-from data_management.io.solar_wind import SWOMNI, SWACE, SWSWIFTEnsemble, read_solar_wind_from_multiple_models
+from data_management.io.solar_wind import SWOMNI, SWACE, DSCOVR, SWSWIFTEnsemble, read_solar_wind_from_multiple_models
 from pathlib import Path
 
 from unittest.mock import patch
@@ -18,6 +18,7 @@ def set_env_var():
         "OMNI_HIGH_RES_STREAM_DIR": f"{str(DATA_DIR)}",
         "SWIFT_ENSEMBLE_OUTPUT_DIR": f"{str(DATA_DIR)}/ensemble",
         "RT_SW_ACE_STREAM_DIR": f"{str(DATA_DIR)}/ACE_RT",
+        "SW_DSCOVR_STREAM_DIR": f"{str(DATA_DIR)}/DSCOVR",
     }
 
     for key, var in ENV_VAR_NAMES.items():
@@ -55,14 +56,15 @@ def test_basic_historical_read(sample_times, expected_columns):
     data = read_solar_wind_from_multiple_models(
         start_time=sample_times["past_start"],
         end_time=sample_times["past_end"],
-        model_order=[SWOMNI(), SWACE()],
+        model_order=[SWOMNI(), DSCOVR(), SWACE()],
         synthetic_now_time=sample_times["now"],
     )
 
     assert isinstance(data, pd.DataFrame)
     assert all(col in data.columns for col in expected_columns)
     assert data.loc["2024-11-22 18:00:00+00:00"].model == "omni"
-    assert data.loc["2024-11-23 00:00:00+00:00"].model == "ace"
+    assert data.loc["2024-11-23 00:00:00+00:00"].model == "dscovr"
+    #no ace since dscovr and ace files are same in the test data and dscovr is before ace in the model_order
     assert not data["file_name"].isna().all()
 
 
@@ -105,7 +107,7 @@ def test_time_ordering_and_transition(sample_times, expected_columns):
     data = read_solar_wind_from_multiple_models(
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
-        model_order=[SWOMNI(), SWACE(), SWSWIFTEnsemble()],
+        model_order=[SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble()],
         synthetic_now_time=sample_times["now"],
     )
 
@@ -146,7 +148,7 @@ def test_data_consistency(sample_times):
     params = {
         "start_time": sample_times["past_start"],
         "end_time": sample_times["past_end"],
-        "model_order": [SWOMNI(), SWACE(), SWSWIFTEnsemble()],
+        "model_order": [SWOMNI(),DSCOVR(), SWACE(), SWSWIFTEnsemble()],
         "synthetic_now_time": sample_times["now"],
     }
 
