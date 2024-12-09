@@ -7,9 +7,9 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 
-from data_management.io.solar_wind import SWACE, SWOMNI, SWSWIFTEnsemble
+from data_management.io.solar_wind import SWACE, SWOMNI, SWSWIFTEnsemble, DSCOVR
 
-SWModel = SWACE | SWOMNI | SWSWIFTEnsemble
+SWModel = DSCOVR | SWACE | SWOMNI | SWSWIFTEnsemble
 
 
 def read_solar_wind_from_multiple_models(  # noqa: PLR0913
@@ -49,7 +49,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
         synthetic_now_time = datetime.now(timezone.utc)
 
     if model_order is None:
-        model_order = [SWOMNI(), SWACE(), SWSWIFTEnsemble()]
+        model_order = [SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble()]
         logging.warning("No model order specified, using default order: OMNI, ACE, SWIFT ensemble")
 
     data_out = [pd.DataFrame()]
@@ -84,7 +84,7 @@ def _read_from_model(  # noqa: PLR0913
     download: bool,
 ) -> list[pd.DataFrame] | pd.DataFrame:
     # Read from historical models
-    if isinstance(model, (SWACE, SWOMNI)):
+    if isinstance(model, (DSCOVR, SWACE, SWOMNI)):
         data_one_model, model_label = _read_historical_model(
             model,
             start_time,
@@ -107,7 +107,7 @@ def _read_from_model(  # noqa: PLR0913
 
 
 def _read_historical_model(
-    model: SWACE | SWOMNI,
+    model: DSCOVR | SWACE | SWOMNI,
     start_time: datetime,
     end_time: datetime,
     synthetic_now_time: datetime,
@@ -118,6 +118,8 @@ def _read_historical_model(
         model_label = "omni"
     elif isinstance(model, SWACE):
         model_label = "ace"
+    elif isinstance(model, DSCOVR):
+        model_label = "dscovr"
     else:
         msg = "Encountered invalide model type in read historical model!"
         raise TypeError(msg)

@@ -1,4 +1,5 @@
 from data_management.io.solar_wind.ace import SWACE
 from data_management.io.solar_wind.omni import SWOMNI
 from data_management.io.solar_wind.swift import SWSWIFTEnsemble
+from data_management.io.solar_wind.dscovr import DSCOVR
 from data_management.io.solar_wind.read_solar_wind_from_multiple_models import read_solar_wind_from_multiple_models
