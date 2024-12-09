@@ -21,7 +21,6 @@ def set_env_var():
         "RT_KP_SWPC_STREAM_DIR": f"{str(DATA_DIR)}/SWPC",
     }
 
-
     for key, var in ENV_VAR_NAMES.items():
         os.environ[key] = ENV_VAR_NAMES[key]
 
@@ -39,7 +38,6 @@ def sample_times():
 
 
 def test_basic_historical_read(sample_times):
-
     data = read_kp_from_multiple_models(
         start_time=sample_times["past_start"],
         end_time=sample_times["past_end"],
@@ -57,7 +55,6 @@ def test_basic_historical_read(sample_times):
 
 
 def test_basic_forecast_read(sample_times):
-
     data = read_kp_from_multiple_models(
         start_time=sample_times["future_start"],
         end_time=sample_times["future_end"],
@@ -72,14 +69,12 @@ def test_basic_forecast_read(sample_times):
     assert all(all(d.model == "ensemble") for d in data)
 
 
-def test_ensemble_reduce_mean(sample_times):
-
+def test_ensemble_reduce_mean():
     with pytest.raises(ValueError):
         raise ValueError("This reduction method has not been implemented yet!")
 
 
 def test_full_ensemble(sample_times):
-
     data = read_kp_from_multiple_models(
         start_time=sample_times["future_start"],
         end_time=sample_times["future_end"],
@@ -97,7 +92,6 @@ def test_full_ensemble(sample_times):
 
 
 def test_time_ordering_and_transition(sample_times):
-
     data = read_kp_from_multiple_models(
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
@@ -111,8 +105,21 @@ def test_time_ordering_and_transition(sample_times):
         assert d.loc["2024-11-24 21:00:00+00:00"].model == "niemegk"
 
 
-def test_time_boundaries(sample_times):
+def test_forecast_in_past(sample_times):
+    data = read_kp_from_multiple_models(
+        start_time=sample_times["past_start"],
+        end_time=sample_times["future_start"],
+        model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
+        synthetic_now_time=sample_times["now"] - timedelta(days=2),
+    )
 
+    assert data.index.is_monotonic_increasing
+    assert data.loc["2024-11-22 18:00:00+00:00"].model == "omni"
+    assert data.loc["2024-11-22 21:00:00+00:00"].model == "niemegk"
+    assert data.loc["2024-11-23 00:00:00+00:00"].model == "swpc"
+
+
+def test_time_boundaries(sample_times):
     start = sample_times["past_start"]
     end = sample_times["future_end"]
 
@@ -129,7 +136,6 @@ def test_time_boundaries(sample_times):
 
 
 def test_invalid_time_range(sample_times):
-
     with pytest.raises(AssertionError):
         read_kp_from_multiple_models(
             start_time=sample_times["future_end"], end_time=sample_times["past_start"], model_order=[KpOMNI()]
@@ -146,7 +152,6 @@ def test_date_more_than_3_days_in_future(sample_times):
 
 
 def test_kp_value_range(sample_times):
-
     data = read_kp_from_multiple_models(
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
@@ -163,7 +168,6 @@ def test_kp_value_range(sample_times):
 
 
 def test_model_transition(sample_times):
-
     data = read_kp_from_multiple_models(
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
@@ -176,9 +180,7 @@ def test_model_transition(sample_times):
     assert not all([df.loc["2024-11-24 21:00:00+00:00"].model == "omni" for df in data])
 
 
-
 def test_data_consistency(sample_times):
-
     params = {
         "start_time": sample_times["past_start"],
         "end_time": sample_times["past_end"],
