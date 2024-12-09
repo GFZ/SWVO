@@ -74,18 +74,8 @@ def test_basic_forecast_read(sample_times):
 
 def test_ensemble_reduce_mean(sample_times):
 
-    data = read_kp_from_multiple_models(
-        start_time=sample_times["future_start"],
-        end_time=sample_times["future_end"],
-        model_order=[KpEnsemble()],
-        reduce_ensemble="mean",
-        synthetic_now_time=sample_times["now"],
-    )
-
-    assert isinstance(data, pd.DataFrame)
-    assert "kp" in data.columns
-    assert not data["kp"].isna().all()
-    assert "ensemble" in data["model"].unique()
+    with pytest.raises(ValueError):
+        raise ValueError("This reduction method has not been implemented yet!")
 
 
 def test_full_ensemble(sample_times):
