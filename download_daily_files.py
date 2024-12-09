@@ -9,7 +9,7 @@ import traceback
 from data_management.io.kp import KpNiemegk, KpSWPC
 from data_management.io.hp import Hp30GFZ, Hp60GFZ
 from data_management.io.omni import OMNILowRes, OMNIHighRes
-from data_management.io.solar_wind import SWACE
+from data_management.io.solar_wind import SWACE, DSCOVR
 from data_management.io.f10_7 import F107SWPC, F107OMNI
 
 """
@@ -107,6 +107,12 @@ if __name__ == "__main__":
         F107SWPC().download_and_process()
     except:
         logging.error("Encountered error while downloading F10.7cm solar wind. Traceback:")
+        logging.error(traceback.format_exc())
+    logging.info("SW DSCOVR...\n")
+    try:
+        DSCOVR().download_and_process(time_now)
+    except:
+        logging.error("Encountered error while downloading DSCOVR data. Traceback:")
         logging.error(traceback.format_exc())
 
     logging.info("Finished downloading and processing!")
