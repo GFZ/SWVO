@@ -16,6 +16,7 @@ class OMNIHighRes:
     URL = "https://spdf.gsfc.nasa.gov/pub/data/omni/high_res_omni/"
 
     START_YEAR = 1981
+    LABEL = "omni"
 
     HEADER = [
         "year",

@@ -9,7 +9,7 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 
-from data_management.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ, HpEnsemble, HpGFZ
+from data_management.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ
 from data_management.io.utils import any_nans, construct_updated_data_frame
 
 HpModel = Hp30Ensemble | Hp30GFZ | Hp60Ensemble | Hp60GFZ
@@ -66,7 +66,7 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     data_out = [pd.DataFrame()]
 
     for model in model_order:
-        data_one_model, model_label = _read_from_model(
+        data_one_model = _read_from_model(
             model,
             start_time,
             end_time,
@@ -75,7 +75,7 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
             download=download,
         )
 
-        data_out = construct_updated_data_frame(data_out, data_one_model, model_label)
+        data_out = construct_updated_data_frame(data_out, data_one_model, model.LABEL)
 
         if not any_nans(data_out):
             break
@@ -95,29 +95,27 @@ def _read_from_model(  # noqa: PLR0913
     *,
     download: bool,
 ) -> list[pd.DataFrame] | pd.DataFrame:
-    hp_index = type(model).__name__[:4].lower()
 
     # Read from historical models
     if isinstance(model, (Hp30GFZ, Hp60GFZ)):
-        data_one_model, model_label = _read_historical_model(
+        data_one_model = _read_historical_model(
             model,
             start_time,
             end_time,
-            hp_index,
+            model.index,
             synthetic_now_time,
             download=download,
         )
 
     if isinstance(model, (Hp30Ensemble, Hp60Ensemble)):
-        data_one_model = _read_latest_ensemble_files(model, hp_index, synthetic_now_time, end_time)
+        data_one_model = _read_latest_ensemble_files(model, model.index, synthetic_now_time, end_time)
 
-        model_label = "ensemble"
         num_ens_members = len(data_one_model)
 
         if num_ens_members > 0 and reduce_ensemble is not None:
-            data_one_model = _reduce_ensembles(data_one_model, reduce_ensemble, hp_index)
+            data_one_model = _reduce_ensembles(data_one_model, reduce_ensemble, model.index)
 
-    return data_one_model, model_label
+    return data_one_model
 
 
 def _read_historical_model(
@@ -129,21 +127,19 @@ def _read_historical_model(
     *,
     download: bool,
 ) -> tuple[pd.DataFrame, str]:
-    if isinstance(model, (Hp30GFZ, Hp60GFZ)):
-        model_label = "gfz"
-    else:
+    if not isinstance(model, (Hp30GFZ, Hp60GFZ)):
         msg = "Encountered invalide model type in read historical model!"
         raise TypeError(msg)
 
-    logging.info(f"Reading {model_label} from {start_time} to {end_time}")
+    logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
 
     data_one_model = model.read(start_time, end_time, download=download)
 
     # set nan for 'future' values
     data_one_model.loc[synthetic_now_time:end_time, hp_index] = np.nan
-    logging.info(f"Setting NaNs in {model_label} from {synthetic_now_time} to {end_time}")
+    logging.info(f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}")
 
-    return data_one_model, model_label
+    return data_one_model
 
 
 def _read_latest_ensemble_files(

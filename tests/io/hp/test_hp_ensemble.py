@@ -1,18 +1,21 @@
+# ruff: noqa: S101,PLR2004
+
 import os
 import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+import numpy as np
 import pandas as pd
 import pytest
-import numpy as np
 
-from data_management.io.hp.ensemble import HpEnsemble, Hp30Ensemble, Hp60Ensemble
+from data_management.io.hp.ensemble import Hp30Ensemble, Hp60Ensemble, HpEnsemble
 
 TEST_DIR = Path("test_data")
 DATA_DIR = TEST_DIR / "mock_hp_ensemble"
 
 
-@pytest.fixture(scope="session",autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def setup_and_cleanup():
     TEST_DIR.mkdir(exist_ok=True)
     DATA_DIR.mkdir(exist_ok=True)
@@ -25,15 +28,12 @@ def setup_and_cleanup():
 
 @pytest.fixture
 def hp30ensemble_instance():
-
     (DATA_DIR / "hp30").mkdir(exist_ok=True)
     return Hp30Ensemble(data_dir=DATA_DIR / "hp30")
 
 
-
 @pytest.mark.parametrize("instance_type,index_name", [("hp30", "hp30"), ("hp60", "hp60")])
 def test_initialization(instance_type, index_name):
-
     ensemble_dir = DATA_DIR / instance_type
     ensemble_dir.mkdir(exist_ok=True)
 
@@ -53,13 +53,12 @@ def test_initialization_without_env_var():
 
 
 def test_invalid_index():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="Encountered invalid index:.*"):
         HpEnsemble("hp45", data_dir=DATA_DIR)
 
 
 @pytest.mark.parametrize("instance_type,index_name", [("hp30", "hp30"), ("hp60", "hp60")])
 def test_read_with_ensemble_data(instance_type, index_name):
-
     ensemble_dir = DATA_DIR / instance_type
     ensemble_dir.mkdir(exist_ok=True)
     instance_class = Hp30Ensemble if instance_type == "hp30" else Hp60Ensemble
@@ -69,7 +68,6 @@ def test_read_with_ensemble_data(instance_type, index_name):
     str_date = current_time.strftime("%Y%m%dT%H%M%S")
 
     for i in range(3):
-
         test_dates = pd.date_range(
             start=current_time, end=current_time + timedelta(days=3), freq=f"{instance.index_number}min"
         )
@@ -91,12 +89,15 @@ def test_read_with_ensemble_data(instance_type, index_name):
         assert isinstance(df.index, pd.DatetimeIndex)
         assert df.index.tz == timezone.utc
         assert not df.empty
-        assert df.index[0] >= current_time.replace(tzinfo=timezone.utc) - timedelta(minutes=float(instance.index_number) - 0.01)
-        assert df.index[-1] <= current_time.replace(tzinfo=timezone.utc) + timedelta(days=1) + timedelta(minutes=float(instance.index_number) + 0.01)
+        assert df.index[0] >= current_time.replace(tzinfo=timezone.utc) - timedelta(
+            minutes=float(instance.index_number) - 0.01,
+        )
+        assert df.index[-1] <= current_time.replace(tzinfo=timezone.utc) + timedelta(days=1) + timedelta(
+            minutes=float(instance.index_number) + 0.01,
+        )
 
 
 def test_read_with_default_times(instance_type="hp30"):
-
     ensemble_dir = DATA_DIR / instance_type
     ensemble_dir.mkdir(exist_ok=True)
     instance_class = Hp30Ensemble if instance_type == "hp30" else Hp60Ensemble

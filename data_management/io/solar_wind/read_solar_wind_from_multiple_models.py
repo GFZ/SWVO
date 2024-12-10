@@ -56,7 +56,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     data_out = [pd.DataFrame()]
 
     for model in model_order:
-        data_one_model, model_label = _read_from_model(
+        data_one_model = _read_from_model(
             model,
             start_time,
             end_time,
@@ -65,7 +65,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
             download=download,
         )
 
-        data_out = construct_updated_data_frame(data_out, data_one_model, model_label)
+        data_out = construct_updated_data_frame(data_out, data_one_model, model.LABEL)
         if not any_nans(data_out):
             break
 
@@ -86,7 +86,7 @@ def _read_from_model(  # noqa: PLR0913
 ) -> list[pd.DataFrame] | pd.DataFrame:
     # Read from historical models
     if isinstance(model, (SWACE, SWOMNI)):
-        data_one_model, model_label = _read_historical_model(
+        data_one_model = _read_historical_model(
             model,
             start_time,
             end_time,
@@ -98,13 +98,12 @@ def _read_from_model(  # noqa: PLR0913
     if isinstance(model, SWSWIFTEnsemble):
         data_one_model = _read_latest_ensemble_files(model, synthetic_now_time, end_time)
 
-        model_label = "swift"
         num_ens_members = len(data_one_model)
 
         if num_ens_members > 0 and reduce_ensemble is not None:
             data_one_model = _reduce_ensembles(data_one_model, reduce_ensemble)
 
-    return data_one_model, model_label
+    return data_one_model
 
 
 def _read_historical_model(
@@ -115,22 +114,18 @@ def _read_historical_model(
     *,
     download: bool,
 ) -> tuple[pd.DataFrame, str]:
-    if isinstance(model, SWOMNI):
-        model_label = "omni"
-    elif isinstance(model, SWACE):
-        model_label = "ace"
-    else:
+    if not isinstance(model, (SWACE, SWOMNI)):
         msg = "Encountered invalide model type in read historical model!"
         raise TypeError(msg)
 
-    logging.info(f"Reading {model_label} from {start_time} to {end_time}")
+    logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
 
     data_one_model = model.read(start_time, end_time, download=download)
     # set nan for 'future' values
     data_one_model.loc[synthetic_now_time:end_time] = np.nan
-    logging.info(f"Setting NaNs in {model_label} from {synthetic_now_time} to {end_time}")
+    logging.info(f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}")
 
-    return data_one_model, model_label
+    return data_one_model
 
 
 def _read_latest_ensemble_files(

@@ -17,6 +17,7 @@ class KpNiemegk:
     NAME = "qlyymm.tab"
 
     DAYS_TO_SAVE_EACH_FILE = 3
+    LABEL = "niemegk"
 
     def __init__(self, data_dir: str | Path = None):
         if data_dir is None:
@@ -33,10 +34,9 @@ class KpNiemegk:
     def download_and_process(
         self, start_time: datetime, end_time: datetime, reprocess_files: bool = False, verbose: bool = False
     ):
-        if start_time.month != datetime.now(timezone.utc).month:
-            if verbose:
-                logging.info("We can only download and progress a Kp Niemegk file for the current month!")
-                return
+        if start_time.month != datetime.now(timezone.utc).month and verbose:
+            logging.info("We can only download and progress a Kp Niemegk file for the current month!")
+            return
 
         temporary_dir = Path("./temp_kp_niemegk_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)

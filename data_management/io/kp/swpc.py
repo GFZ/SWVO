@@ -14,6 +14,8 @@ class KpSWPC:
     URL = "https://services.swpc.noaa.gov/text/"
     NAME = "3-day-geomag-forecast.txt"
 
+    LABEL = "swpc"
+
     def __init__(self, data_dir: str | Path = None):
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:

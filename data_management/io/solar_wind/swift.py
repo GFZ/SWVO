@@ -13,6 +13,7 @@ class SWSWIFTEnsemble:
     PROTON_MASS = 1.67262192369e-27
 
     ENV_VAR_NAME = "SWIFT_ENSEMBLE_OUTPUT_DIR"
+    LABEL = "swift"
 
     def __init__(self, data_dir: str | Path = None):
         if data_dir is None:

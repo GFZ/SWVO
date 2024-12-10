@@ -8,6 +8,7 @@ import pandas as pd
 
 class KpEnsemble:
     ENV_VAR_NAME = "KP_ENSEMBLE_OUTPUT_DIR"
+    LABEL = "ensemble"
 
     def __init__(self, data_dir: str | Path = None):
         if data_dir is None:

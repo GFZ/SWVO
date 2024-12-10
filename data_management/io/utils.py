@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def any_nans(data: list[pd.DataFrame]) -> bool:
+def any_nans(data: list[pd.DataFrame]|pd.DataFrame) -> bool:
     """
     Calculate if a list of data frames contains any nans.
 
@@ -13,8 +13,8 @@ def any_nans(data: list[pd.DataFrame]) -> bool:
     return any((df.isna().any(axis=None) > 0) for df in data)
 
 def construct_updated_data_frame(
-    data: list[pd.DataFrame],
-    data_one_model: list[pd.DataFrame],
+    data: list[pd.DataFrame]|pd.DataFrame,
+    data_one_model: list[pd.DataFrame]|pd.DataFrame,
     model_label: str,
 ) -> list[pd.DataFrame]:
     """
@@ -27,6 +27,9 @@ def construct_updated_data_frame(
 
     if isinstance(data_one_model, pd.DataFrame):
         data_one_model = [data_one_model]
+
+    if isinstance(data, pd.DataFrame):
+        data = [data]
 
     # extend the data we have read so far to match the new ensemble numbers
     if len(data) == 1 and len(data_one_model) > 1:

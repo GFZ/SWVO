@@ -14,6 +14,7 @@ class OMNILowRes:
     ENV_VAR_NAME = "OMNI_LOW_RES_STREAM_DIR"
 
     URL = "https://spdf.gsfc.nasa.gov/pub/data/omni/low_res_omni/"
+    LABEL = "omni"
 
     HEADER = [
         "year",
