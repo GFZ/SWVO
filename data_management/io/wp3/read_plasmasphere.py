@@ -1,23 +1,24 @@
-import datetime as dt
-import logging
 import os
-
+import logging
 import pandas as pd
+import datetime as dt
 
 from data_management.io.base_file_reader import BaseReader
 
 
 class PlasmaspherePredictionReader(BaseReader):
-    def __init__(self, wp3_output_folder, sub_folder="GFZ_PLASMA"):
+
+    def __init__(self, folder):
         super().__init__()
-        self.data_folder = os.path.join(wp3_output_folder, sub_folder)
+        self.data_folder = folder
         self._check_data_folder()
         self.file = None
         self.requested_date = None
 
     def _check_data_folder(self):
         if not os.path.exists(self.data_folder):
-            msg = f"Data folder {self.data_folder} for WP3 plasma output not found...impossible to retrieve data."
+            msg = "Data folder {} for WP3 plasma output not found...impossible to retrieve data.".format(
+                self.data_folder)
             logging.error(msg)
             raise FileNotFoundError(msg)
 
@@ -34,12 +35,16 @@ class PlasmaspherePredictionReader(BaseReader):
         :rtype: pandas.DataFrame
         """
 
-        file_name = f"plasmasphere_density_{date.year}-{str(date.month).zfill(2)}-{str(date.day).zfill(2)}-{str(date.hour).zfill(2)}-{str(date.minute).zfill(2)}.csv"
+        file_name = "plasmasphere_density_{}-{}-{}-{}-{}.csv".format(date.year,
+                                                                     str(date.month).zfill(2),
+                                                                     str(date.day).zfill(2),
+                                                                     str(date.hour).zfill(2),
+                                                                     str(date.minute).zfill(2))
 
         file_path = os.path.join(folder, file_name)
 
         if not os.path.isfile(file_path):
-            msg = f"No suitable files found in the folder {folder} for the requested date {date}"
+            msg = "No suitable files found in the folder {} for the requested date {}".format(folder, date)
             logging.warning(msg)
             return None
 
@@ -68,6 +73,7 @@ class PlasmaspherePredictionReader(BaseReader):
         if source == "gfz_plasma":
             requested_date = requested_date.replace(minute=0, second=0, microsecond=0)
             return self._read_single_file(self.data_folder, requested_date)
-        msg = f"Source {source} requested for reading plasmasphere prediction not available..."
-        logging.error(msg)
-        raise RuntimeError(msg)
+        else:
+            msg = "Source {} requested for reading plasmasphere prediction not available...".format(source)
+            logging.error(msg)
+            raise RuntimeError(msg)

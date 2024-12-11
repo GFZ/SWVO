@@ -25,8 +25,7 @@ done
 
 if [ -z "$PYTHON_ENV" ]
 then
-  echo "Environment name not provided quitting installation..."
-  exit 1
+  echo "No python environment (option -e) passed. Installing in current environment..."
 else
   echo "Installing data_management as a package for environment: " "$PYTHON_ENV"
   source activate "$PYTHON_ENV" || conda activate "$PYTHON_ENV"

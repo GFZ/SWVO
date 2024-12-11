@@ -9,7 +9,7 @@ import math
 
 import numpy as np
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -404,8 +404,14 @@ class PlasmaspherePlot(PlotOutput):
                 df_kp_date = None
                 solar_wind_date = None
                 if kp_inputs is not None and solar_wind_inputs is not None:
-                    df_kp_date = kp_inputs[kp_inputs["date_of_run"] == date]
-                    solar_wind_date = solar_wind_inputs[solar_wind_inputs["date_of_run"] == date]
+                    df_kp_date = kp_inputs[
+                        (kp_inputs["t"] <= date) &
+                        (kp_inputs["t"] >= date - timedelta(days=3))
+                    ]
+                    solar_wind_date = solar_wind_inputs[
+                        (solar_wind_inputs["t"] <= date) &
+                        (solar_wind_inputs["t"] >= date - timedelta(days=3))
+                    ]
 
                 self._plot_single_date_prediction(l_values, mlt_values,
                                                   density_values, date,
