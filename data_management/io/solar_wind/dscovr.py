@@ -21,6 +21,8 @@ class DSCOVR:
     SWEPAM_FIELDS = ["speed", "proton_density", "temperature"]
     MAG_FIELDS = ["bx_gsm", "by_gsm", "bz_gsm", "bavg"]
 
+    LABEL = "dscovr"
+
     def __init__(self, data_dir: str | Path = None):
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
