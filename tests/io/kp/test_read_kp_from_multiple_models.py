@@ -116,6 +116,8 @@ def test_forecast_in_past(sample_times):
     assert data.index.is_monotonic_increasing
     assert data.loc["2024-11-22 18:00:00+00:00"].model == "omni"
     assert data.loc["2024-11-22 21:00:00+00:00"].model == "niemegk"
+    
+    #forecast
     assert data.loc["2024-11-23 00:00:00+00:00"].model == "swpc"
 
 
