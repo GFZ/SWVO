@@ -1,15 +1,20 @@
-import pytest
-from datetime import datetime, timezone, timedelta
+#ruff: noqa: S101
+
+from datetime import datetime, timezone
 from pathlib import Path
-import pandas as pd
 from unittest.mock import mock_open, patch
 
-from data_management.io.hp.gfz import HpGFZ, Hp30GFZ, Hp60GFZ
+import pandas as pd
+import pytest
+
+from data_management.io.hp.gfz import Hp30GFZ, Hp60GFZ, HpGFZ
 
 
 @pytest.fixture
 def mock_hp_data():
-    test_dates = pd.date_range(start=datetime(2020, 1, 1), end=datetime(2020, 12, 31), freq="30min")
+    test_dates = pd.date_range(
+        start=datetime(2020, 1, 1, tzinfo=timezone.utc), end=datetime(2020, 12, 31, tzinfo=timezone.utc), freq="30min",
+    )
     test_data = pd.DataFrame(
         {
             "t": test_dates,
@@ -45,7 +50,7 @@ def test_hp60gfz_initialization(hp60gfz):
 
 
 def test_invalid_index():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="Encountered invalid index:.*"):
         HpGFZ("hp45")
 
 
@@ -55,8 +60,8 @@ def test_missing_env_var():
 
 
 def test_read_with_download(hp30gfz, mocker, mock_hp_data):
-    end_time = datetime(2020, 12, 31)
-    start_time = datetime(2020, 1, 1)
+    end_time = datetime(2020, 12, 31)  # noqa: DTZ001
+    start_time = datetime(2020, 1, 1)  # noqa: DTZ001
 
     mocker.patch("pathlib.Path.exists", return_value=False)
     mocker.patch.object(hp30gfz, "download_and_process")
@@ -64,21 +69,19 @@ def test_read_with_download(hp30gfz, mocker, mock_hp_data):
 
     df = hp30gfz.read(start_time, end_time, download=True)
 
-    # hp30gfz.download_and_process.assert_called_once_with(start_time, end_time)
     assert not df.empty
     assert df.index.tz == timezone.utc
     assert "hp30" in df.columns
 
 
 def test_start_year_behind(hp30gfz, mocker, mock_hp_data):
-    start_time = datetime(1980, 1, 1)
-    end_time = datetime(2020, 12, 31)
+    start_time = datetime(1980, 1, 1)  # noqa: DTZ001
+    end_time = datetime(2020, 12, 31)  # noqa: DTZ001
 
     mocker.patch("pathlib.Path.exists", return_value=True)
     mocker.patch.object(hp30gfz, "_read_single_file", return_value=mock_hp_data)
 
     with patch("logging.Logger.warning") as mock_warning:
-
         _ = hp30gfz.read(start_time, end_time)
         mock_warning.assert_any_call(
             "Start date chosen falls behind the mission starting year. Moving start date to first"
@@ -87,7 +90,6 @@ def test_start_year_behind(hp30gfz, mocker, mock_hp_data):
 
 
 def test_process_single_file(hp30gfz, tmp_path, mocker):
-
     file_content = """# Header
 2020 01 01 0000 0.0 0.0 0.0 15.0
 2020 01 01 0030 0.0 0.0 0.0 16.0
@@ -99,14 +101,14 @@ def test_process_single_file(hp30gfz, tmp_path, mocker):
     df = hp30gfz._process_single_file(tmp_path, ["test_file.txt"])
 
     assert len(df) == 3
-    assert df.index[0] == pd.Timestamp("2020-01-01 00:00:00")
+    assert df.index[0] == pd.Timestamp("2020-01-01 00:00:00", tzinfo=timezone.utc)
     assert df.iloc[0]["hp30"] == 15.0
     assert "hp30" in df.columns
 
 
 def test_get_processed_file_list(hp30gfz):
-    start_time = datetime(2020, 1, 1)
-    end_time = datetime(2021, 12, 31)
+    start_time = datetime(2020, 1, 1)  # noqa: DTZ001
+    end_time = datetime(2021, 12, 31)  # noqa: DTZ001
 
     file_paths, time_intervals = hp30gfz._get_processed_file_list(start_time, end_time)
 
@@ -118,16 +120,16 @@ def test_get_processed_file_list(hp30gfz):
 
 
 def test_invalid_time_range(hp30gfz):
-    end_time = datetime(2020, 1, 1)
-    start_time = datetime(2020, 12, 31)
+    end_time = datetime(2020, 1, 1)  # noqa: DTZ001
+    start_time = datetime(2020, 12, 31)  # noqa: DTZ001
 
     with pytest.raises(AssertionError):
         hp30gfz.read(start_time, end_time)
 
 
 def test_download_and_process(hp30gfz, mocker):
-    start_time = datetime(2020, 1, 1)
-    end_time = datetime(2020, 12, 31)
+    start_time = datetime(2020, 1, 1)  # noqa: DTZ001
+    end_time = datetime(2020, 12, 31)  # noqa: DTZ001
 
     mocked = mocker.patch("wget.download")
     mocker.patch("shutil.rmtree")
@@ -140,32 +142,31 @@ def test_download_and_process(hp30gfz, mocker):
 
 @pytest.fixture
 def sample_csv_data():
-
-    test_dates = pd.date_range(start=datetime(2020, 1, 1), end=datetime(2020, 1, 1, 1), freq="30min")
-    df = pd.DataFrame({"t": test_dates, "hp30": [15.0, 16.0, 17.0]})
-    return df
+    test_dates = pd.date_range(
+        start=datetime(2020, 1, 1, tzinfo=timezone.utc), end=datetime(2020, 1, 1, 1, tzinfo=timezone.utc), freq="30min",
+    )
+    return pd.DataFrame({"t": test_dates, "hp30": [15.0, 16.0, 17.0]})
 
 
 @pytest.mark.parametrize(
-    "index_name,values",
+    ("index_name", "values"),
     [
         ("hp30", [15.0, 16.0, 17.0]),
         ("hp60", [20.0, 21.0, 22.0]),
     ],
 )
 def test_read_single_file(hp30gfz, hp60gfz, tmp_path, index_name, values):
-
     instance = hp30gfz if index_name == "hp30" else hp60gfz
 
-    test_dates = pd.date_range(start=datetime(2020, 1, 1), end=datetime(2020, 1, 1, 1), freq="30min").strftime(
-        "%Y-%m-%d %H:%M:%S"
-    )
+    test_dates = pd.date_range(
+        start=datetime(2020, 1, 1, tzinfo=timezone.utc), end=datetime(2020, 1, 1, 1, tzinfo=timezone.utc), freq="30min",
+    ).strftime("%Y-%m-%d %H:%M:%S")
     test_data = pd.DataFrame({"t": test_dates, index_name: values})
 
     test_file = tmp_path / "test_data.csv"
     test_data.to_csv(test_file, index=False, header=False)
 
-    result_df = instance._read_single_file(test_file)
+    result_df = instance._read_single_file(test_file)  # noqa: SLF001
 
     assert isinstance(result_df, pd.DataFrame)
     assert index_name in result_df.columns
@@ -173,5 +174,5 @@ def test_read_single_file(hp30gfz, hp60gfz, tmp_path, index_name, values):
     assert len(result_df) == 3
     assert isinstance(result_df.index, pd.DatetimeIndex)
     assert result_df[index_name].tolist() == values
-    assert result_df.index[0] == pd.Timestamp("2020-01-01 00:00:00")
-    assert result_df.index[-1] == pd.Timestamp("2020-01-01 01:00:00")
+    assert result_df.index[0] == pd.Timestamp("2020-01-01 00:00:00", tzinfo=timezone.utc)
+    assert result_df.index[-1] == pd.Timestamp("2020-01-01 01:00:00", tzinfo=timezone.utc)

@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from data_management.io.kp import KpEnsemble, KpNiemegk, KpOMNI, KpSWPC
+from data_management.io.utils import any_nans, construct_updated_data_frame
 
 KpModel = KpEnsemble | KpNiemegk | KpOMNI | KpSWPC
 
@@ -57,7 +58,7 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
     data_out = [pd.DataFrame()]
 
     for model in model_order:
-        data_one_model, model_label = _read_from_model(
+        data_one_model = _read_from_model(
             model,
             start_time,
             end_time,
@@ -66,8 +67,8 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
             download=download,
         )
 
-        data_out = _construct_updated_data_frame(data_out, data_one_model, model_label)
-        if not _any_nans(data_out):
+        data_out = construct_updated_data_frame(data_out, data_one_model, model.LABEL)
+        if not any_nans(data_out):
             break
 
     if len(data_out) == 1:
@@ -87,7 +88,7 @@ def _read_from_model(  # noqa: PLR0913
 ) -> list[pd.DataFrame] | pd.DataFrame:
     # Read from historical models
     if isinstance(model, (KpOMNI, KpNiemegk)):
-        data_one_model, model_label = _read_historical_model(
+        data_one_model = _read_historical_model(
             model,
             start_time,
             end_time,
@@ -101,18 +102,16 @@ def _read_from_model(  # noqa: PLR0913
         data_one_model = [
             model.read(synthetic_now_time.replace(hour=0, minute=0, second=0), end_time, download=download),
         ]
-        model_label = "swpc"
 
     if isinstance(model, KpEnsemble):
         data_one_model = _read_latest_ensemble_files(model, synthetic_now_time, end_time)
 
-        model_label = "ensemble"
         num_ens_members = len(data_one_model)
 
         if num_ens_members > 0 and reduce_ensemble is not None:
             data_one_model = _reduce_ensembles(data_one_model, reduce_ensemble)
 
-    return data_one_model, model_label
+    return data_one_model
 
 
 def _read_historical_model(
@@ -123,22 +122,18 @@ def _read_historical_model(
     *,
     download: bool,
 ) -> tuple[pd.DataFrame, str]:
-    if isinstance(model, KpOMNI):
-        model_label = "omni"
-    elif isinstance(model, KpNiemegk):
-        model_label = "niemegk"
-    else:
+    if not isinstance(model, (KpOMNI, KpNiemegk)):
         msg = "Encountered invalide model type in read historical model!"
         raise TypeError(msg)
 
-    logging.info(f"Reading {model_label} from {start_time} to {end_time}")
+    logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
 
     data_one_model = model.read(start_time, end_time, download=download)
     # set nan for 'future' values
     data_one_model.loc[synthetic_now_time:end_time, "kp"] = np.nan
-    logging.info(f"Setting NaNs in {model_label} from {synthetic_now_time} to {end_time}")
+    logging.info(f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}")
 
-    return data_one_model, model_label
+    return data_one_model
 
 
 def _read_latest_ensemble_files(
@@ -182,7 +177,7 @@ def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"
 
         data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={"kp": kp_mean_ensembles})
 
-    if method == "median":
+    elif method == "median":
         kp_median_ensembles = []
 
         for it, _ in enumerate(data_ensembles[0].index):
@@ -195,39 +190,7 @@ def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"
         data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={"kp": kp_median_ensembles})
 
     else:
-        msg = "This reduction method has not been implemented yet!"
+        msg = f"This reduction method has not been implemented yet: {method}!"
         raise NotImplementedError(msg)
 
     return data_reduced
-
-
-def _construct_updated_data_frame(
-    data: list[pd.DataFrame],
-    data_one_model: list[pd.DataFrame],
-    model_label: str,
-) -> list[pd.DataFrame]:
-    """
-    Construct an updated data frame providing the previous data frame and the data frame of the current model call.
-
-    Also adds the model label to the data frame.
-    """
-    if isinstance(data_one_model, pd.DataFrame):
-        data_one_model = [data_one_model]
-
-    # extend the data we have read so far to match the new ensemble numbers
-    if len(data) == 1 and len(data_one_model) > 1:
-        data = data * len(data_one_model)
-    elif len(data) != len(data_one_model):
-        msg = f"Tried to combine models with different ensemble numbers: {len(data)} and {len(data_one_model)}"
-        raise ValueError(msg)
-
-    for i, _ in enumerate(data_one_model):
-        data_one_model[i]["model"] = model_label
-        data_one_model[i].loc[data_one_model[i]["kp"].isna(), "model"] = None
-        data[i] = data[i].combine_first(data_one_model[i])
-
-    return data
-
-
-def _any_nans(data: list[pd.DataFrame]) -> bool:
-    return any(df["kp"].isna().sum() > 0 for df in data)

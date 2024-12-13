@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 import shutil
@@ -14,10 +16,13 @@ class F107SWPC:
     URL = "https://services.swpc.noaa.gov/text/"
     NAME_F107 = "daily-solar-indices.txt"
 
-    def __init__(self, data_dir: str | Path = None):
+    LABEL = "swpc"
+
+    def __init__(self, data_dir: str|Path|None = None):
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
+                msg = f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
+                raise ValueError(msg)
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
         self.data_dir = Path(data_dir)
@@ -26,18 +31,22 @@ class F107SWPC:
         logging.info(f"SWPC F10.7 data directory: {self.data_dir}")
 
     def _get_processed_file_list(
-        self, start_time: datetime, end_time: datetime
-    ) -> Tuple[List[Path], List[Tuple[datetime, datetime]]]:
-        """Returns list of file paths and their corresponding time intervals."""
+        self, start_time: datetime, end_time: datetime,
+    ) -> tuple[list[Path], list[tuple[datetime, datetime]]]:
+        """Get list of file paths and their corresponding time intervals."""
         years_needed = range(start_time.year, end_time.year + 1)
 
         file_paths = [self.data_dir / f"SWPC_F107_{year}.csv" for year in years_needed]
-        time_intervals = [(datetime(year, 1, 1), datetime(year, 12, 31, 23, 59, 59)) for year in years_needed]
+        time_intervals = [
+            (datetime(year, 1, 1, tzinfo=timezone.utc),
+             datetime(year, 12, 31, 23, 59, 59, tzinfo=timezone.utc))
+             for year in years_needed
+        ]
 
         return file_paths, time_intervals
 
-    def download_and_process(self, verbose: bool = False) -> pd.DataFrame:
-        """Downloads and processes the latest 30-day F10.7 data."""
+    def download_and_process(self, *, verbose: bool = False) -> pd.DataFrame:
+        """Download and process the latest 30-day F10.7 data."""
         temp_dir = Path("./temp_f107")
         temp_dir.mkdir(exist_ok=True)
 
@@ -47,8 +56,9 @@ class F107SWPC:
 
             wget.download(self.URL + self.NAME_F107, str(temp_dir))
 
-            if os.stat(temp_dir / self.NAME_F107).st_size == 0:
-                raise FileNotFoundError(f"Error downloading file: {self.URL + self.NAME_F107}")
+            if Path(temp_dir / self.NAME_F107).stat().st_size == 0:
+                msg = f"Error downloading file: {self.URL + self.NAME_F107}"
+                raise FileNotFoundError(msg)
 
             if verbose:
                 logging.info("Processing F10.7 data...")
@@ -84,24 +94,27 @@ class F107SWPC:
             shutil.rmtree(temp_dir)
 
     def _read_f107_file(self, file_path: Path) -> pd.DataFrame:
-        """Reads and processes the F10.7 data file."""
+        """Read and process the F10.7 data file."""
         data = pd.read_csv(
             file_path, sep=r"\s+", skiprows=13, usecols=[0, 1, 2, 3], names=["year", "month", "day", "f107"]
         )
 
         data["date"] = pd.to_datetime(data[["year", "month", "day"]].assign(hour=0))
         data = data[["date", "f107"]]
-        return data
 
-    def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
-        assert start_time < end_time, "start_time must be before end_time"
+        return data  # noqa: RET504
+
+    def read(self, start_time: datetime, end_time: datetime, *, download: bool = False) -> pd.DataFrame:
+        if start_time >= end_time:
+            msg = "start_time must be before end_time"
+            raise ValueError(msg)
 
         if not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
         if not end_time.tzinfo:
             end_time = end_time.replace(tzinfo=timezone.utc)
 
-        current_year = datetime.now().year
+        current_year = datetime.now(tz=timezone.utc).year
         file_paths, file_intervals = self._get_processed_file_list(start_time, end_time)
 
         years_requested = range(start_time.year, end_time.year + 1)
@@ -143,4 +156,5 @@ class F107SWPC:
         data_out = data_out.drop(columns=["date"])
         data_out.index = data_out.index.tz_localize("UTC")
         data_out = data_out.truncate(before=start_time, after=end_time)
-        return data_out
+
+        return data_out  # noqa: RET504

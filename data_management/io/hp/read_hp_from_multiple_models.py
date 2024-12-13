@@ -1,22 +1,57 @@
+"""Function to read Hp from multiple models."""
+
+from __future__ import annotations
+
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import List, Type
+from typing import Literal
 
 import numpy as np
 import pandas as pd
 
-from data_management.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ, HpEnsemble, HpGFZ
+from data_management.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ
+from data_management.io.utils import any_nans, construct_updated_data_frame
+
+HpModel = Hp30Ensemble | Hp30GFZ | Hp60Ensemble | Hp60GFZ
 
 
-def read_hp_from_multiple_models(
+def read_hp_from_multiple_models(  # noqa: PLR0913
     start_time: datetime,
     end_time: datetime,
+    model_order: list[HpModel] | None = None,
     hp_index: str = "hp30",
-    model_order: List[Type] = None,
-    reduce_ensemble=None,
-    synthetic_now_time: datetime = datetime.now(timezone.utc),
-    download=False,
-):
+    reduce_ensemble: Literal["mean", "median"] | None = None,
+    synthetic_now_time: datetime | None = None,
+    *,
+    download: bool = False,
+) -> pd.DataFrame | list[pd.DataFrame]:
+    """
+    Read Hp data from multiple models.
+
+    The model order represents the priorities of models.
+    The first model in the model order is read. If there are still NaNs in the resulting data,
+    the next model will be read. And so on. In the case of reading ensemble predictions, a list
+    will be returned, otherwise a plain data frame will be returned.
+
+    :param start_time: Start time of the data request.
+    :type start_time: datetime
+    :param end_time: End time of the data request.
+    :type end_time: datetime
+    :param model_order: Order in which data will be read from the models, defaults to [OMNI, Niemegk, Ensemble, SWPC]
+    :type model_order: list | None, optional
+    :param reduce_ensemble: The method to reduce ensembles to a single time series, defaults to None
+    :type reduce_ensemble: Literal[&quot;mean&quot;] | None, optional
+    :param synthetic_now_time: Time, which represents &quot;now&quot;.
+    After this time, no data will be taken from historical models (OMNI, Niemegk), defaults to None
+    :type synthetic_now_time: datetime | None, optional
+    :param download: Flag which decides whether new data should be downloaded, defaults to False
+    :type download: bool, optional
+    :return: A data frame or a list of data frames containing data for the requested period.
+    :rtype: pd.DataFrame | list[pd.DataFrame]
+    """
+    if synthetic_now_time is None:
+        synthetic_now_time = datetime.now(timezone.utc)
+
     hp_index = hp_index.lower()
 
     if model_order is None:
@@ -26,72 +61,143 @@ def read_hp_from_multiple_models(
         elif hp_index == "hp60":
             model_order = [Hp60GFZ(), Hp60Ensemble()]
         else:
-            raise ValueError(f"Requested {hp_index} index does not exist! Possible options: hp30, hp60")
-
+            msg = f"Requested {hp_index} index does not exist! Possible options: hp30, hp60"
+            raise ValueError(msg)
     data_out = [pd.DataFrame()]
 
     for model in model_order:
-        if isinstance(model, HpGFZ):
-            print(model_order[0].__class__)
-            print(f"Reading {hp_index} from {start_time} to {end_time}")
-            data_one_model = [model.read(start_time, end_time, download=download)]
-            model_label = model.__class__.__name__
+        data_one_model = _read_from_model(
+            model,
+            start_time,
+            end_time,
+            synthetic_now_time,
+            reduce_ensemble,
+            download=download,
+        )
 
-            for i, _ in enumerate(data_one_model):
-                data_one_model[i].loc[synthetic_now_time:end_time, hp_index] = np.nan
+        data_out = construct_updated_data_frame(data_out, data_one_model, model.LABEL)
 
-        if isinstance(model, HpEnsemble):
-            # we are trying to read the most recent file; it this fails, we go one step back (1 hour) and see if this file is present
-
-            target_time = synthetic_now_time
-            data_one_model = model.read(target_time, end_time)
-
-            while len(data_one_model) == 0 and target_time > (synthetic_now_time - timedelta(days=3)):
-                target_time -= timedelta(hours=1)
-
-                # ONLY READ MIDNIGHT FILE FOR NOW; OTHER FILES BREAK
-                target_time = target_time.replace(hour=0, minute=0, second=0)
-
-                data_one_model = model.read(target_time, end_time)
-
-            model_label = "ensemble"
-
-            print(f"Reading {hp_index} ensemble {target_time} to {end_time}")
-
-            num_ens_members = len(data_one_model)
-
-            if reduce_ensemble == "mean":
-                kp_mean_ensembles = []
-
-                for it, _ in enumerate(data_one_model[0].index):
-                    data_curr_time = []
-                    for ie in range(num_ens_members):
-                        data_curr_time.append(data_one_model[ie].loc[data_one_model[ie].index[it], hp_index])
-
-                    kp_mean_ensembles.append(np.mean(data_curr_time))
-
-                data_one_model = [pd.DataFrame(index=data_one_model[0].index, data={hp_index: kp_mean_ensembles})]
-
-            elif reduce_ensemble is None:
-                data_out = data_out * num_ens_members
-
-        any_nans_found = False
-        # we making it a list in case of ensemble members
-        for i, _ in enumerate(data_one_model):
-            data_one_model[i]["model"] = model_label
-            data_one_model[i].loc[data_one_model[i][hp_index].isna(), "model"] = None
-            data_out[i] = data_out[i].combine_first(data_one_model[i])
-
-            if data_out[i][hp_index].isna().sum() > 0:
-                any_nans_found = True
-
-            logging.info(f"Found {data_out[i][hp_index].isna().sum()} NaNs in {model_label}")
-
-        # if no NaNs are present anymore, we don't have to read backups
-        if not any_nans_found:
+        if not any_nans(data_out):
             break
 
     if len(data_out) == 1:
         data_out = data_out[0]
 
     return data_out
+
+
+def _read_from_model(  # noqa: PLR0913
+    model: HpModel,
+    start_time: datetime,
+    end_time: datetime,
+    synthetic_now_time: datetime,
+    reduce_ensemble: str,
+    *,
+    download: bool,
+) -> list[pd.DataFrame] | pd.DataFrame:
+
+    # Read from historical models
+    if isinstance(model, (Hp30GFZ, Hp60GFZ)):
+        data_one_model = _read_historical_model(
+            model,
+            start_time,
+            end_time,
+            model.index,
+            synthetic_now_time,
+            download=download,
+        )
+
+    if isinstance(model, (Hp30Ensemble, Hp60Ensemble)):
+        data_one_model = _read_latest_ensemble_files(model, model.index, synthetic_now_time, end_time)
+
+        num_ens_members = len(data_one_model)
+
+        if num_ens_members > 0 and reduce_ensemble is not None:
+            data_one_model = _reduce_ensembles(data_one_model, reduce_ensemble, model.index)
+
+    return data_one_model
+
+
+def _read_historical_model(
+    model: Hp30GFZ | Hp60GFZ,
+    start_time: datetime,
+    end_time: datetime,
+    hp_index:str,
+    synthetic_now_time: datetime,
+    *,
+    download: bool,
+) -> tuple[pd.DataFrame, str]:
+    if not isinstance(model, (Hp30GFZ, Hp60GFZ)):
+        msg = "Encountered invalide model type in read historical model!"
+        raise TypeError(msg)
+
+    logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
+
+    data_one_model = model.read(start_time, end_time, download=download)
+
+    # set nan for 'future' values
+    data_one_model.loc[synthetic_now_time:end_time, hp_index] = np.nan
+    logging.info(f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}")
+
+    return data_one_model
+
+
+def _read_latest_ensemble_files(
+    model: Hp30Ensemble|Hp60Ensemble,
+    hp_index:str,
+    synthetic_now_time: datetime,
+    end_time: datetime,
+) -> list[pd.DataFrame]:
+    # we are trying to read the most recent file; it this fails, we go 1 hour back and see if this file is present
+
+    target_time = synthetic_now_time
+
+    data_one_model = pd.DataFrame(data={hp_index: []})
+
+    while target_time > (synthetic_now_time - timedelta(days=3)):
+        # ONLY READ MIDNIGHT FILE FOR NOW; OTHER FILES BREAK
+        target_time = target_time.replace(hour=0, minute=0, second=0)
+
+        try:
+            data_one_model = model.read(target_time, end_time)
+            break
+        except FileNotFoundError:
+            target_time -= timedelta(hours=1)
+            continue
+
+    logging.info(f"Reading PAGER Hp ensemble from {target_time} to {end_time}")
+
+    return data_one_model
+
+
+def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean", "median"], hp_index:str) -> pd.DataFrame:
+    """Reduce a list of data frames representing ensemble data to a single data frame using the provided method."""
+    if method == "mean":
+        hp_mean_ensembles = []
+
+        for it, _ in enumerate(data_ensembles[0].index):
+            data_curr_time = [
+                data_one_ensemble.loc[data_one_ensemble.index[it], hp_index] for data_one_ensemble in data_ensembles
+            ]
+
+            hp_mean_ensembles.append(np.mean(data_curr_time))
+
+        data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={hp_index: hp_mean_ensembles})
+
+    elif method == "median":
+        hp_median_ensembles = []
+
+        for it, _ in enumerate(data_ensembles[0].index):
+            data_curr_time = [
+                data_one_ensemble.loc[data_one_ensemble.index[it], hp_index] for data_one_ensemble in data_ensembles
+            ]
+
+            hp_median_ensembles.append(np.median(data_curr_time))
+
+        data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={hp_index: hp_median_ensembles})
+
+    else:
+        msg = f"This reduction method has not been implemented yet: {method}!"
+        raise NotImplementedError(msg)
+
+    return data_reduced

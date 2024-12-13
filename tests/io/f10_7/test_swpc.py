@@ -1,15 +1,15 @@
+# ruff: noqa: S101
+
 import os
 import shutil
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
 import pandas as pd
 import pytest
-import logging
 
 from data_management.io.f10_7.swpc import F107SWPC
-
 
 TEST_DATA_DIR = Path("test_data")
 MOCK_DATA_PATH = TEST_DATA_DIR / "mock_f107"
@@ -17,7 +17,6 @@ MOCK_DATA_PATH = TEST_DATA_DIR / "mock_f107"
 
 @pytest.fixture(autouse=True)
 def setup_and_cleanup():
-
     TEST_DATA_DIR.mkdir(exist_ok=True)
     MOCK_DATA_PATH.mkdir(exist_ok=True)
 
@@ -29,7 +28,6 @@ def setup_and_cleanup():
 
 @pytest.fixture
 def f107_instance():
-
     with patch.dict("os.environ", {F107SWPC.ENV_VAR_NAME: str(MOCK_DATA_PATH)}):
         instance = F107SWPC()
         return instance
@@ -37,7 +35,6 @@ def f107_instance():
 
 @pytest.fixture
 def sample_f107_data():
-
     return """:Product: Daily Solar Data            DSD.txt
 :Issued: 1425 UT 08 Nov 2024
 #
@@ -59,7 +56,6 @@ def sample_f107_data():
 
 @pytest.fixture
 def mock_download_response(sample_f107_data):
-
     def mock_download(output):
         mock_file_path = Path(output) / F107SWPC.NAME_F107
         mock_file_path.parent.mkdir(exist_ok=True)
@@ -70,14 +66,12 @@ def mock_download_response(sample_f107_data):
 
 
 def test_initialization_with_env_var():
-
     with patch.dict("os.environ", {F107SWPC.ENV_VAR_NAME: str(MOCK_DATA_PATH)}):
         f107 = F107SWPC()
         assert f107.data_dir == MOCK_DATA_PATH
 
 
 def test_initialization_without_env_var():
-
     if F107SWPC.ENV_VAR_NAME in os.environ:
         del os.environ[F107SWPC.ENV_VAR_NAME]
     with pytest.raises(ValueError):
@@ -85,7 +79,6 @@ def test_initialization_without_env_var():
 
 
 def test_get_processed_file_list(f107_instance):
-
     start_time = datetime(2020, 1, 1)
     end_time = datetime(2022, 12, 31)
 
@@ -100,7 +93,6 @@ def test_get_processed_file_list(f107_instance):
 
 # @patch("wget.download")
 def test_download_and_process(f107_instance):
-
     # mock_wget.side_effect = mock_download_response
 
     f107_instance.download_and_process(verbose=True)
@@ -115,7 +107,6 @@ def test_download_and_process(f107_instance):
 
 
 def test_read_f107_file(f107_instance, sample_f107_data):
-
     test_file = MOCK_DATA_PATH / "test_f107.txt"
     test_file.parent.mkdir(exist_ok=True)
 
@@ -133,29 +124,26 @@ def test_read_with_no_data(f107_instance):
     start_time = datetime(2020, 1, 1)
     end_time = datetime(2020, 12, 31)
 
-    with patch('logging.Logger.warning') as mock_warning:
+    with patch("logging.Logger.warning") as mock_warning:
         data = f107_instance.read(start_time, end_time, download=False)
-        
+
         mock_warning.assert_any_call("Data for year(s) 2020 not found.")
         mock_warning.assert_any_call("No data available. Set `download` to `True`")
-        
+
         assert isinstance(data, pd.DataFrame)
         assert len(data) == 0
         assert all(col in data.columns for col in ["f107"])
 
 
-
 def test_read_invalid_time_range(f107_instance):
-
     start_time = datetime(2020, 12, 31)
     end_time = datetime(2020, 1, 1)
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="start_time must be before end_time"):
         f107_instance.read(start_time, end_time)
 
 
 def test_read_with_existing_data(f107_instance):
-
     sample_data = pd.DataFrame(
         {
             "date": pd.date_range(start="2020-01-01", end="2020-12-31", freq="D"),
@@ -183,7 +171,6 @@ def test_read_missing_years_warning(f107_instance, test_year):
     expected_file_path = MOCK_DATA_PATH / f"SWPC_F107_{test_year}.csv"
 
     with patch("logging.Logger.warning") as mock_warning:
-
         f107_instance.read(start_time, end_time, download=False)
 
         if test_year == 2019:
@@ -196,7 +183,6 @@ def test_read_missing_years_warning(f107_instance, test_year):
 
 
 def test_data_update_with_existing_file(f107_instance):
-
     initial_data = pd.DataFrame(
         {
             "date": pd.date_range(start="2024-01-01", end="2024-01-05", freq="D"),
@@ -215,7 +201,6 @@ def test_data_update_with_existing_file(f107_instance):
 
 
 def test_cleanup_after_download(f107_instance):
-
     f107_instance.download_and_process()
 
     temp_dir = Path("./temp_f107")
@@ -223,7 +208,6 @@ def test_cleanup_after_download(f107_instance):
 
 
 def test_read_with_partial_data(f107_instance, caplog):
-
     sample_data = pd.DataFrame(
         {
             "date": pd.date_range(start="2020-01-01", end="2020-12-31", freq="D"),
@@ -237,13 +221,12 @@ def test_read_with_partial_data(f107_instance, caplog):
     start_time = datetime(2020, 12, 1)
     end_time = datetime(2021, 1, 31)
 
-    with patch('logging.Logger.warning') as mock_warning:
+    with patch("logging.Logger.warning") as mock_warning:
         data = f107_instance.read(start_time, end_time)
-        
+
         mock_warning.assert_any_call("Data for year(s) 2021 not found.")
         mock_warning.assert_any_call("Only data for 2020 are available.")
         mock_warning.assert_any_call("File test_data/mock_f107/SWPC_F107_2021.csv not found")
-        
 
         assert isinstance(data, pd.DataFrame)
         assert len(data) > 0

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -8,16 +10,18 @@ import pandas as pd
 
 class HpEnsemble:
     ENV_VAR_NAME = "PLACEHOLDER; SEE DERIVED CLASSES BELOW"
+    LABEL = "ensemble"
 
-    def __init__(self, index, data_dir: str | Path = None):
+    def __init__(self, index:str, data_dir: str|Path|None = None):
         self.index = index
-        assert (
-            self.index == "hp30" or self.index == "hp60"
-        ), "Enountered invalid index: {self.index}. Possible options are: hp30, hp60!"
+        if self.index not in ("hp30", "hp60"):
+            msg = "Encountered invalid index: {self.index}. Possible options are: hp30, hp60!"
+            raise ValueError(msg)
 
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
+                msg = f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
+                raise ValueError(msg)
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
@@ -26,7 +30,8 @@ class HpEnsemble:
         logging.info(f"{self.index.upper()} Ensemble data directory: {self.data_dir}")
 
         if not self.data_dir.exists():
-            raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrive data!")
+            msg = f"Data directory {self.data_dir} does not exist! Impossible to retrive data!"
+            raise FileNotFoundError(msg)
 
         self.index_number = index[2:]
 
@@ -56,19 +61,18 @@ class HpEnsemble:
             raise FileNotFoundError(msg)
 
         for file in file_list:
-            df = pd.read_csv(file, names=["t", self.index])
+            hp_df = pd.read_csv(file, names=["t", self.index])
 
-            df["t"] = pd.to_datetime(df["t"])
-            df.index = df["t"]
-            df.drop(labels=["t"], axis=1, inplace=True)
+            hp_df["t"] = pd.to_datetime(hp_df["t"], utc=True)
+            hp_df.index = hp_df["t"]
+            hp_df = hp_df.drop(labels=["t"], axis=1)
 
-            df.index = df.index.tz_localize("UTC")
-            df = df.truncate(
+            hp_df = hp_df.truncate(
                 before=start_time - timedelta(minutes=int(self.index_number) - 0.01),
                 after=end_time + timedelta(minutes=int(self.index_number) + 0.01),
             )
 
-            data.append(df)
+            data.append(hp_df)
 
         return data
 
@@ -76,12 +80,12 @@ class HpEnsemble:
 class Hp30Ensemble(HpEnsemble):
     ENV_VAR_NAME = "HP30_ENSEMBLE_FORECAST_DIR"
 
-    def __init__(self, data_dir: str | Path = None):
+    def __init__(self, data_dir: str|Path|None = None):
         super().__init__("hp30", data_dir)
 
 
 class Hp60Ensemble(HpEnsemble):
     ENV_VAR_NAME = "HP60_ENSEMBLE_FORECAST_DIR"
 
-    def __init__(self, data_dir: str | Path = None):
+    def __init__(self, data_dir: str|Path|None = None):
         super().__init__("hp60", data_dir)
