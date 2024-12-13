@@ -1,7 +1,11 @@
 import pandas as pd
+from scipy.signal import savgol_filter
+from datetime import datetime, timedelta, timezone
+import numpy as np
+from scipy.ndimage import gaussian_filter1d
 
 
-def any_nans(data: list[pd.DataFrame]|pd.DataFrame) -> bool:
+def any_nans(data: list[pd.DataFrame] | pd.DataFrame) -> bool:
     """
     Calculate if a list of data frames contains any nans.
 
@@ -12,9 +16,10 @@ def any_nans(data: list[pd.DataFrame]|pd.DataFrame) -> bool:
     """
     return any((df.isna().any(axis=None) > 0) for df in data)
 
+
 def construct_updated_data_frame(
-    data: list[pd.DataFrame]|pd.DataFrame,
-    data_one_model: list[pd.DataFrame]|pd.DataFrame,
+    data: list[pd.DataFrame] | pd.DataFrame,
+    data_one_model: list[pd.DataFrame] | pd.DataFrame,
     model_label: str,
 ) -> list[pd.DataFrame]:
     """
@@ -44,3 +49,102 @@ def construct_updated_data_frame(
         data[i] = data[i].combine_first(data_one_model[i])
 
     return data
+
+
+def datenum(date_input: datetime | int, month: int = None, year: int = None, hour: int = 0, minute: int = 0, seconds: int = 0) -> float:
+    """
+    Convert a date to a MATLAB serial date number.
+
+    Parameters:
+    date_input (datetime | int): A datetime object or an integer representing the day of the month.
+    month (int, optional): The month of the date. Required if date_input is an integer.
+    year (int, optional): The year of the date. Required if date_input is an integer.
+
+    Returns:
+    float: The MATLAB serial date number.
+
+    Raises:
+    ValueError: If the input is invalid, i.e., if date_input is an integer and month or year is not provided.
+    """
+    MATLAB_EPOCH = datetime.toordinal(datetime(1970, 1, 1, tzinfo=timezone.utc)) + 366
+
+    if isinstance(date_input, datetime):
+        dt = date_input.replace(tzinfo=timezone.utc)
+    elif month is not None and year is not None:
+        dt = datetime(year=year, month=month, day=date_input, hour=hour, minute=minute, second=seconds).replace(tzinfo=timezone.utc)
+    else:
+        raise ValueError(
+            "Invalid input. Provide either a datetime object or year, month, and day."
+        )
+
+    return dt.timestamp() / 86400 + MATLAB_EPOCH
+
+
+def datestr(datenum: float) -> str:
+    """
+    Convert MATLAB datenum to a formatted date string.
+
+    Parameters:
+    datenum (float): The MATLAB datenum to convert.
+
+    Returns:
+    str: The formatted date string in the format "YYYYMMDDHHMM00".
+    """
+
+    MATLAB_EPOCH = datetime.toordinal(datetime(1970, 1, 1, tzinfo=timezone.utc)) + 366
+    unix_days = datenum - MATLAB_EPOCH
+    unix_timestamp = unix_days * 86400
+
+    dt = datetime.fromtimestamp(unix_timestamp, tz=timezone.utc)
+    formatted_date = dt.strftime("%Y%m%d%H%M")
+
+    return formatted_date
+
+
+def sw_mag_propagation(sw_data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Propagate the solar wind magnetic field to the bow shock and magnetopause.
+    """
+
+    sw_data["t"] = sw_data.index
+    sw_data["t"] = np.vectorize(datenum)(sw_data["t"])
+    sw_data = sw_data.dropna()
+
+    distance = 1.5e6
+    shifted_time = distance / sw_data["speed"]
+
+    shifted_time_smooth = gaussian_filter1d(
+        np.array(shifted_time.values, dtype=np.float64), sigma=5
+    )
+    new_time_smooth = sw_data["t"] + shifted_time_smooth / 86400
+
+    stdate = sw_data["t"].min()
+    endate = new_time_smooth.max()
+
+    full_time_range = pd.date_range(
+        datestr(sw_data["t"].min()),
+        datestr(new_time_smooth.max()),
+        freq="1min",
+        tz="UTC",
+    )
+
+    valid = (new_time_smooth >= stdate) & (new_time_smooth <= endate)
+    sw_data = sw_data[valid]
+    new_time_smooth = new_time_smooth[valid]
+
+    new_time_smooth = (new_time_smooth * 1440).astype(int)
+    valid = np.diff(new_time_smooth, prepend=new_time_smooth.iloc[0]) > 0
+    sw_data = sw_data[valid]
+    new_time_smooth = new_time_smooth[valid] / 1440
+
+    sw_data["t"] = new_time_smooth
+    sw_data = sw_data.dropna()
+    sw_data["t"] = pd.to_datetime(np.vectorize(datestr)(sw_data["t"]), utc=True)
+
+    sw_data.index = sw_data["t"]
+
+    sw_data = sw_data[~sw_data.index.duplicated(keep="first")]
+    sw_data = sw_data.reindex(full_time_range)
+    sw_data = sw_data.drop(columns=["t"])
+
+    return sw_data
