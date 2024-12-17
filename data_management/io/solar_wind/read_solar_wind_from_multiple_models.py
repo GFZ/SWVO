@@ -128,7 +128,7 @@ def _read_historical_model(
 
     data_one_model = model.read(start_time, end_time, download=download)
     # set nan for 'future' values
-    data_one_model.loc[synthetic_now_time:end_time] = np.nan
+    data_one_model.loc[synthetic_now_time+timedelta(minutes=1):end_time] = np.nan
     logging.info(f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}")
 
     return data_one_model
@@ -142,6 +142,9 @@ def _read_latest_ensemble_files(
     # we are trying to read the most recent file; it this fails, we go one step back (1 day) and see if this file is present
 
     target_time = min(synthetic_now_time, end_time)
+
+    if target_time == synthetic_now_time:
+        target_time += timedelta(minutes=1)
 
     data_one_model = []
 

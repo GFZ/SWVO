@@ -112,8 +112,9 @@ class TestReadSolarWindFromMultipleModels:
 
         for d in data:
             assert d.index.is_monotonic_increasing
-            assert d.loc["2024-11-25 00:00:00+00:00"].model == "swift"
-            assert d.loc["2024-11-24 23:59:00+00:00"].model == "omni"
+            assert d.loc["2024-11-20 00:00:00+00:00"].model == "omni"
+            assert d.loc["2024-11-25 00:00:00+00:00"].model == "dscovr"
+            assert d.loc["2024-11-25 00:01:00+00:00"].model == "swift"
             assert all(col in d.columns for col in expected_columns)
 
     def test_forecast_in_past(self, sample_times, expected_columns):

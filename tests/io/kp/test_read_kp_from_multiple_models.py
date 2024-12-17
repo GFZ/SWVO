@@ -109,8 +109,8 @@ class TestReadKpFromMultipleModels:
 
         for d in data:
             assert d.index.is_monotonic_increasing
-            assert d.loc["2024-11-25 00:00:00+00:00"].model == "ensemble"
-            assert d.loc["2024-11-24 21:00:00+00:00"].model == "niemegk"
+            assert d.loc["2024-11-24 00:00:00+00:00"].model == "niemegk"
+            assert d.loc["2024-11-25 03:00:00+00:00"].model == "ensemble"
 
 
     def test_forecast_in_past(self, sample_times):
@@ -121,12 +121,12 @@ class TestReadKpFromMultipleModels:
             synthetic_now_time=sample_times["test_time_now"] - timedelta(days=2),
         )
 
-        assert data.index.is_monotonic_increasing
-        assert data.loc["2024-11-22 18:00:00+00:00"].model == "omni"
-        assert data.loc["2024-11-22 21:00:00+00:00"].model == "niemegk"
-
-        # forecast
-        assert data.loc["2024-11-23 00:00:00+00:00"].model == "swpc"
+        assert all(d.index.is_monotonic_increasing for d in data)
+        assert all(d.loc["2024-11-22 18:00:00+00:00"].model == "omni" for d in data)
+        assert all(d.loc["2024-11-23 00:00:00+00:00"].model == "niemegk" for d in data)
+        
+        #there should be ensemble in the forecast
+        assert all(d.loc["2024-11-23 03:00:00+00:00"].model == "ensemble" for d in data)
 
 
     def test_time_boundaries(self, sample_times):
@@ -189,9 +189,9 @@ class TestReadKpFromMultipleModels:
             synthetic_now_time=sample_times["test_time_now"],
         )
 
-        assert all([df.loc["2024-11-25 00:00:00+00:00"].model == "ensemble" for df in data])
-        assert all([df.loc["2024-11-24 21:00:00+00:00"].model == "niemegk" for df in data])
+        assert all([df.loc["2024-11-25 00:00:00+00:00"].model == "niemegk" for df in data])
         assert not all([df.loc["2024-11-24 21:00:00+00:00"].model == "omni" for df in data])
+        assert all([df.loc["2024-11-25 03:00:00+00:00"].model == "ensemble" for df in data])
 
 
     def test_data_consistency(self, sample_times):

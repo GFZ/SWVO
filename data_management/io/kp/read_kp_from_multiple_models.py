@@ -53,7 +53,9 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
 
     if model_order is None:
         model_order = [KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()]
-        logging.warning("No model order specified, using default order: OMNI, Niemegk, Ensemble, SWPC")
+        logging.warning(
+            "No model order specified, using default order: OMNI, Niemegk, Ensemble, SWPC"
+        )
 
     data_out = [pd.DataFrame()]
 
@@ -100,11 +102,17 @@ def _read_from_model(  # noqa: PLR0913
     if isinstance(model, KpSWPC):
         logging.info(f"Reading swpc from {synthetic_now_time} to {end_time}")
         data_one_model = [
-            model.read(synthetic_now_time.replace(hour=0, minute=0, second=0), end_time, download=download),
+            model.read(
+                synthetic_now_time.replace(hour=0, minute=0, second=0),
+                end_time,
+                download=download,
+            ),
         ]
 
     if isinstance(model, KpEnsemble):
-        data_one_model = _read_latest_ensemble_files(model, synthetic_now_time, end_time)
+        data_one_model = _read_latest_ensemble_files(
+            model, synthetic_now_time, end_time
+        )
 
         num_ens_members = len(data_one_model)
 
@@ -130,8 +138,12 @@ def _read_historical_model(
 
     data_one_model = model.read(start_time, end_time, download=download)
     # set nan for 'future' values
-    data_one_model.loc[synthetic_now_time:end_time, "kp"] = np.nan
-    logging.info(f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}")
+    data_one_model.loc[synthetic_now_time + timedelta(hours=3) : end_time, "kp"] = (
+        np.nan
+    )
+    logging.info(
+        f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}"
+    )
 
     return data_one_model
 
@@ -143,12 +155,11 @@ def _read_latest_ensemble_files(
 ) -> list[pd.DataFrame]:
     # we are trying to read the most recent file; it this fails, we go 1 hour back and see if this file is present
 
-    target_time = synthetic_now_time
+    target_time = synthetic_now_time + timedelta(hours=3)
 
     data_one_model = pd.DataFrame(data={"kp": []})
 
     while target_time > (synthetic_now_time - timedelta(days=3)):
-
         target_time = target_time.replace(minute=0, second=0)
 
         try:
@@ -163,31 +174,39 @@ def _read_latest_ensemble_files(
     return data_one_model
 
 
-def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean", "median"]) -> pd.DataFrame:
+def _reduce_ensembles(
+    data_ensembles: list[pd.DataFrame], method: Literal["mean", "median"]
+) -> pd.DataFrame:
     """Reduce a list of data frames representing ensemble data to a single data frame using the provided method."""
     if method == "mean":
         kp_mean_ensembles = []
 
         for it, _ in enumerate(data_ensembles[0].index):
             data_curr_time = [
-                data_one_ensemble.loc[data_one_ensemble.index[it], "kp"] for data_one_ensemble in data_ensembles
+                data_one_ensemble.loc[data_one_ensemble.index[it], "kp"]
+                for data_one_ensemble in data_ensembles
             ]
 
             kp_mean_ensembles.append(np.mean(data_curr_time))
 
-        data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={"kp": kp_mean_ensembles})
+        data_reduced = pd.DataFrame(
+            index=data_ensembles[0].index, data={"kp": kp_mean_ensembles}
+        )
 
     elif method == "median":
         kp_median_ensembles = []
 
         for it, _ in enumerate(data_ensembles[0].index):
             data_curr_time = [
-                data_one_ensemble.loc[data_one_ensemble.index[it], "kp"] for data_one_ensemble in data_ensembles
+                data_one_ensemble.loc[data_one_ensemble.index[it], "kp"]
+                for data_one_ensemble in data_ensembles
             ]
 
             kp_median_ensembles.append(np.median(data_curr_time))
 
-        data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={"kp": kp_median_ensembles})
+        data_reduced = pd.DataFrame(
+            index=data_ensembles[0].index, data={"kp": kp_median_ensembles}
+        )
 
     else:
         msg = f"This reduction method has not been implemented yet: {method}!"
