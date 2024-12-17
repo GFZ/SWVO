@@ -11,30 +11,28 @@ TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
 
 
-@pytest.fixture
-def f107omni():
-    os.environ["OMNI_LOW_RES_STREAM_DIR"] = str(DATA_DIR)
-    yield F107OMNI()
-
-
-@pytest.fixture
-def mock_f107omni_data():
-    test_dates = pd.date_range(
-        start=datetime(2020, 1, 1), end=datetime(2020, 12, 31), freq="h"
-    )
-    test_data = pd.DataFrame(
-        {
-            "t": test_dates,
-            "f107": [150.0] * len(test_dates),
-            "file_name": "some_file",
-            "timestamp": test_dates.strftime("%Y-%m-%d %H:%M:%S"),
-        }
-    )
-    test_data.index = test_dates
-    return test_data
-
-
 class TestF107OMNI:
+    @pytest.fixture
+    def f107omni(self):
+        os.environ["OMNI_LOW_RES_STREAM_DIR"] = str(DATA_DIR)
+        yield F107OMNI()
+
+    @pytest.fixture
+    def mock_f107omni_data(self):
+        test_dates = pd.date_range(
+            start=datetime(2020, 1, 1), end=datetime(2020, 12, 31), freq="h"
+        )
+        test_data = pd.DataFrame(
+            {
+                "t": test_dates,
+                "f107": [150.0] * len(test_dates),
+                "file_name": "some_file",
+                "timestamp": test_dates.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+        )
+        test_data.index = test_dates
+        return test_data
+
     def test_initialization_with_env_var(self, f107omni):
         assert f107omni.data_dir.exists()
 

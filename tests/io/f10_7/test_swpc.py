@@ -15,57 +15,53 @@ TEST_DATA_DIR = Path("test_data")
 MOCK_DATA_PATH = TEST_DATA_DIR / "mock_f107"
 
 
-@pytest.fixture(autouse=True)
-def setup_and_cleanup():
-    TEST_DATA_DIR.mkdir(exist_ok=True)
-    MOCK_DATA_PATH.mkdir(exist_ok=True)
-
-    yield
-
-    if TEST_DATA_DIR.exists():
-        shutil.rmtree(TEST_DATA_DIR)
-
-
-@pytest.fixture
-def f107_instance():
-    with patch.dict("os.environ", {F107SWPC.ENV_VAR_NAME: str(MOCK_DATA_PATH)}):
-        instance = F107SWPC()
-        return instance
-
-
-@pytest.fixture
-def sample_f107_data():
-    return """:Product: Daily Solar Data            DSD.txt
-:Issued: 1425 UT 08 Nov 2024
-#
-#  Prepared by the U.S. Dept. of Commerce, NOAA, Space Weather Prediction Center
-#  Please send comments and suggestions to SWPC.Webmaster@noaa.gov
-#
-#                Last 30 Days Daily Solar Data
-#
-#                         Sunspot       Stanford GOES15
-#           Radio  SESC     Area          Solar  X-Ray  ------ Flares ------
-#           Flux  Sunspot  10E-6   New     Mean  Bkgd    X-Ray      Optical
-#  Date     10.7cm Number  Hemis. Regions Field  Flux   C  M  X  S  1  2  3
-#--------------------------------------------------------------------------- 
-2024 10 09  220    107     1920      0    -999      *   3  2  2  4  2  0  0
-2024 10 10  216    150     1460      2    -999      *   4  4  0  4  0  0  0
-2024 10 11  214    130     1445      0    -999      *   6  2  0  4  0  0  0
-"""
-
-
-@pytest.fixture
-def mock_download_response(sample_f107_data):
-    def mock_download(output):
-        mock_file_path = Path(output) / F107SWPC.NAME_F107
-        mock_file_path.parent.mkdir(exist_ok=True)
-        with open(mock_file_path, "w") as f:
-            f.write(sample_f107_data)
-
-    return mock_download
-
-
 class TestF107SWPC:
+    @pytest.fixture(autouse=True)
+    def setup_and_cleanup(self):
+        TEST_DATA_DIR.mkdir(exist_ok=True)
+        MOCK_DATA_PATH.mkdir(exist_ok=True)
+
+        yield
+
+        if TEST_DATA_DIR.exists():
+            shutil.rmtree(TEST_DATA_DIR)
+
+    @pytest.fixture
+    def f107_instance(self):
+        with patch.dict("os.environ", {F107SWPC.ENV_VAR_NAME: str(MOCK_DATA_PATH)}):
+            instance = F107SWPC()
+            return instance
+
+    @pytest.fixture
+    def sample_f107_data(self):
+        return """:Product: Daily Solar Data            DSD.txt
+    :Issued: 1425 UT 08 Nov 2024
+    #
+    #  Prepared by the U.S. Dept. of Commerce, NOAA, Space Weather Prediction Center
+    #  Please send comments and suggestions to SWPC.Webmaster@noaa.gov
+    #
+    #                Last 30 Days Daily Solar Data
+    #
+    #                         Sunspot       Stanford GOES15
+    #           Radio  SESC     Area          Solar  X-Ray  ------ Flares ------
+    #           Flux  Sunspot  10E-6   New     Mean  Bkgd    X-Ray      Optical
+    #  Date     10.7cm Number  Hemis. Regions Field  Flux   C  M  X  S  1  2  3
+    #--------------------------------------------------------------------------- 
+    2024 10 09  220    107     1920      0    -999      *   3  2  2  4  2  0  0
+    2024 10 10  216    150     1460      2    -999      *   4  4  0  4  0  0  0
+    2024 10 11  214    130     1445      0    -999      *   6  2  0  4  0  0  0
+    """
+
+    @pytest.fixture
+    def mock_download_response(self, sample_f107_data):
+        def mock_download(output):
+            mock_file_path = Path(output) / F107SWPC.NAME_F107
+            mock_file_path.parent.mkdir(exist_ok=True)
+            with open(mock_file_path, "w") as f:
+                f.write(sample_f107_data)
+
+        return mock_download
+
     def test_initialization_with_env_var(self):
         with patch.dict("os.environ", {F107SWPC.ENV_VAR_NAME: str(MOCK_DATA_PATH)}):
             f107 = F107SWPC()

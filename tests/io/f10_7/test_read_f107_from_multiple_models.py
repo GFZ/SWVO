@@ -22,21 +22,20 @@ for key, var in ENV_VAR_NAMES.items():
     os.environ[key] = ENV_VAR_NAMES[key]
 
 
-@pytest.fixture
-def sample_times():
-    now = datetime(2024, 11, 25).replace(
-        tzinfo=timezone.utc, minute=0, second=0, microsecond=0
-    )
-    return {
-        "past_start": now - timedelta(days=5),
-        "past_end": now - timedelta(days=2),
-        "future_start": now + timedelta(days=1),
-        "future_end": now + timedelta(days=3),
-        "test_time_now": now,
-    }
-
-
 class TestReadF107FromMultipleModels:
+    @pytest.fixture
+    def sample_times(self):
+        now = datetime(2024, 11, 25).replace(
+            tzinfo=timezone.utc, minute=0, second=0, microsecond=0
+        )
+        return {
+            "past_start": now - timedelta(days=5),
+            "past_end": now - timedelta(days=2),
+            "future_start": now + timedelta(days=1),
+            "future_end": now + timedelta(days=3),
+            "test_time_now": now,
+        }
+
     def test_basic_historical_read(self, sample_times):
         data = read_f107_from_multiple_models(
             start_time=sample_times["past_start"],
