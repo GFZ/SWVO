@@ -15,3 +15,7 @@ venv/
 set_env_variables.sh
 *.tmp
 ruff.toml
+.vscode/settings.json
+replace.sh
+omni.sh
+.coveragerc
