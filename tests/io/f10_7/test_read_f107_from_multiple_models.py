@@ -30,7 +30,7 @@ def sample_times():
         "past_end": now - timedelta(days=2),
         "future_start": now + timedelta(days=1),
         "future_end": now + timedelta(days=3),
-        "now": now,
+        "test_time_now": now,
     }
 
 
@@ -40,7 +40,7 @@ def test_basic_historical_read(sample_times):
         start_time=sample_times["past_start"],
         end_time=sample_times["past_end"],
         model_order=[F107OMNI()],
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
 
     assert isinstance(data, pd.DataFrame)
@@ -56,7 +56,7 @@ def test_basic_forecast_read(sample_times):
         start_time=sample_times["future_start"],
         end_time=sample_times["future_end"],
         model_order=[F107SWPC()],
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
 
     assert isinstance(data, pd.DataFrame)
@@ -73,7 +73,7 @@ def test_time_ordering(sample_times):
         start_time=start,
         end_time=end,
         model_order=[F107OMNI(), F107SWPC()],
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
 
     assert data.index.is_monotonic_increasing
@@ -95,7 +95,7 @@ def test_model_transition_1(sample_times):
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
         model_order=[F107OMNI(), F107SWPC()],
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
 
     assert data.loc["2024-11-22 00:00:00+00:00"].model == "omni"
@@ -109,7 +109,7 @@ def test_model_transition_2(sample_times):
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
         model_order=[F107OMNI(), F107SWPC()],
-        synthetic_now_time=sample_times["now"] + timedelta(days=-2),
+        synthetic_now_time=sample_times["test_time_now"] + timedelta(days=-2),
     )
 
     assert data.loc["2024-11-22 00:00:00+00:00"].model == "omni"
@@ -121,7 +121,7 @@ def test_data_consistency(sample_times):
         "start_time": sample_times["past_start"],
         "end_time": sample_times["past_end"],
         "model_order": [F107OMNI()],
-        "synthetic_now_time": sample_times["now"],
+        "synthetic_now_time": sample_times["test_time_now"],
     }
 
     data1 = read_f107_from_multiple_models(**params)

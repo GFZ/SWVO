@@ -30,7 +30,7 @@ def sample_times():
         "past_end": now - timedelta(days=2),
         "future_start": now + timedelta(days=1),
         "future_end": now + timedelta(days=3),
-        "now": now,
+        "test_time_now": now,
     }
 
 
@@ -43,7 +43,7 @@ class TestHpFromMultipleModels:
             end_time=sample_times["past_end"],
             hp_index=hp_index,
             model_order=[models[0]()],
-            synthetic_now_time=sample_times["now"],
+            synthetic_now_time=sample_times["test_time_now"],
         )
 
         assert isinstance(data, pd.DataFrame)
@@ -60,7 +60,7 @@ class TestHpFromMultipleModels:
             end_time=sample_times["future_end"],
             hp_index=hp_index,
             model_order=[models[1]()],
-            synthetic_now_time=sample_times["now"],
+            synthetic_now_time=sample_times["test_time_now"],
         )
 
         assert all(isinstance(d, pd.DataFrame) for d in data)
@@ -75,7 +75,7 @@ class TestHpFromMultipleModels:
             hp_index=hp_index,
             model_order=[models[1]()],
             reduce_ensemble="mean",
-            synthetic_now_time=sample_times["now"],
+            synthetic_now_time=sample_times["test_time_now"],
         )
 
         assert isinstance(data, pd.DataFrame)
@@ -90,7 +90,7 @@ class TestHpFromMultipleModels:
             hp_index=hp_index,
             model_order=[models[1]()],
             reduce_ensemble=None,
-            synthetic_now_time=sample_times["now"],
+            synthetic_now_time=sample_times["test_time_now"],
         )
 
         assert isinstance(data, list)
@@ -105,7 +105,7 @@ class TestHpFromMultipleModels:
             end_time=sample_times["future_end"],
             hp_index=hp_index,
             model_order=[models[0](), models[1]()],
-            synthetic_now_time=sample_times["now"],
+            synthetic_now_time=sample_times["test_time_now"],
         )
 
         for d in data:
@@ -126,7 +126,7 @@ class TestHpFromMultipleModels:
             end_time=sample_times["future_end"],
             hp_index=hp_index,
             model_order=[models[0](), models[1]()],
-            synthetic_now_time=sample_times["now"],
+            synthetic_now_time=sample_times["test_time_now"],
         )
         assert all([df.loc["2024-11-25 00:00:00+00:00"].model == "ensemble" for df in data])
         assert all([df.loc["2024-11-24 21:00:00+00:00"].model == "gfz" for df in data])
@@ -137,7 +137,7 @@ class TestHpFromMultipleModels:
             "end_time": sample_times["past_end"],
             "hp_index": hp_index,
             "model_order": [models[0]()],
-            "synthetic_now_time": sample_times["now"],
+            "synthetic_now_time": sample_times["test_time_now"],
         }
 
         data1 = read_hp_from_multiple_models(**params)

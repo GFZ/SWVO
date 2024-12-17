@@ -33,7 +33,7 @@ def sample_times():
         "past_end": now - timedelta(days=2),
         "future_start": now + timedelta(days=1),
         "future_end": now + timedelta(days=3),
-        "now": now,
+        "test_time_now": now,
     }
 
 
@@ -42,7 +42,7 @@ def test_basic_historical_read(sample_times):
         start_time=sample_times["past_start"],
         end_time=sample_times["past_end"],
         model_order=[KpOMNI(), KpNiemegk()],
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
 
     assert isinstance(data, pd.DataFrame)
@@ -59,7 +59,7 @@ def test_basic_forecast_read(sample_times):
         start_time=sample_times["future_start"],
         end_time=sample_times["future_end"],
         model_order=[KpEnsemble(), KpSWPC()],
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
 
     assert all(isinstance(d, pd.DataFrame) for d in data)
@@ -80,7 +80,7 @@ def test_full_ensemble(sample_times):
         end_time=sample_times["future_end"],
         model_order=[KpEnsemble()],
         reduce_ensemble=None,
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
 
     assert isinstance(data, list)
@@ -96,7 +96,7 @@ def test_time_ordering_and_transition(sample_times):
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
         model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
 
     for d in data:
@@ -110,7 +110,7 @@ def test_forecast_in_past(sample_times):
         start_time=sample_times["past_start"],
         end_time=sample_times["future_start"],
         model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
-        synthetic_now_time=sample_times["now"] - timedelta(days=2),
+        synthetic_now_time=sample_times["test_time_now"] - timedelta(days=2),
     )
 
     assert data.index.is_monotonic_increasing
@@ -129,7 +129,7 @@ def test_time_boundaries(sample_times):
         start_time=start,
         end_time=end,
         model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
 
     for d in data:
@@ -147,9 +147,9 @@ def test_invalid_time_range(sample_times):
 def test_date_more_than_3_days_in_future(sample_times):
     with pytest.raises(ValueError, match="We can only read 3 days at a time of Kp SWPC!"):
         read_kp_from_multiple_models(
-            start_time=sample_times["now"] - timedelta(days=6),
-            end_time=sample_times["now"] + timedelta(days=4),
-            synthetic_now_time=sample_times["now"],
+            start_time=sample_times["test_time_now"] - timedelta(days=6),
+            end_time=sample_times["test_time_now"] + timedelta(days=4),
+            synthetic_now_time=sample_times["test_time_now"],
         )
 
 
@@ -158,7 +158,7 @@ def test_kp_value_range(sample_times):
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
         model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
 
     def check_kp_range(df):
@@ -174,7 +174,7 @@ def test_model_transition(sample_times):
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
         model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
 
     assert all([df.loc["2024-11-25 00:00:00+00:00"].model == "ensemble" for df in data])
@@ -187,7 +187,7 @@ def test_data_consistency(sample_times):
         "start_time": sample_times["past_start"],
         "end_time": sample_times["past_end"],
         "model_order": [KpOMNI()],
-        "synthetic_now_time": sample_times["now"],
+        "synthetic_now_time": sample_times["test_time_now"],
     }
 
     data1 = read_kp_from_multiple_models(**params)

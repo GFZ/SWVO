@@ -33,7 +33,7 @@ def sample_times():
         "past_end": now - timedelta(days=2),
         "future_start": now + timedelta(days=1),
         "future_end": now + timedelta(days=3),
-        "now": now,
+        "test_time_now": now,
     }
 
 
@@ -56,7 +56,7 @@ def test_basic_historical_read(sample_times, expected_columns):
         start_time=sample_times["past_start"],
         end_time=sample_times["past_end"],
         model_order=[SWOMNI(), DSCOVR(), SWACE()],
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
 
     assert isinstance(data, pd.DataFrame)
@@ -72,7 +72,7 @@ def test_basic_forecast_read(sample_times, expected_columns):
         start_time=sample_times["future_start"],
         end_time=sample_times["future_end"],
         model_order=[SWSWIFTEnsemble()],
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
     assert all(isinstance(d, pd.DataFrame) for d in data)
     assert all(not d["file_name"].isna().all() for d in data)
@@ -88,7 +88,7 @@ def test_full_ensemble(sample_times, expected_columns):
         end_time=sample_times["future_end"],
         model_order=[SWSWIFTEnsemble()],
         reduce_ensemble=None,
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
 
     assert isinstance(data, list)
@@ -104,7 +104,7 @@ def test_time_ordering_and_transition(sample_times, expected_columns):
         start_time=sample_times["past_start"],
         end_time=sample_times["future_end"],
         model_order=[SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble()],
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
 
     for d in data:
@@ -119,7 +119,7 @@ def test_forecast_in_past(sample_times, expected_columns):
         start_time=sample_times["past_start"],
         end_time=sample_times["past_end"],
         model_order=[SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble()],
-        synthetic_now_time=sample_times["now"] - timedelta(days=3),
+        synthetic_now_time=sample_times["test_time_now"] - timedelta(days=3),
     )
 
     for d in data:
@@ -137,7 +137,7 @@ def test_time_boundaries(sample_times):
         start_time=start,
         end_time=end,
         model_order=[SWOMNI(), SWSWIFTEnsemble()],
-        synthetic_now_time=sample_times["now"],
+        synthetic_now_time=sample_times["test_time_now"],
     )
 
     for d in data:
@@ -157,7 +157,7 @@ def test_data_consistency(sample_times):
         "start_time": sample_times["past_start"],
         "end_time": sample_times["future_start"],
         "model_order": [SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble()],
-        "synthetic_now_time": sample_times["now"],
+        "synthetic_now_time": sample_times["test_time_now"],
     }
 
     data1 = read_solar_wind_from_multiple_models(**params)
