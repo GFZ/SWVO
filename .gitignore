@@ -19,3 +19,4 @@ ruff.toml
 replace.sh
 omni.sh
 .coveragerc
+cron_check.sh
