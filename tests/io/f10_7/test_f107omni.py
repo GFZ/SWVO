@@ -19,7 +19,9 @@ def f107omni():
 
 @pytest.fixture
 def mock_f107omni_data():
-    test_dates = pd.date_range(start=datetime(2020, 1, 1), end=datetime(2020, 12, 31), freq="h")
+    test_dates = pd.date_range(
+        start=datetime(2020, 1, 1), end=datetime(2020, 12, 31), freq="h"
+    )
     test_data = pd.DataFrame(
         {
             "t": test_dates,
@@ -32,111 +34,110 @@ def mock_f107omni_data():
     return test_data
 
 
-def test_initialization_with_env_var(f107omni):
-    assert f107omni.data_dir.exists()
+class TestF107OMNI:
+    def test_initialization_with_env_var(self, f107omni):
+        assert f107omni.data_dir.exists()
 
+    def test_initialization_with_data_dir(self):
+        f107omni = F107OMNI(data_dir=DATA_DIR)
+        assert f107omni.data_dir == DATA_DIR
 
-def test_initialization_with_data_dir():
-    f107omni = F107OMNI(data_dir=DATA_DIR)
-    assert f107omni.data_dir == DATA_DIR
+    def test_initialization_without_env_var(self):
+        if "OMNI_LOW_RES_STREAM_DIR" in os.environ:
+            del os.environ["OMNI_LOW_RES_STREAM_DIR"]
+        with pytest.raises(ValueError):
+            F107OMNI()
 
-
-def test_initialization_without_env_var():
-    if "OMNI_LOW_RES_STREAM_DIR" in os.environ:
-        del os.environ["OMNI_LOW_RES_STREAM_DIR"]
-    with pytest.raises(ValueError):
-        F107OMNI()
-
-
-def test_download_and_process(f107omni, mocker):
-    mocker.patch("wget.download")
-    mocker.patch.object(
-        f107omni,
-        "_process_single_file",
-        return_value=f107omni._process_single_file(Path(TEST_DIR) / "data/omni2_2020.dat"),
-    )
-
-    start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
-    end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
-
-    f107omni.download_and_process(start_time, end_time, verbose=True)
-
-    assert (TEST_DIR / Path("data/omni2_2020.dat")).exists()
-
-
-def test_read_without_download(f107omni, mocker):
-    start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)
-    end_time = datetime(2021, 12, 31, tzinfo=timezone.utc)
-    with pytest.raises(ValueError):  # value error is raised when no files are found hence no concatenation is possible
-        f107omni.read(start_time, end_time, download=False)
-
-
-def test_read_with_download(f107omni, mock_f107omni_data, mocker):
-
-    mocker.patch("pathlib.Path.exists", return_value=False)
-    mocker.patch.object(f107omni, "_read_single_file", return_value=mock_f107omni_data)
-    mocker.patch.object(f107omni, "download_and_process")
-
-    start_time = datetime(2020, 1, 1)
-    end_time = datetime(2020, 12, 31)
-
-    df = f107omni.read(start_time, end_time, download=True)
-    f107omni.download_and_process.assert_called_once()
-
-    assert not df.empty
-    assert all(df["f107"] == 150.0)
-    assert "f107" in df.columns
-    assert all(idx.hour == 0 for idx in df.index)
-    assert all(idx.tzinfo is not None for idx in df.index)
-    assert all(idx.tzinfo is timezone.utc for idx in df.index)
-
-
-def test_process_single_file(f107omni):
-    file = Path(TEST_DIR) / "data/omni2_2020.dat"
-    df = f107omni._process_single_file(file)
-    assert isinstance(df, pd.DataFrame)
-    assert len(df) > 0
-    assert "f107" in df.columns
-
-
-def test_read_single_file(f107omni):
-
-    csv_file = Path(TEST_DIR) / "data/OMNI_LOW_RES_2020.csv"
-    df = f107omni._read_single_file(csv_file)
-    assert isinstance(df, pd.DataFrame)
-    assert len(df) > 0
-    assert "f107" in df.columns
-
-
-def test_start_year_behind(f107omni, mocker, mock_f107omni_data):
-    start_time = datetime(1920, 1, 1, tzinfo=timezone.utc)
-    end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
-
-    mocker.patch("pathlib.Path.exists", return_value=True)
-    mocker.patch.object(f107omni, "_get_processed_file_list", return_value=([Path("dummy.csv")], []))
-    mocker.patch.object(f107omni, "_read_single_file", return_value=mock_f107omni_data)
-
-    df = pd.DataFrame(
-        {
-            "f107": [],
-            "file_name": [],
-        }
-    )
-    df.index = pd.DatetimeIndex([])
-
-    mocker.patch("pandas.concat", return_value=df)
-    mocker.patch.object(pd.DataFrame, "truncate", return_value=df)
-
-    with patch("logging.Logger.warning") as mock_warning:
-
-        result_df = f107omni.read(start_time, end_time)
-        mock_warning.assert_any_call(
-            "Start date chosen falls behind the existing data. Moving start date to first" " available mission files..."
+    def test_download_and_process(self, f107omni, mocker):
+        mocker.patch("wget.download")
+        mocker.patch.object(
+            f107omni,
+            "_process_single_file",
+            return_value=f107omni._process_single_file(
+                Path(TEST_DIR) / "data/omni2_2020.dat"
+            ),
         )
 
-    assert result_df.empty, "Expected resulting DataFrame to be empty"
+        start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
 
+        f107omni.download_and_process(start_time, end_time, verbose=True)
 
-def test_remove_processed_file():
+        assert (TEST_DIR / Path("data/omni2_2020.dat")).exists()
 
-    os.remove(Path(TEST_DIR) / "data/OMNI_LOW_RES_2020.csv")
+    def test_read_without_download(self, f107omni):
+        start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)
+        end_time = datetime(2021, 12, 31, tzinfo=timezone.utc)
+        with pytest.raises(
+            ValueError
+        ):  # value error is raised when no files are found hence no concatenation is possible
+            f107omni.read(start_time, end_time, download=False)
+
+    def test_read_with_download(self, f107omni, mock_f107omni_data, mocker):
+        mocker.patch("pathlib.Path.exists", return_value=False)
+        mocker.patch.object(
+            f107omni, "_read_single_file", return_value=mock_f107omni_data
+        )
+        mocker.patch.object(f107omni, "download_and_process")
+
+        start_time = datetime(2020, 1, 1)
+        end_time = datetime(2020, 12, 31)
+
+        df = f107omni.read(start_time, end_time, download=True)
+        f107omni.download_and_process.assert_called_once()
+
+        assert not df.empty
+        assert all(df["f107"] == 150.0)
+        assert "f107" in df.columns
+        assert all(idx.hour == 0 for idx in df.index)
+        assert all(idx.tzinfo is not None for idx in df.index)
+        assert all(idx.tzinfo is timezone.utc for idx in df.index)
+
+    def test_process_single_file(self, f107omni):
+        file = Path(TEST_DIR) / "data/omni2_2020.dat"
+        df = f107omni._process_single_file(file)
+        assert isinstance(df, pd.DataFrame)
+        assert len(df) > 0
+        assert "f107" in df.columns
+
+    def test_read_single_file(self, f107omni):
+        csv_file = Path(TEST_DIR) / "data/OMNI_LOW_RES_2020.csv"
+        df = f107omni._read_single_file(csv_file)
+        assert isinstance(df, pd.DataFrame)
+        assert len(df) > 0
+        assert "f107" in df.columns
+
+    def test_start_year_behind(self, f107omni, mocker, mock_f107omni_data):
+        start_time = datetime(1920, 1, 1, tzinfo=timezone.utc)
+        end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
+
+        mocker.patch("pathlib.Path.exists", return_value=True)
+        mocker.patch.object(
+            f107omni, "_get_processed_file_list", return_value=([Path("dummy.csv")], [])
+        )
+        mocker.patch.object(
+            f107omni, "_read_single_file", return_value=mock_f107omni_data
+        )
+
+        df = pd.DataFrame(
+            {
+                "f107": [],
+                "file_name": [],
+            }
+        )
+        df.index = pd.DatetimeIndex([])
+
+        mocker.patch("pandas.concat", return_value=df)
+        mocker.patch.object(pd.DataFrame, "truncate", return_value=df)
+
+        with patch("logging.Logger.warning") as mock_warning:
+            result_df = f107omni.read(start_time, end_time)
+            mock_warning.assert_any_call(
+                "Start date chosen falls behind the existing data. Moving start date to first"
+                " available mission files..."
+            )
+
+        assert result_df.empty, "Expected resulting DataFrame to be empty"
+
+    def test_remove_processed_file(self):
+        os.remove(Path(TEST_DIR) / "data/OMNI_LOW_RES_2020.csv")
