@@ -218,3 +218,15 @@ def test_read_with_default_times(swift_instance, create_mock_swift_files):
     for df in result:
         assert df.index.min() <= base_date
         assert df.index.max() >= base_date + timedelta(days=3)
+
+
+def test_with_propagation():
+    start_time = datetime(2024, 11, 21, tzinfo=timezone.utc)
+    end_time = datetime(2024, 11, 24, tzinfo=timezone.utc)
+
+    swace_instance = SWSWIFTEnsemble(Path(__file__).parent / "data" / "DSCOVR")
+    data = swace_instance.read(start_time, end_time, propagation=True)
+
+    assert isinstance(data, list)
+    for df in data:
+        assert any(df["file_name"] == "propagated from previous SWIFT FORECAST file")

@@ -7,6 +7,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from data_management.io.utils import sw_mag_propagation
+
 
 
 class SWSWIFTEnsemble:
@@ -29,7 +31,7 @@ class SWSWIFTEnsemble:
         if not self.data_dir.exists():
             raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrieve data!")
 
-    def read(self, start_time: datetime, end_time: datetime) -> list:
+    def read(self, start_time: datetime, end_time: datetime, propagation: bool = False) -> list:
         if start_time and not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
         if end_time and not end_time.tzinfo:
@@ -40,6 +42,10 @@ class SWSWIFTEnsemble:
 
         if end_time is None:
             end_time = start_time.replace(tzinfo=timezone.utc) + timedelta(days=3)
+
+        if propagation:
+            logging.info("Shiting start day by -1 day to account for propagation")
+            start_time = start_time - timedelta(days=1)
 
         str_date = start_time.strftime("%Y%m%dt0000")
 
@@ -56,6 +62,10 @@ class SWSWIFTEnsemble:
                     before=start_time - timedelta(minutes=10),
                     after=end_time + timedelta(minutes=10),
                 )
+
+                if propagation:
+                    data_gsm = sw_mag_propagation(data_gsm)
+                    data_gsm["file_name"] = data_gsm.apply(self._update_filename, axis=1)
 
                 gsm_s.append(data_gsm)
             except IndexError:
@@ -138,3 +148,17 @@ class SWSWIFTEnsemble:
         df["file_name"] = file_name
 
         return df
+
+
+    def _update_filename(self, row: pd.Series) -> str:
+        if pd.isna(row["file_name"]):
+            return row["file_name"]
+
+        file_date_str = Path(row["file_name"]).stem.split("_")[-1]
+        file_date = pd.to_datetime(file_date_str, format="%Y%m%d").date()
+        index_date = row.name.date()
+        return (
+            "propagated from previous SWIFT FORECAST file"
+            if file_date != index_date
+            else row["file_name"]
+        )

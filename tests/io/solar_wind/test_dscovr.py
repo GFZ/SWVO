@@ -189,3 +189,16 @@ def test_invalid_value_handling(field, invalid_value, expected):
         assert np.isnan(data[field].iloc[0])
     else:
         assert data[field].iloc[0] == pytest.approx(expected)
+
+
+def test_with_propagation():
+    start_time = datetime(2024, 11, 21, tzinfo=timezone.utc)
+    end_time = datetime(2024, 11, 24, tzinfo=timezone.utc)
+
+    swace_instance = DSCOVR(Path(__file__).parent / "data" / "DSCOVR")
+    data = swace_instance.read(start_time, end_time, propagation=True)
+
+    assert isinstance(data, pd.DataFrame)
+    assert len(data) == 5109
+    assert all(col in data.columns for col in DSCOVR.MAG_FIELDS + DSCOVR.SWEPAM_FIELDS)
+    assert any(data["file_name"] == "propagated from previous DSCOVR NOWCAST file")
