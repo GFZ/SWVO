@@ -148,8 +148,8 @@ def _read_latest_ensemble_files(
     data_one_model = pd.DataFrame(data={"kp": []})
 
     while target_time > (synthetic_now_time - timedelta(days=3)):
-        # ONLY READ MIDNIGHT FILE FOR NOW; OTHER FILES BREAK
-        target_time = target_time.replace(hour=0, minute=0, second=0)
+
+        target_time = target_time.replace(minute=0, second=0)
 
         try:
             data_one_model = model.read(target_time, end_time)
