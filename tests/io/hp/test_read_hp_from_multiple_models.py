@@ -3,7 +3,13 @@ from datetime import datetime, timezone, timedelta
 import pandas as pd
 import numpy as np
 import os
-from data_management.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ, read_hp_from_multiple_models
+from data_management.io.hp import (
+    Hp30Ensemble,
+    Hp30GFZ,
+    Hp60Ensemble,
+    Hp60GFZ,
+    read_hp_from_multiple_models,
+)
 from pathlib import Path
 
 TEST_DIR = os.path.dirname(__file__)
@@ -24,7 +30,9 @@ def set_env_var():
 
 @pytest.fixture
 def sample_times():
-    now = datetime(2024, 11, 25).replace(tzinfo=timezone.utc, minute=0, second=0, microsecond=0)
+    now = datetime(2024, 11, 25).replace(
+        tzinfo=timezone.utc, minute=0, second=0, microsecond=0
+    )
     return {
         "past_start": now - timedelta(days=5),
         "past_end": now - timedelta(days=2),
@@ -34,9 +42,11 @@ def sample_times():
     }
 
 
-@pytest.mark.parametrize("hp_index,models", [("hp30", [Hp30GFZ, Hp30Ensemble]), ("hp60", [Hp60GFZ, Hp60Ensemble])])
+@pytest.mark.parametrize(
+    "hp_index,models",
+    [("hp30", [Hp30GFZ, Hp30Ensemble]), ("hp60", [Hp60GFZ, Hp60Ensemble])],
+)
 class TestHpFromMultipleModels:
-
     def test_basic_historical_read(self, sample_times, hp_index, models):
         data = read_hp_from_multiple_models(
             start_time=sample_times["past_start"],
@@ -53,8 +63,6 @@ class TestHpFromMultipleModels:
         assert data["model"].unique() == ["gfz"]
 
     def test_basic_forecast_read(self, sample_times, hp_index, models):
-
-        print(models[1]())
         data = read_hp_from_multiple_models(
             start_time=sample_times["future_start"],
             end_time=sample_times["future_end"],
@@ -128,7 +136,9 @@ class TestHpFromMultipleModels:
             model_order=[models[0](), models[1]()],
             synthetic_now_time=sample_times["test_time_now"],
         )
-        assert all([df.loc["2024-11-25 00:00:00+00:00"].model == "ensemble" for df in data])
+        assert all(
+            [df.loc["2024-11-25 00:00:00+00:00"].model == "ensemble" for df in data]
+        )
         assert all([df.loc["2024-11-24 21:00:00+00:00"].model == "gfz" for df in data])
 
     def test_data_consistency(self, sample_times, hp_index, models):
@@ -147,7 +157,10 @@ class TestHpFromMultipleModels:
 
 
 def test_invalid_hp_index():
-    with pytest.raises(ValueError, match="Requested invalid_index index does not exist! Possible options: hp30, hp60"):
+    with pytest.raises(
+        ValueError,
+        match="Requested invalid_index index does not exist! Possible options: hp30, hp60",
+    ):
         read_hp_from_multiple_models(
             start_time=datetime.now(timezone.utc),
             end_time=datetime.now(timezone.utc) + timedelta(days=1),
