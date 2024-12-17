@@ -155,8 +155,7 @@ def _read_latest_ensemble_files(
 ) -> list[pd.DataFrame]:
     # we are trying to read the most recent file; it this fails, we go 1 hour back and see if this file is present
 
-    target_time = synthetic_now_time + timedelta(hours=3)
-
+    target_time = synthetic_now_time
     data_one_model = pd.DataFrame(data={"kp": []})
 
     while target_time > (synthetic_now_time - timedelta(days=3)):

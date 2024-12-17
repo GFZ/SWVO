@@ -142,10 +142,6 @@ def _read_latest_ensemble_files(
     # we are trying to read the most recent file; it this fails, we go one step back (1 day) and see if this file is present
 
     target_time = min(synthetic_now_time, end_time)
-
-    if target_time == synthetic_now_time:
-        target_time += timedelta(minutes=1)
-
     data_one_model = []
 
     while target_time > (synthetic_now_time - timedelta(days=5)):
