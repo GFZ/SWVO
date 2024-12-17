@@ -16,7 +16,6 @@ DATA_DIR = TEST_DIR / "mock_ace"
 
 @pytest.fixture(autouse=True)
 def setup_and_cleanup():
-    
     TEST_DIR.mkdir(exist_ok=True)
     DATA_DIR.mkdir(exist_ok=True)
 
@@ -53,8 +52,6 @@ def sample_swepam_data():
 
 @pytest.fixture
 def mock_download_response(sample_mag_data, sample_swepam_data):
-    
-
     def mock_download(url, output):
         output_path = Path(output)
         if SWACE.NAME_MAG in url:
@@ -78,14 +75,12 @@ def test_initialization_with_env_var():
 
 
 def test_initialization_with_explicit_path():
-    
     explicit_path = DATA_DIR / "explicit"
     swace = SWACE(data_dir=explicit_path)
     assert swace.data_dir == explicit_path
 
 
 def test_initialization_without_env_var():
-    
     if SWACE.ENV_VAR_NAME in os.environ:
         del os.environ[SWACE.ENV_VAR_NAME]
     with pytest.raises(ValueError):
@@ -93,11 +88,12 @@ def test_initialization_without_env_var():
 
 
 def test_get_processed_file_list(swace_instance):
-    
     start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
     end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
 
-    file_paths, time_intervals = swace_instance._get_processed_file_list(start_time, end_time)
+    file_paths, time_intervals = swace_instance._get_processed_file_list(
+        start_time, end_time
+    )
 
     assert len(file_paths) == 366
     assert all(str(path).startswith(str(DATA_DIR)) for path in file_paths)
@@ -107,8 +103,6 @@ def test_get_processed_file_list(swace_instance):
 
 
 def test_download_and_process(swace_instance):
-    
-
     current_time = datetime.now(timezone.utc)
     swace_instance.download_and_process(current_time, verbose=True)
 
@@ -117,11 +111,12 @@ def test_download_and_process(swace_instance):
 
     data = pd.read_csv(expected_file)
     assert len(data) > 0
-    assert all(field in data.columns for field in SWACE.MAG_FIELDS + SWACE.SWEPAM_FIELDS)
+    assert all(
+        field in data.columns for field in SWACE.MAG_FIELDS + SWACE.SWEPAM_FIELDS
+    )
 
 
 def test_process_mag_file(swace_instance, sample_mag_data):
-    
     test_file = DATA_DIR / SWACE.NAME_MAG
     test_file.parent.mkdir(exist_ok=True)
 
@@ -130,7 +125,6 @@ def test_process_mag_file(swace_instance, sample_mag_data):
 
     data = swace_instance._process_mag_file(DATA_DIR)
 
-
     assert isinstance(data, pd.DataFrame)
     assert all(field in data.columns for field in SWACE.MAG_FIELDS)
     assert len(data) == 2
@@ -138,7 +132,6 @@ def test_process_mag_file(swace_instance, sample_mag_data):
 
 
 def test_process_swepam_file(swace_instance, sample_swepam_data):
-    
     test_file = DATA_DIR / SWACE.NAME_SWEPAM
     test_file.parent.mkdir(exist_ok=True)
 
@@ -154,7 +147,6 @@ def test_process_swepam_file(swace_instance, sample_swepam_data):
 
 
 def test_read_with_no_data(swace_instance):
-    
     start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
     end_time = datetime(2020, 1, 2, tzinfo=timezone.utc)
 
@@ -167,7 +159,6 @@ def test_read_with_no_data(swace_instance):
 
 
 def test_read_invalid_time_range(swace_instance):
-    
     start_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
     end_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
 
@@ -176,7 +167,6 @@ def test_read_invalid_time_range(swace_instance):
 
 
 def test_read_with_existing_data(swace_instance):
-    
     start_time = datetime(2024, 3, 15, tzinfo=timezone.utc)
     end_time = datetime(2024, 3, 15, 23, 59, 59, tzinfo=timezone.utc)
 
@@ -206,7 +196,6 @@ def test_read_with_existing_data(swace_instance):
 
 
 def test_cleanup_after_download(swace_instance, mock_download_response):
-    
     with patch("wget.download", side_effect=mock_download_response):
         current_time = datetime.now(timezone.utc)
         swace_instance.download_and_process(current_time)
@@ -225,7 +214,6 @@ def test_cleanup_after_download(swace_instance, mock_download_response):
     ],
 )
 def test_invalid_value_handling(field, invalid_value, expected):
-    
     data = pd.DataFrame({field: [invalid_value]})
 
     if field in SWACE.MAG_FIELDS:
@@ -241,3 +229,16 @@ def test_invalid_value_handling(field, invalid_value, expected):
         assert np.isnan(data[field].iloc[0])
     else:
         assert data[field].iloc[0] == pytest.approx(expected)
+
+
+def test_with_propagation():
+    start_time = datetime(2024, 11, 21, tzinfo=timezone.utc)
+    end_time = datetime(2024, 11, 24, tzinfo=timezone.utc)
+
+    swace_instance = SWACE(Path(__file__).parent / "data" / "ACE_RT")
+    data = swace_instance.read(start_time, end_time, propagation=True)
+
+    assert isinstance(data, pd.DataFrame)
+    assert len(data) == 5109
+    assert all(col in data.columns for col in SWACE.MAG_FIELDS + SWACE.SWEPAM_FIELDS)
+    assert any(data["file_name"] == "propagated from previous ACE NOWCAST file")
