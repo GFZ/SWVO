@@ -49,7 +49,8 @@ class SWSWIFTEnsemble:
 
         str_date = start_time.strftime("%Y%m%dt0000")
 
-        ensemble_folders = list((self.data_dir / str_date).glob("*task*"))
+        ensemble_folders = sorted(list((self.data_dir / str_date).glob("*task*")), key=lambda x: int(x.stem.split("task")[-1]))
+
 
         logging.info(f"Found {len(ensemble_folders)} SWIFT tasks folders...")
         gsm_s = []
