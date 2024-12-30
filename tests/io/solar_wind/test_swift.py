@@ -65,7 +65,7 @@ class TestSWIFT:
             base_dir = MOCK_DATA_PATH / date_str
 
             for task_num in range(num_tasks):
-                task_dir = base_dir / f"task_{task_num}"
+                task_dir = base_dir / f"task{task_num}"
                 swift_dir = task_dir / "SWIFT"
                 swift_dir.mkdir(parents=True, exist_ok=True)
 

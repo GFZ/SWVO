@@ -25,6 +25,7 @@ class KpEnsemble:
             raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrive data!")
 
     def read(self, start_time: datetime, end_time: datetime) -> list:
+        #It does not make sense to read KpEnsemble files from different dates
         if start_time is not None and not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
         if end_time is not None and not end_time.tzinfo:

@@ -32,6 +32,8 @@ class SWSWIFTEnsemble:
             raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrieve data!")
 
     def read(self, start_time: datetime, end_time: datetime, propagation: bool = False) -> list:
+        #It does not make sense to read SWIFT ensemble files from different dates
+
         if start_time and not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
         if end_time and not end_time.tzinfo:

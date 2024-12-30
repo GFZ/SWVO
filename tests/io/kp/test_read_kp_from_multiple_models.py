@@ -189,8 +189,8 @@ class TestReadKpFromMultipleModels:
             synthetic_now_time=sample_times["test_time_now"],
         )
 
-        assert all([df.loc["2024-11-25 00:00:00+00:00"].model == "niemegk" for df in data])
         assert not all([df.loc["2024-11-24 21:00:00+00:00"].model == "omni" for df in data])
+        assert all([df.loc["2024-11-25 00:00:00+00:00"].model == "niemegk" for df in data])
         assert all([df.loc["2024-11-25 03:00:00+00:00"].model == "ensemble" for df in data])
 
 
