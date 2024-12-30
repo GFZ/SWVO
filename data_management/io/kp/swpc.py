@@ -112,15 +112,23 @@ class KpSWPC:
 
             for i, line in enumerate(lines):
                 if i == 1:
-                    year = line.split(" ")[1].lstrip().rstrip()
+                    year = int(line.split(" ")[1].lstrip().rstrip())
                 if "Kp index" in line:
                     first_line = i
                     l_ = lines[i + 1].lstrip().rstrip()
                     dates = l_.split("   ")
-                    dates = [year + " " + d.lstrip().rstrip() for d in dates]
-                    dates = [datetime.strptime(d, "%Y %b %d") for d in dates]
+                    # Handle year change for January dates when current month is December
+                    processed_dates = []
+                    for d in dates:
+                        d = d.lstrip().rstrip()
+                        month = d.split(" ")[0]
+                        if any("Dec" in date for date in dates) and month == "Jan":
+                            processed_dates.append(f"{year + 1} {d}")
+                        else:
+                            processed_dates.append(f"{year} {d}")
+                    dates = [datetime.strptime(d, "%Y %b %d") for d in processed_dates]
                     break
-
+                    
         data = pd.read_csv(temporary_dir / self.NAME, skiprows=first_line + 2, sep=r"\s+", names=["0", "1", "2", "3"])
         kp = []
         timestamp = []
