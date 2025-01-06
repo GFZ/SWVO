@@ -4,15 +4,36 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
+
 
 import pandas as pd
 
 
+@add_attributes_to_class_docstring
+@add_methods_to_class_docstring
 class HpEnsemble:
+    """This is a base class for Hp ensemble data.
+
+    Parameters
+    ----------
+    index : str
+        Hp index Possible options are: hp30, hp60.
+    data_dir : str | Path, optional
+        Data directory for the Hp data. If not provided, it will be read from the environment variable
+
+    Raises
+    ------
+    ValueError
+        Returns `ValueError` if necessary environment variable is not set.
+    FileNotFoundError
+        Returns `FileNotFoundError` if the data directory does not exist.
+    """
+
     ENV_VAR_NAME = "PLACEHOLDER; SEE DERIVED CLASSES BELOW"
     LABEL = "ensemble"
 
-    def __init__(self, index:str, data_dir: str|Path|None = None):
+    def __init__(self, index: str, data_dir: str | Path | None = None):
         self.index = index
         if self.index not in ("hp30", "hp60"):
             msg = "Encountered invalid index: {self.index}. Possible options are: hp30, hp60!"
@@ -35,7 +56,20 @@ class HpEnsemble:
 
         self.index_number = index[2:]
 
+    @add_time_docs("read")
     def read(self, start_time: datetime, end_time: datetime) -> list:
+        """Read Hp ensemble data for the requested period.
+
+        Returns
+        -------
+        list
+            List of ensemble data frames containing data for the requested period.
+
+        Raises
+        ------
+        FileNotFoundError
+            Returns `FileNotFoundError` if no ensemble file is found for the requested date.
+        """
         if start_time is not None and not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
         if end_time is not None and not end_time.tzinfo:
@@ -50,7 +84,9 @@ class HpEnsemble:
         start_date = start_time.replace(microsecond=0, minute=0, second=0)
         str_date = start_date.strftime("%Y%m%dT%H0000")
         file_list = sorted(
-            self.data_dir.glob(f"FORECAST_{self.index.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_*.csv")
+            self.data_dir.glob(
+                f"FORECAST_{self.index.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_*.csv"
+            )
         )
 
         data = []
@@ -77,15 +113,35 @@ class HpEnsemble:
         return data
 
 
+@add_attributes_to_class_docstring
+@add_methods_to_class_docstring
 class Hp30Ensemble(HpEnsemble):
+    """A class to handle Hp30 ensemble data.
+
+    Parameters
+    ----------
+    data_dir : str | Path, optional
+        Data directory for the Hp30 ensemble data. If not provided, it will be read from the environment variable
+    """
+
     ENV_VAR_NAME = "HP30_ENSEMBLE_FORECAST_DIR"
 
-    def __init__(self, data_dir: str|Path|None = None):
+    def __init__(self, data_dir: str | Path | None = None):
         super().__init__("hp30", data_dir)
 
 
+@add_attributes_to_class_docstring
+@add_methods_to_class_docstring
 class Hp60Ensemble(HpEnsemble):
+    """A class to handle Hp30 ensemble data.
+
+    Parameters
+    ----------
+    data_dir : str | Path, optional
+        Data directory for the Hp30 ensemble data. If not provided, it will be read from the environment variable
+    """
+
     ENV_VAR_NAME = "HP60_ENSEMBLE_FORECAST_DIR"
 
-    def __init__(self, data_dir: str|Path|None = None):
+    def __init__(self, data_dir: str | Path | None = None):
         super().__init__("hp60", data_dir)

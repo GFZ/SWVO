@@ -20,3 +20,6 @@ replace.sh
 omni.sh
 .coveragerc
 cron_check.sh
+swace_commented_code
+docs/_build/*
+docs/api/*

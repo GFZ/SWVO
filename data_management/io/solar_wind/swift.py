@@ -8,10 +8,32 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from data_management.io.utils import sw_mag_propagation
+from data_management.io.decorators import (
+    add_time_docs,
+    add_attributes_to_class_docstring,
+    add_methods_to_class_docstring,
+)
 
 
-
+@add_attributes_to_class_docstring
+@add_methods_to_class_docstring
 class SWSWIFTEnsemble:
+    """
+    This is a class for SWIFT ensemble data.
+
+    Parameters
+    ----------
+    data_dir : str | Path, optional
+        Data directory for the Hp data. If not provided, it will be read from the environment variable
+
+    Raises
+    ------
+    ValueError
+        Returns `ValueError` if necessary environment variable is not set.
+    FileNotFoundError
+        Returns `FileNotFoundError` if the data directory does not exist.
+    """
+
     PROTON_MASS = 1.67262192369e-27
 
     ENV_VAR_NAME = "SWIFT_ENSEMBLE_OUTPUT_DIR"
@@ -20,7 +42,9 @@ class SWSWIFTEnsemble:
     def __init__(self, data_dir: str | Path = None):
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
+                raise ValueError(
+                    f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
+                )
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
@@ -29,10 +53,34 @@ class SWSWIFTEnsemble:
         logging.info(f"SWIFT ensemble data directory: {self.data_dir}")
 
         if not self.data_dir.exists():
-            raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrieve data!")
+            raise FileNotFoundError(
+                f"Data directory {self.data_dir} does not exist! Impossible to retrieve data!"
+            )
 
-    def read(self, start_time: datetime, end_time: datetime, propagation: bool = False) -> list:
-        #It does not make sense to read SWIFT ensemble files from different dates
+    @add_time_docs("read")
+    def read(
+        self, start_time: datetime, end_time: datetime, propagation: bool = False
+    ) -> list:
+        # It does not make sense to read SWIFT ensemble files from different dates
+
+        """
+        Read SWIFT ensemble data for the requested period.
+
+        Parameters
+        ----------
+        propagation : bool, optional
+            Propagate the data from L1 to near-Earth, defaults to False.
+
+        Returns
+        -------
+        list
+            A list of data frames containing ensemble data for the requested period.
+
+        Raises
+        ------
+        FileNotFoundError
+            Raises `FileNotFoundError` if no ensemble files are found for the requested date.
+        """
 
         if start_time and not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
@@ -40,7 +88,9 @@ class SWSWIFTEnsemble:
             end_time = end_time.replace(tzinfo=timezone.utc)
 
         if start_time is None:
-            start_time = datetime.now(timezone.utc).replace(microsecond=0, minute=0, second=0)
+            start_time = datetime.now(timezone.utc).replace(
+                microsecond=0, minute=0, second=0
+            )
 
         if end_time is None:
             end_time = start_time.replace(tzinfo=timezone.utc) + timedelta(days=3)
@@ -51,8 +101,10 @@ class SWSWIFTEnsemble:
 
         str_date = start_time.strftime("%Y%m%dt0000")
 
-        ensemble_folders = sorted(list((self.data_dir / str_date).glob("*task*")), key=lambda x: int(x.stem.split("task")[-1]))
-
+        ensemble_folders = sorted(
+            list((self.data_dir / str_date).glob("*task*")),
+            key=lambda x: int(x.stem.split("task")[-1]),
+        )
 
         logging.info(f"Found {len(ensemble_folders)} SWIFT tasks folders...")
         gsm_s = []
@@ -68,7 +120,9 @@ class SWSWIFTEnsemble:
 
                 if propagation:
                     data_gsm = sw_mag_propagation(data_gsm)
-                    data_gsm["file_name"] = data_gsm.apply(self._update_filename, axis=1)
+                    data_gsm["file_name"] = data_gsm.apply(
+                        self._update_filename, axis=1
+                    )
 
                 gsm_s.append(data_gsm)
             except IndexError:
@@ -77,22 +131,26 @@ class SWSWIFTEnsemble:
 
         return gsm_s
 
-    def read_single_output(self, target_time: datetime):
-        pass
+    # def read_single_output(self, target_time: datetime):
+    #     pass
 
     def _read_single_file(self, file_name, use_old_column_names=False) -> pd.DataFrame:
         """
-        This function reads one the two available json file of SWIFT output and extract relevant variables
-        combining them into a pandas DataFrame.
+        This function reads one of the two available JSON files of SWIFT output and extracts relevant variables, combining them into a pandas DataFrame.
 
-        The path to the file to read.
-        :param file_name: The path of the file to read.
-        :type file_name: str
-        :param fields: Lists of fields to extract from the DataFrame. The list needs to contain a subset
-                       of available fields. if None, all the fields available are retrieved.
-        :type fields: list
-        :return: A pandas.DataFrame with requested variables.
+        Parameters
+        ----------
+        file_name : str
+            The path of the file to read.
+        fields : list, optional
+            List of fields to extract from the DataFrame. The list needs to contain a subset of available fields. If None, all the fields available are retrieved.
+
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame containing the requested variables.
         """
+
         with open(file_name) as f:
             data = json.load(f)
 
@@ -152,8 +210,19 @@ class SWSWIFTEnsemble:
 
         return df
 
-
     def _update_filename(self, row: pd.Series) -> str:
+        """Update the filename in the row.
+
+        Parameters
+        ----------
+        row : pd.Series
+
+        Returns
+        -------
+        str
+            Updated filename.
+        """
+
         if pd.isna(row["file_name"]):
             return row["file_name"]
 

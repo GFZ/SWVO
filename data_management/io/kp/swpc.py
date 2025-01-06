@@ -7,8 +7,26 @@ from shutil import rmtree
 import pandas as pd
 import wget
 
+from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
 
+
+@add_attributes_to_class_docstring
+@add_methods_to_class_docstring
 class KpSWPC:
+    """
+    A class for handling SWPC Kp data.
+
+    Parameters
+    ----------
+    data_dir : str | Path, optional
+        Data directory for the SWPC Kp data. If not provided, it will be read from the environment variable
+
+    Raises
+    ------
+    ValueError
+        Returns `ValueError` if necessary environment variable is not set
+    """
+
     ENV_VAR_NAME = "RT_KP_SWPC_STREAM_DIR"
 
     URL = "https://services.swpc.noaa.gov/text/"
@@ -28,7 +46,21 @@ class KpSWPC:
 
         logging.info(f"Kp SWPC  data directory: {self.data_dir}")
 
-    def download_and_process(self, target_date: datetime, reprocess_files: bool = False, verbose: bool = False):
+    def download_and_process(self, target_date: datetime, reprocess_files: bool = False):
+        """Download and process SWPC Kp data file.
+
+        Parameters
+        ----------
+        target_date : datetime
+            Target date for the Kp data, 
+        reprocess_files : bool, optional
+                        Downloads and processes the files again, defaults to False, by default False
+
+        Raises
+        ------
+        ValueError
+            Raises `ValueError` if the target date is in the past.
+        """        
         if target_date.date() < datetime.now(timezone.utc).date():
             raise ValueError("We can only download and progress a Kp SWPC file for the current day!")
 
@@ -45,24 +77,40 @@ class KpSWPC:
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
         try:
-            if verbose:
-                logging.info(f"Downloading file {self.URL + self.NAME} ...")
+            logging.debug(f"Downloading file {self.URL + self.NAME} ...")
 
             wget.download(self.URL + self.NAME, str(temporary_dir))
 
-            if verbose:
-                logging.info(f"Processing file ...")
+            logging.debug("Processing file ...")
             processed_df = self._process_single_file(temporary_dir)
 
             processed_df.to_csv(file_path, index=False, header=False)
 
-            if verbose:
-                logging.info(f"Saving processed file {file_path}")
+            logging.debug(f"Saving processed file {file_path}")
 
         finally:
             rmtree(temporary_dir)
 
+
+    @add_time_docs("read")
     def read(self, start_time: datetime, end_time: datetime = None, download: bool = False) -> pd.DataFrame:
+        """Read Kp data for the specified time range.
+
+        Parameters
+        ----------
+        download : bool, optional
+            Download data on the go, defaults to False.
+
+        Returns
+        -------
+        pd.DataFrame
+            SWPC Kp dataframe.
+
+        Raises
+        ------
+        ValueError
+            Raises `ValueError` if the time range is more than 3 days.
+        """
         if not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
         if end_time is not None and not end_time.tzinfo:
@@ -90,7 +138,19 @@ class KpSWPC:
 
         return data_out
 
-    def _read_single_file(self, file_path) -> pd.DataFrame:
+    def _read_single_file(self, file_path: Path) -> pd.DataFrame:
+        """Read Kp file to a DataFrame.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the file.
+
+        Returns
+        -------
+        pd.DataFrame
+            Data from Kp file.
+        """
         df = pd.read_csv(file_path, names=["t", "kp"])
 
         df["t"] = pd.to_datetime(df["t"])
@@ -102,7 +162,20 @@ class KpSWPC:
 
         return df
 
+
     def _process_single_file(self, temporary_dir: Path) -> pd.DataFrame:
+        """Process Kp file to a DataFrame.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the file.
+
+        Returns
+        -------
+        pd.DataFrame
+            Kp data.
+        """
         first_line = None
         dates = None
         year = None

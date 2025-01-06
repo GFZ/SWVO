@@ -25,27 +25,29 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     """
     Read solar wind data from multiple models.
 
-    The model order represents the priorities of models.
-    The first model in the model order is read. If there are still NaNs in the resulting data,
-    the next model will be read. And so on. In the case of reading ensemble predictions, a list
-    will be returned, otherwise a plain data frame will be returned.
+    The model order represents the priorities of models. The first model in the model order is read. If there are still NaNs in the resulting data, the next model will be read. And so on. In the case of reading ensemble predictions, a list will be returned, otherwise a plain data frame will be returned.
 
-    :param start_time: Start time of the data request.
-    :type start_time: datetime
-    :param end_time: End time of the data request.
-    :type end_time: datetime
-    :param model_order: Order in which data will be read from the models, defaults to [OMNI, ACE, SWIFT]
-    :type model_order: list | None, optional
-    :param reduce_ensemble: The method to reduce ensembles to a single time series, defaults to None
-    :type reduce_ensemble: Literal[&quot;mean&quot;] | None, optional
-    :param synthetic_now_time: Time, which represents &quot;now&quot;.
-    After this time, no data will be taken from historical models (OMNI, ACE), defaults to None
-    :type synthetic_now_time: datetime | None, optional
-    :param download: Flag which decides whether new data should be downloaded, defaults to False
-    :type download: bool, optional
-    :return: A data frame or a list of data frames containing data for the requested period.
-    :rtype: pd.DataFrame | list[pd.DataFrame]
+    Parameters
+    ----------
+    start_time : datetime
+        Start time of the data request.
+    end_time : datetime
+        End time of the data request.
+    model_order : list, optional
+        Order in which data will be read from the models. Defaults to [OMNI, ACE, SWIFT].
+    reduce_ensemble : {'mean'}, optional
+        The method to reduce ensembles to a single time series. Defaults to None.
+    synthetic_now_time : datetime, optional
+        Time which represents "now". After this time, no data will be taken from historical models (OMNI, ACE). Defaults to None.
+    download : bool, optional
+        Flag which decides whether new data should be downloaded. Defaults to False.
+
+    Returns
+    -------
+    pd.DataFrame or list of pandas.DataFrame
+        A data frame or a list of data frames containing data for the requested period.
     """
+
     if synthetic_now_time is None:
         synthetic_now_time = datetime.now(timezone.utc)
 
@@ -84,6 +86,29 @@ def _read_from_model(  # noqa: PLR0913
     *,
     download: bool,
 ) -> list[pd.DataFrame] | pd.DataFrame:
+    """Reads SW data from a given model within the specified time range.
+
+    Parameters
+    ----------
+    model : SWModel
+        The model from which to read the SW data.
+    start_time : datetime
+        The start time of the data range.
+    end_time : datetime
+        The end time of the data range.
+    synthetic_now_time : datetime
+        Represents "now". Used for defining boundaries for historical or forecast data.
+    reduce_ensemble : str
+        The method to reduce ensemble data (e.g., "mean"). If None, ensemble members are not reduced.
+    download : bool, optional
+        Whether to download new data or not.
+
+    Returns
+    -------
+    list[pd.DataFrame] | pd.DataFrame
+        A single data frame or a list of data frames containing the model data.
+
+    """
     # Read from historical models
     if isinstance(model, (DSCOVR, SWACE, SWOMNI)):
         data_one_model = _read_historical_model(
@@ -114,6 +139,33 @@ def _read_historical_model(
     *,
     download: bool,
 ) -> tuple[pd.DataFrame, str]:
+    
+    """Reads SW data from historical models (DSCOVR, SWACE or SWOMNI) within the specified time range.
+
+    Parameters
+    ----------
+    model : DSCOVR | SWACE | SWOMNI
+        The historical model from which to read the data.
+    start_time : datetime
+        The start time of the data range.
+    end_time : datetime
+        The end time of the data range.
+    synthetic_now_time : datetime
+        Represents "now". Data after this time is set to NaN.
+    download : bool, optional
+        Whether to download new data or not.
+
+    Returns
+    -------
+    pd.DataFrame
+        A data frame containing the model data with future values (after synthetic_now_time) set to NaN.
+
+    Raises
+    ------
+    TypeError
+        If the provided model is not an instance of DSCOVR, SWACE or SWOMNI.
+
+    """
     if isinstance(model, SWOMNI):
         model_label = "omni"
     elif isinstance(model, SWACE):
@@ -141,6 +193,32 @@ def _read_latest_ensemble_files(
 ) -> list[pd.DataFrame]:
     # we are trying to read the most recent file; it this fails, we go one step back (1 day) and see if this file is present
 
+    """
+    Reads the most recent SW ensemble data file available from the specified model.
+
+    If the file for the target time is not found, the function iterates backward in hourly increments, up to 3 days, until a valid file is located.
+
+    Parameters
+    ----------
+    model : KpEnsemble
+        The ensemble model from which to read the data.
+    synthetic_now_time : datetime
+        Represents "now". The function starts searching for files from this time.
+    end_time : datetime
+        The end time of the data range.
+
+    Returns
+    -------
+    list[pd.DataFrame]
+        A list of data frames containing ensemble data for the specified range.
+
+    Raises
+    ------
+    FileNotFoundError
+        If no valid file is found within the 5-day window.
+
+    """
+
     target_time = min(synthetic_now_time, end_time)
     data_one_model = []
 
@@ -162,6 +240,26 @@ def _read_latest_ensemble_files(
 def _interpolate_to_common_indices(
     target_time: datetime, end_time: datetime, synthetic_now_time: datetime, data: list[pd.DataFrame]
 ) -> list[pd.DataFrame]:
+    """
+    Interpolate the data to a common index with a 1-minute frequency.
+
+    Parameters
+    ----------
+    target_time : datetime
+        The start time for the interpolation.
+    end_time : datetime
+        The end time for the interpolation.
+    synthetic_now_time : datetime
+        The "now" time, used for truncating data after interpolation.
+    data : list[pd.DataFrame]
+        The list of data frames to interpolate.
+
+    Returns
+    -------
+    list[pd.DataFrame]
+        The list of interpolated data frames with a common index.
+    """
+
     for ie, _ in enumerate(data):
         df_common_index = pd.DataFrame(
             index=pd.date_range(

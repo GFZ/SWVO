@@ -5,6 +5,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import traceback
+from urllib.error import HTTPError
 
 from data_management.io.kp import KpNiemegk, KpSWPC
 from data_management.io.hp import Hp30GFZ, Hp60GFZ
@@ -41,7 +42,7 @@ if __name__ == "__main__":
     logging.basicConfig(
         filename=str(log_dir / f'daily_downloads_log_{time_now.strftime("%Y%m%d_T%H0000")}.log'),
         filemode="w",
-        format="%(asctime)s,%(msecs)d %(message)s",
+        format="%(asctime)s,%(msecs)d - %(levelname)s - %(message)s",
         datefmt="%H:%M:%S",
         level=logging.INFO,
     )
@@ -53,65 +54,93 @@ if __name__ == "__main__":
 
     logging.info("Starting downloading and processing...")
 
-    logging.info("Kp Niemegk...\n")
+    logging.info("Kp Niemegk...")
     try:
         KpNiemegk().download_and_process(date_yesterday_start, time_now, reprocess_files=True)
-    except:
+    except Exception:
         logging.error("Encountered error while downloading Niemegk Kp. Traceback:")
         logging.error(traceback.format_exc())
 
-    logging.info("Kp SWPC...\n")
+
+    logging.info("Kp SWPC...")
     try:
         KpSWPC().download_and_process(time_now, reprocess_files=True)
-    except:
+    except Exception:
         logging.error("Encountered error while downloading SWPC Kp. Traceback:")
         logging.error(traceback.format_exc())
 
-    logging.info("OMNI low resolution...\n")
-    try:
-        OMNILowRes().download_and_process(date_yesterday_start, time_now, reprocess_files=True)
-    except:
-        logging.error("Encountered error while downloading OMNI low res. Traceback:")
-        logging.error(traceback.format_exc())
+    logging.info("OMNI low resolution...")
+    omni_low_res_start_date = date_yesterday_start
+    omni_low_res_end_date = time_now
+    while True:
+        try:
+            OMNILowRes().download_and_process(omni_low_res_start_date, omni_low_res_end_date, reprocess_files=True)
+            break
 
-    logging.info("OMNI high resolution...\n")
-    try:
-        OMNIHighRes().download_and_process(date_yesterday_start, time_now, reprocess_files=True)
-    except:
-        logging.error("Encountered error while downloading OMNI high res. Traceback:")
-        logging.error(traceback.format_exc())
+        except HTTPError as e:
+            logging.error(f"HTTPError: {e}")
+            logging.error(f"Could not download file for {omni_low_res_start_date.year}.")
+            logging.info(f"Reverting to {date_yesterday_start.year - 1}")
+            omni_low_res_start_date = omni_low_res_start_date.replace(year=omni_low_res_start_date.year - 1)
+            omni_low_res_end_date = datetime(omni_low_res_start_date.year, 12, 31)
+            continue
 
-    logging.info("Hp30 GFZ...\n")
+        except Exception:
+            logging.error("Encountered error while downloading OMNI low res. Traceback:")
+            logging.error(traceback.format_exc())
+
+
+    logging.info("OMNI high resolution...")
+    omni_high_res_start_date = date_yesterday_start
+    omni_high_res_end_date = time_now
+    while True:
+        try:
+            OMNIHighRes().download_and_process(date_yesterday_start, omni_high_res_end_date, reprocess_files=True)
+            break
+
+        except HTTPError as e:
+            logging.error(f"HTTPError: {e}")
+            logging.error(f"Could not download file for {omni_high_res_start_date.year}.")
+            logging.info(f"Reverting to {date_yesterday_start.year - 1}")
+            omni_high_res_start_date = omni_high_res_start_date.replace(year=omni_high_res_start_date.year - 1)
+            omni_high_res_end_date = datetime(omni_high_res_start_date.year, 12, 31)
+            continue
+
+        except Exception:
+            logging.error("Encountered error while downloading OMNI high res. Traceback:")
+            logging.error(traceback.format_exc())
+
+    logging.info("Hp30 GFZ...")
     try:
         Hp30GFZ().download_and_process(date_yesterday_start, time_now, reprocess_files=True)
-    except:
+    except Exception:
         logging.error("Encountered error while downloading Hp30. Traceback:")
         logging.error(traceback.format_exc())
 
-    logging.info("Hp60 GFZ...\n")
+    logging.info("Hp60 GFZ...")
     try:
         Hp60GFZ().download_and_process(date_yesterday_start, time_now, reprocess_files=True)
-    except:
+    except Exception:
         logging.error("Encountered error while downloading Hp30. Traceback:")
         logging.error(traceback.format_exc())
 
-    logging.info("SW ACE RT...\n")
+    logging.info("SW ACE RT...")
     try:
         SWACE().download_and_process(time_now)
-    except:
+    except Exception:
         logging.error("Encountered error while downloading ACE RT solar wind. Traceback:")
         logging.error(traceback.format_exc())
 
-    logging.info("F10.7 SWPC RT...\n")
+    logging.info("F10.7 SWPC RT...")
     try:
         F107SWPC().download_and_process()
-    except:
+    except Exception:
         logging.error("Encountered error while downloading F10.7cm solar wind. Traceback:")
         logging.error(traceback.format_exc())
-    logging.info("SW DSCOVR...\n")
+    logging.info("SW DSCOVR...")
     try:
         DSCOVR().download_and_process(time_now)
-    except:
+    except Exception:
         logging.error("Encountered error while downloading DSCOVR data. Traceback:")
         logging.error(traceback.format_exc())
 

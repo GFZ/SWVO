@@ -14,33 +14,40 @@ F107Model = F107OMNI | F107SWPC
 def read_f107_from_multiple_models(
     start_time: datetime,
     end_time: datetime,
-    model_order: list[F107Model]|None = None,
-    synthetic_now_time: datetime|None = None,
+    model_order: list[F107Model] | None = None,
+    synthetic_now_time: datetime | None = None,
     *,
-    download:bool=False,
+    download: bool = False,
 ) -> pd.DataFrame:
     """
     Read F107 data from multiple models.
 
-    The model order represents the priorities of models.
-    The first model in the model order is read. If there are still NaNs in the resulting data,
-    the next model will be read. And so on. In the case of reading ensemble predictions, a list
-    will be returned, otherwise a plain data frame will be returned.
+    The model order represents the priorities of models. The first model in the
+    model order is read. If there are still NaNs in the resulting data, the next
+    model will be read, and so on. For ensemble predictions, a list will be 
+    returned; otherwise, a plain data frame will be returned.
 
-    :param start_time: Start time of the data request.
-    :type start_time: datetime
-    :param end_time: End time of the data request.
-    :type end_time: datetime
-    :param model_order: Order in which data will be read from the models, defaults to [OMNI, SWPC]
-    :type model_order: list | None, optional
-    :param synthetic_now_time: Time, which represents &quot;now&quot;.
-    After this time, no data will be taken from historical models (OMNI, SWPC), defaults to None
-    :type synthetic_now_time: datetime | None, optional
-    :param download: Flag which decides whether new data should be downloaded, defaults to False
-    :type download: bool, optional
-    :return: A data frame or a list of data frames containing data for the requested period.
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    start_time : datetime
+        Start time of the data request.
+    end_time : datetime
+        End time of the data request.
+    model_order : list or None, optional
+        Order in which data will be read from the models. Defaults to [OMNI, SWPC].
+    synthetic_now_time : datetime or None, optional
+        Time representing "now". After this time, no data will be taken from 
+        historical models (OMNI, SWPC). Defaults to None.
+    download : bool, optional
+        Flag indicating whether new data should be downloaded. Defaults to False.
+
+    Returns
+    -------
+    pd.DataFrame or list of pd.DataFrame
+        A data frame or a list of data frames containing data for the requested 
+        period.
     """
+
     if synthetic_now_time is None:
         synthetic_now_time = datetime.now(timezone.utc)
 

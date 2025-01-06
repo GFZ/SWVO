@@ -11,6 +11,9 @@ import pandas as pd
 
 from data_management.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ
 from data_management.io.utils import any_nans, construct_updated_data_frame
+from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
+
+
 
 HpModel = Hp30Ensemble | Hp30GFZ | Hp60Ensemble | Hp60GFZ
 
@@ -33,21 +36,25 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     the next model will be read. And so on. In the case of reading ensemble predictions, a list
     will be returned, otherwise a plain data frame will be returned.
 
-    :param start_time: Start time of the data request.
-    :type start_time: datetime
-    :param end_time: End time of the data request.
-    :type end_time: datetime
-    :param model_order: Order in which data will be read from the models, defaults to [OMNI, Niemegk, Ensemble, SWPC]
-    :type model_order: list | None, optional
-    :param reduce_ensemble: The method to reduce ensembles to a single time series, defaults to None
-    :type reduce_ensemble: Literal[&quot;mean&quot;] | None, optional
-    :param synthetic_now_time: Time, which represents &quot;now&quot;.
-    After this time, no data will be taken from historical models (OMNI, Niemegk), defaults to None
-    :type synthetic_now_time: datetime | None, optional
-    :param download: Flag which decides whether new data should be downloaded, defaults to False
-    :type download: bool, optional
-    :return: A data frame or a list of data frames containing data for the requested period.
-    :rtype: pd.DataFrame | list[pd.DataFrame]
+    Parameters
+    ----------
+    start_time : datetime
+        Start time of the data request.
+    end_time : datetime
+        End time of the data request.
+    model_order : list, optional
+        Order in which data will be read from the models, defaults to [OMNI, Niemegk, Ensemble, SWPC].
+    reduce_ensemble : {"mean"}, optional
+        The method to reduce ensembles to a single time series, defaults to None.
+    synthetic_now_time : datetime, optional
+        Time, which represents "now". After this time, no data will be taken from historical models (OMNI, Niemegk), defaults to None.
+    download : bool, optional
+        Flag which decides whether new data should be downloaded, defaults to False.
+
+    Returns
+    -------
+    pd.DataFrame | list of pd.DataFrame
+        A data frame or a list of data frames containing data for the requested period.
     """
     if synthetic_now_time is None:
         synthetic_now_time = datetime.now(timezone.utc)
@@ -86,6 +93,7 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     return data_out
 
 
+@add_time_docs(None)
 def _read_from_model(  # noqa: PLR0913
     model: HpModel,
     start_time: datetime,
@@ -95,7 +103,26 @@ def _read_from_model(  # noqa: PLR0913
     *,
     download: bool,
 ) -> list[pd.DataFrame] | pd.DataFrame:
+    """
 
+    Parameters
+    ----------
+    start_time : datetime
+        _description_
+    end_time : datetime
+        _description_
+    synthetic_now_time : datetime
+        _description_
+    reduce_ensemble : str
+        _description_
+    download : bool
+        _description_
+
+    Returns
+    -------
+    list[pd.DataFrame] | pd.DataFrame
+        _description_
+    """
     # Read from historical models
     if isinstance(model, (Hp30GFZ, Hp60GFZ)):
         data_one_model = _read_historical_model(
@@ -108,12 +135,16 @@ def _read_from_model(  # noqa: PLR0913
         )
 
     if isinstance(model, (Hp30Ensemble, Hp60Ensemble)):
-        data_one_model = _read_latest_ensemble_files(model, model.index, synthetic_now_time, end_time)
+        data_one_model = _read_latest_ensemble_files(
+            model, model.index, synthetic_now_time, end_time
+        )
 
         num_ens_members = len(data_one_model)
 
         if num_ens_members > 0 and reduce_ensemble is not None:
-            data_one_model = _reduce_ensembles(data_one_model, reduce_ensemble, model.index)
+            data_one_model = _reduce_ensembles(
+                data_one_model, reduce_ensemble, model.index
+            )
 
     return data_one_model
 
@@ -122,11 +153,41 @@ def _read_historical_model(
     model: Hp30GFZ | Hp60GFZ,
     start_time: datetime,
     end_time: datetime,
-    hp_index:str,
+    hp_index: str,
     synthetic_now_time: datetime,
     *,
     download: bool,
-) -> tuple[pd.DataFrame, str]:
+) -> pd.DataFrame:
+    """
+    Reads historical data from a specified model within a given time range and sets NaN for future values.
+
+    Parameters:
+    -----------
+
+    model : Hp30GFZ | Hp60GFZ
+        The model from which to read historical data.
+    start_time :datetime
+        The start time for the data reading.
+    end_time : datetime
+        The end time for the data reading.
+    hp_index : str
+        The index to be used for setting NaN values.
+    synthetic_now_time : datetime
+        The synthetic current time to determine future values.
+    download : bool
+        Flag indicating whether to download the data.
+
+    Returns:
+    --------
+    pd.DataFrame
+        DataFrame with the historical data.
+
+    Raises:
+    -------
+    TypeError
+        If the model is not an instance of Hp30GFZ or Hp60GFZ.
+    """
+
     if not isinstance(model, (Hp30GFZ, Hp60GFZ)):
         msg = "Encountered invalide model type in read historical model!"
         raise TypeError(msg)
@@ -137,19 +198,45 @@ def _read_historical_model(
 
     # set nan for 'future' values
     data_one_model.loc[synthetic_now_time:end_time, hp_index] = np.nan
-    logging.info(f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}")
+    logging.info(
+        f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}"
+    )
 
     return data_one_model
 
 
 def _read_latest_ensemble_files(
-    model: Hp30Ensemble|Hp60Ensemble,
-    hp_index:str,
+    model: Hp30Ensemble | Hp60Ensemble,
+    hp_index: str,
     synthetic_now_time: datetime,
     end_time: datetime,
 ) -> list[pd.DataFrame]:
     # we are trying to read the most recent file; it this fails, we go 1 hour back and see if this file is present
 
+    """
+    Reads ensemble data from a specified model within a given time range.
+
+    Parameters:
+    -----------
+
+    model : Hp30Ensemble | Hp60Ensemble
+        The model from which to read ensemble data.
+    hp_index : str
+        The index to be used for setting NaN values.
+    synthetic_now_time : datetime
+        The synthetic current time to determine future values.
+    end_time : datetime
+        The end time for the data reading.
+
+    Returns:
+    --------
+    tuple[pd.DataFrame]
+        List of DataFrames with the ensemble data.
+
+    Raises:
+    -------
+    FileNotFoundError
+    """
     target_time = synthetic_now_time
 
     data_one_model = pd.DataFrame(data={hp_index: []})
@@ -170,31 +257,60 @@ def _read_latest_ensemble_files(
     return data_one_model
 
 
-def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean", "median"], hp_index:str) -> pd.DataFrame:
-    """Reduce a list of data frames representing ensemble data to a single data frame using the provided method."""
+def _reduce_ensembles(
+    data_ensembles: list[pd.DataFrame], method: Literal["mean", "median"], hp_index: str
+) -> pd.DataFrame:
+    """Reduce a list of data frames representing ensemble data to a single data frame using the provided method.
+
+    Parameters:
+    -----------
+    data_ensembles : list[pd.DataFrame]
+        List of data frames representing ensemble data.
+    method : str
+        The method to reduce the ensemble data.
+    hp_index : str
+        Hp index.
+
+    Returns:
+    --------
+    pd.DataFrame
+        DataFrame with the reduced ensemble data.
+
+    Raises:
+    -------
+    NotImplementedError
+        If the method is not implemented.
+
+    """
     if method == "mean":
         hp_mean_ensembles = []
 
         for it, _ in enumerate(data_ensembles[0].index):
             data_curr_time = [
-                data_one_ensemble.loc[data_one_ensemble.index[it], hp_index] for data_one_ensemble in data_ensembles
+                data_one_ensemble.loc[data_one_ensemble.index[it], hp_index]
+                for data_one_ensemble in data_ensembles
             ]
 
             hp_mean_ensembles.append(np.mean(data_curr_time))
 
-        data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={hp_index: hp_mean_ensembles})
+        data_reduced = pd.DataFrame(
+            index=data_ensembles[0].index, data={hp_index: hp_mean_ensembles}
+        )
 
     elif method == "median":
         hp_median_ensembles = []
 
         for it, _ in enumerate(data_ensembles[0].index):
             data_curr_time = [
-                data_one_ensemble.loc[data_one_ensemble.index[it], hp_index] for data_one_ensemble in data_ensembles
+                data_one_ensemble.loc[data_one_ensemble.index[it], hp_index]
+                for data_one_ensemble in data_ensembles
             ]
 
             hp_median_ensembles.append(np.median(data_curr_time))
 
-        data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={hp_index: hp_median_ensembles})
+        data_reduced = pd.DataFrame(
+            index=data_ensembles[0].index, data={hp_index: hp_median_ensembles}
+        )
 
     else:
         msg = f"This reduction method has not been implemented yet: {method}!"

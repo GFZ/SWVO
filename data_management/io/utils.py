@@ -3,6 +3,8 @@ from scipy.signal import savgol_filter
 from datetime import datetime, timedelta, timezone
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
+from functools import wraps
+import inspect
 
 
 def any_nans(data: list[pd.DataFrame] | pd.DataFrame) -> bool:

@@ -9,8 +9,26 @@ import numpy as np
 import pandas as pd
 import wget
 
+from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
 
+
+
+@add_attributes_to_class_docstring
+@add_methods_to_class_docstring
 class OMNIHighRes:
+    """This is a class for the OMNI High Resolution data.
+
+    Parameters
+    ----------
+    data_dir : str | Path, optional
+        Data directory for the OMNI High Resolution data. If not provided, it will be read from the environment variable
+
+    Raises
+    ------
+    ValueError
+        Returns `ValueError` if necessary environment variable is not set.
+    """
+
     ENV_VAR_NAME = "OMNI_HIGH_RES_STREAM_DIR"
 
     URL = "https://spdf.gsfc.nasa.gov/pub/data/omni/high_res_omni/"
@@ -73,7 +91,9 @@ class OMNIHighRes:
     def __init__(self, data_dir: str | Path = None):
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
+                raise ValueError(
+                    f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
+                )
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
@@ -82,14 +102,33 @@ class OMNIHighRes:
 
         logging.info(f"OMNI high resolution data directory: {self.data_dir}")
 
+    @add_time_docs("download")
     def download_and_process(
         self,
         start_time: datetime,
         end_time: datetime,
         cadence_min: float = 1,
         reprocess_files: bool = False,
-        verbose: bool = False,
-    ):
+    ) -> None:
+        """Download and process OMNI High Resolution data files.
+
+        Parameters
+        ----------
+        cadence_min : float, optional
+            Cadence of the data in minutes, defaults to 1
+        reprocess_files : bool, optional
+            Downloads and processes the files again, defaults to False, by default False
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        AssertionError
+            Raises `AssertionError` if the cadence is not 1 or 5 minutes.
+        """
+
         assert (
             cadence_min == 1 or cadence_min == 5
         ), "Only 1 or 5 minute cadence can be chosen for high resolution omni data."
@@ -98,7 +137,9 @@ class OMNIHighRes:
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
         try:
-            file_paths, time_intervals = self._get_processed_file_list(start_time, end_time, cadence_min)
+            file_paths, time_intervals = self._get_processed_file_list(
+                start_time, end_time, cadence_min
+            )
 
             for file_path, time_interval in zip(file_paths, time_intervals):
                 if cadence_min == 1:
@@ -112,13 +153,11 @@ class OMNIHighRes:
                     else:
                         continue
 
-                if verbose:
-                    logging.info(f"Downloading file {self.URL + filename} ...")
+                logging.debug(f"Downloading file {self.URL + filename} ...")
 
                 wget.download(self.URL + filename, str(temporary_dir))
 
-                if verbose:
-                    logging.info(f"Processing file ...")
+                logging.debug("Processing file ...")
 
                 processed_df = self._process_single_file(temporary_dir / filename)
                 processed_df.to_csv(file_path, index=True, header=True)
@@ -126,9 +165,34 @@ class OMNIHighRes:
         finally:
             rmtree(temporary_dir)
 
+    @add_time_docs("read")
     def read(
-        self, start_time: datetime, end_time: datetime, cadence_min: float = 1, download: bool = False
+        self,
+        start_time: datetime,
+        end_time: datetime,
+        cadence_min: float = 1,
+        download: bool = False,
     ) -> pd.DataFrame:
+        """
+        Read OMNI High Resolution data for the given time range.
+
+        Parameters
+        ----------
+        cadence_min : float, optional
+            Cadence of the data in minutes, defaults to 1
+        download : bool, optional
+            Download data on the go, defaults to False.
+
+        Returns
+        -------
+        pd.DataFrame
+            OMNI High Resolution data.
+
+        Raises
+        ------
+        AssertionError
+            Raises `AssertionError` if the cadence is not 1 or 5 minutes.
+        """
         assert (
             cadence_min == 1 or cadence_min == 5
         ), "Only 1 or 5 minute cadence can be chosen for high resolution omni data."
@@ -155,7 +219,9 @@ class OMNIHighRes:
         for file_path in file_paths:
             if not file_path.exists():
                 if download:
-                    self.download_and_process(start_time, end_time, cadence_min=cadence_min)
+                    self.download_and_process(
+                        start_time, end_time, cadence_min=cadence_min
+                    )
                 else:
                     logging.warning(f"File {file_path} not found")
                     continue
@@ -175,9 +241,23 @@ class OMNIHighRes:
 
         return data_out
 
+    @add_time_docs(None)
     def _get_processed_file_list(
         self, start_time: datetime, end_time: datetime, cadence_min: float
     ) -> Tuple[List, List]:
+        """Get list of file paths and their corresponding time intervals.
+
+        Parameters
+        ----------
+        cadence_min : float
+            Cadence of the data in minutes.
+
+        Returns
+        -------
+        Tuple[List, List]
+            List of file paths and time intervals.
+        """
+
         file_paths = []
         time_intervals = []
 
@@ -185,7 +265,10 @@ class OMNIHighRes:
         end_time = datetime(end_time.year, 12, 31, 23, 59, 59)
 
         while current_time < end_time:
-            file_path = self.data_dir / f"OMNI_HIGH_RES_{cadence_min}min_{current_time.strftime('%Y')}.csv"
+            file_path = (
+                self.data_dir
+                / f"OMNI_HIGH_RES_{cadence_min}min_{current_time.strftime('%Y')}.csv"
+            )
             file_paths.append(file_path)
 
             interval_start = current_time
@@ -196,7 +279,20 @@ class OMNIHighRes:
 
         return file_paths, time_intervals
 
-    def _process_single_file(self, file_path):
+    def _process_single_file(self, file_path) -> pd.DataFrame:
+        """Process yearly OMNI High Resolution file to a DataFrame.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the file.
+
+        Returns
+        -------
+        pd.DataFrame
+            Yearly OMNI High Resolution data.
+        """
+
         to_drop = [
             "year",
             "day",
@@ -264,12 +360,16 @@ class OMNIHighRes:
 
         data = pd.read_csv(file_path, sep=r"\s+", names=self.HEADER)
 
-        data["timestamp"] = data["year"].map(str).apply(lambda x: x + "-01-01 ") + data["hour"].map(str).apply(
-            lambda x: x.zfill(2)
+        data["timestamp"] = data["year"].map(str).apply(lambda x: x + "-01-01 ") + data[
+            "hour"
+        ].map(str).apply(lambda x: x.zfill(2))
+        data["timestamp"] += (
+            data["minute"].map(str).apply(lambda x: ":" + x.zfill(2) + ":00")
         )
-        data["timestamp"] += data["minute"].map(str).apply(lambda x: ":" + x.zfill(2) + ":00")
         data["timestamp"] = pd.to_datetime(data["timestamp"])
-        data["timestamp"] = data["timestamp"] + data["day"].apply(lambda x: timedelta(days=int(x) - 1))
+        data["timestamp"] = data["timestamp"] + data["day"].apply(
+            lambda x: timedelta(days=int(x) - 1)
+        )
         data["bx_gse"] = data["bx_gse_gsm"]
         data["bx_gsm"] = data["bx_gse_gsm"]
 
@@ -283,6 +383,18 @@ class OMNIHighRes:
         return data
 
     def _read_single_file(self, file_path) -> pd.DataFrame:
+        """Read yearly OMNI High Resolution file to a DataFrame.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the file.
+
+        Returns
+        -------
+        pd.DataFrame
+            Data from yearly High Low Resolution file.
+        """
         df = pd.read_csv(file_path)
 
         df["t"] = pd.to_datetime(df["timestamp"], utc=True)

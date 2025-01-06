@@ -9,9 +9,26 @@ import numpy as np
 import pandas as pd
 import wget
 from data_management.io.utils import sw_mag_propagation
+from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
 
 
+
+@add_attributes_to_class_docstring
+@add_methods_to_class_docstring
 class DSCOVR:
+    """This is a class for the DSCOVR Solar Wind data.
+
+    Parameters
+    ----------
+    data_dir : str | Path, optional
+        Data directory for the DSCOVR Solar Wind data. If not provided, it will be read from the environment variable
+
+    Raises
+    ------
+    ValueError
+        Returns `ValueError` if necessary environment variable is not set.
+    """
+
     ENV_VAR_NAME = "SW_DSCOVR_STREAM_DIR"
 
     URL = "https://services.swpc.noaa.gov/products/solar-wind/"
@@ -37,46 +54,43 @@ class DSCOVR:
 
         logging.info(f"DSCOVR data directory: {self.data_dir}")
 
-    def download_and_process(self, request_time: datetime, verbose: bool = False):
+    def download_and_process(self, request_time: datetime) -> None:
         """
         Download and process DSCOVR data, splitting data across midnight into appropriate day files.
+
+        Parameters
+        ----------
+        request_time : datetime
+            The time for which the data is requested. Must be in the past and within the last two hours.
+
+        Raises
+        ------
+        AssertionError
+            If the request_time is in the future.
+        FileNotFoundError
+            If the downloaded files are empty.
+
+        Returns
+        -------
+        None
         """
         current_time = datetime.now(timezone.utc)
         assert request_time < current_time, "Request time cannot be in the future!"
 
         if current_time - request_time > timedelta(hours=24):
-            if verbose:
-                logging.info(
-                    "We can only download DSCOVR data for the last 23 hours and a hour in past!"
-                )
+            logging.debug(
+                "We can only download DSCOVR data for the last 23 hours and a hour in past!"
+            )
             return
 
         temporary_dir = Path("./temp_sw_dscovr_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
         try:
-            if verbose:
-                logging.info(f"Downloading file {self.URL + self.NAME_MAG} ...")
+            self._download_file(temporary_dir, self.NAME_MAG)
+            self._download_file(temporary_dir, self.NAME_SWEPAM)
 
-            wget.download(self.URL + self.NAME_MAG, str(temporary_dir))
-
-            if os.stat(str(temporary_dir / self.NAME_MAG)).st_size == 0:
-                raise FileNotFoundError(
-                    f"Error while downloading file: {self.URL + self.NAME_MAG}!"
-                )
-
-            if verbose:
-                logging.info(f"Downloading file {self.URL + self.NAME_SWEPAM} ...")
-
-            wget.download(self.URL + self.NAME_SWEPAM, str(temporary_dir))
-
-            if os.stat(str(temporary_dir / self.NAME_SWEPAM)).st_size == 0:
-                raise FileNotFoundError(
-                    f"Error while downloading file: {self.URL + self.NAME_SWEPAM}!"
-                )
-
-            if verbose:
-                logging.info(f"Processing file ...")
+            logging.debug(f"Processing file ...")
             processed_df = self._process_single_file(temporary_dir)
 
             unique_dates = np.unique(processed_df.index.date)
@@ -98,22 +112,30 @@ class DSCOVR:
                 ]
 
                 if file_path.exists():
-                    if verbose:
-                        logging.info(
-                            f"Found previous file for {date}. Loading and combining ..."
-                        )
+                    logging.debug(
+                        f"Found previous file for {date}. Loading and combining ..."
+                    )
                     previous_df = self._read_single_file(file_path)
 
                     previous_df.drop("file_name", axis=1, inplace=True)
                     day_data = day_data.combine_first(previous_df)
 
-                if verbose:
-                    logging.info(f"Saving processed file for {date}")
+                logging.debug(f"Saving processed file for {date}")
                 day_data.to_csv(file_path, index=True, header=True)
 
         finally:
             rmtree(temporary_dir)
 
+    def _download_file(self, temporary_dir: Path, file_name: str) -> None:
+        logging.debug(f"Downloading file {self.URL + file_name} ...")
+        wget.download(self.URL + file_name, str(temporary_dir))
+
+        if os.stat(str(temporary_dir / file_name)).st_size == 0:
+            raise FileNotFoundError(
+                f"Error while downloading file: {self.URL + file_name}!"
+            )
+
+    @add_time_docs("read")
     def read(
         self,
         start_time: datetime,
@@ -123,8 +145,24 @@ class DSCOVR:
     ) -> pd.DataFrame:
         """
         Read DSCOVR data for the specified time range.
-        """
 
+        Parameters
+        ----------
+        download : bool, optional
+            Download data on the go, defaults to False.
+        propagation : bool, optional
+            Propagate the data from L1 to near-Earth, defaults to False.
+
+        Returns
+        -------
+        pd.DataFrame
+            OMNI High Resolution data.
+
+        Raises
+        ------
+        AssertionError
+            Raises `AssertionError` if the start time is before the end time.
+        """
         assert start_time < end_time, "Start time must be before end time!"
 
         if propagation:
@@ -132,7 +170,6 @@ class DSCOVR:
             start_time = start_time - timedelta(days=1)
 
         file_paths, _ = self._get_processed_file_list(start_time, end_time)
-
 
         t = pd.date_range(
             datetime(start_time.year, start_time.month, start_time.day),
@@ -179,9 +216,22 @@ class DSCOVR:
 
         return data_out
 
+    @add_time_docs(None)
     def _get_processed_file_list(
         self, start_time: datetime, end_time: datetime
     ) -> Tuple[List, List]:
+        """Get list of file paths and their corresponding time intervals.
+
+        Parameters
+        ----------
+        cadence_min : float
+            Cadence of the data in minutes.
+
+        Returns
+        -------
+        Tuple[List, List]
+            List of file paths and time intervals.
+        """
         file_paths = []
         time_intervals = []
 
@@ -210,6 +260,18 @@ class DSCOVR:
         return file_paths, time_intervals
 
     def _read_single_file(self, file_path) -> pd.DataFrame:
+        """Read DSCOVR file to a DataFrame.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the file.
+
+        Returns
+        -------
+        pd.DataFrame
+            Data from DSCOVR file.
+        """
         df = pd.read_csv(file_path)
 
         df["t"] = pd.to_datetime(df["t"], utc=True)
@@ -222,6 +284,13 @@ class DSCOVR:
         return df
 
     def _process_single_file(self, temporary_dir: Path) -> pd.DataFrame:
+        """Process mag and swepam DSCOVR file to a DataFrame.
+
+        Returns
+        -------
+        pd.DataFrame
+            DSCOVR data.
+        """
         data_mag = self._process_mag_file(temporary_dir)
         data_swepam = self._process_swepam_file(temporary_dir)
 
@@ -242,7 +311,11 @@ class DSCOVR:
         """
         Reads magnetic instrument last available real time DSCOVR data.
 
-        :return: A pandas.DataFrame with magnetic field components and timestamp sampled every minute.
+        Returns
+        -------
+
+        pd.DataFrame
+            Dataframe with magnetic field components and timestamp sampled every minute.
         """
 
         data_mag = pd.read_json(temporary_dir / self.NAME_MAG)
@@ -265,8 +338,12 @@ class DSCOVR:
         """
         This method reads faraday cup SWEPAM instrument daily file from DSCOVR original data.
 
-        :return: A pandas.DataFrame with solar wind speed, proton density, temperature and timestamp,
-                 sampled every minute.
+
+        Returns
+        -------
+
+        pd.DataFrame
+            Dataframe  with solar wind speed, proton density, temperature and timestamp, sampled every minute.
         """
 
         data_plasma = pd.read_json(temporary_dir / self.NAME_SWEPAM)
@@ -288,6 +365,17 @@ class DSCOVR:
         return data_plasma
 
     def _update_filename(self, row: pd.Series) -> str:
+        """Update the filename in the row.
+
+        Parameters
+        ----------
+        row : pd.Series
+
+        Returns
+        -------
+        str
+            Updated filename.
+        """
         if pd.isna(row["file_name"]):
             return row["file_name"]
 

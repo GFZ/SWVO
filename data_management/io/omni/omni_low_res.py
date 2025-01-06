@@ -9,8 +9,25 @@ import numpy as np
 import pandas as pd
 import wget
 
+from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
 
+
+
+@add_attributes_to_class_docstring
+@add_methods_to_class_docstring
 class OMNILowRes:
+    """This is a class for the OMNI Low Resolution data.
+
+    Parameters
+    ----------
+    data_dir : str | Path, optional
+        Data directory for the OMNI Low Resolution data. If not provided, it will be read from the environment variable
+
+    Raises
+    ------
+    ValueError
+        Returns `ValueError` if necessary environment variable is not set.
+    """
     ENV_VAR_NAME = "OMNI_LOW_RES_STREAM_DIR"
 
     URL = "https://spdf.gsfc.nasa.gov/pub/data/omni/low_res_omni/"
@@ -86,9 +103,20 @@ class OMNILowRes:
 
         logging.info(f"OMNI Low Res  data directory: {self.data_dir}")
 
-    def download_and_process(
-        self, start_time: datetime, end_time: datetime, reprocess_files: bool = False, verbose: bool = False
-    ):
+    @add_time_docs("download")
+    def download_and_process(self, start_time: datetime, end_time: datetime, reprocess_files: bool = False) -> None:
+        """Download and process OMNI Low Resolution data files.
+
+        Parameters
+        ----------
+        reprocess_files : bool, optional
+            Downloads and processes the files again, defaults to False, by default False
+
+        Returns
+        -------
+        None
+        """
+
         temporary_dir = Path("./temp_omni_low_res_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
@@ -104,13 +132,11 @@ class OMNILowRes:
                     else:
                         continue
 
-                if verbose:
-                    logging.info(f"Downloading file {self.URL + filename} ...")
+                logging.debug(f"Downloading file {self.URL + filename} ...")
 
                 wget.download(self.URL + filename, str(temporary_dir))
 
-                if verbose:
-                    logging.info(f"Processing file ...")
+                logging.debug("Processing file ...")
 
                 processed_df = self._process_single_file(temporary_dir / filename)
                 processed_df.to_csv(file_path, index=True, header=True)
@@ -118,7 +144,16 @@ class OMNILowRes:
         finally:
             rmtree(temporary_dir)
 
+    @add_time_docs(None)
     def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
+        """Get list of file paths and their corresponding time intervals.
+
+        Returns
+        -------
+        Tuple[List, List]
+            List of file paths and time intervals.
+        """
+
         file_paths = []
         time_intervals = []
 
@@ -137,7 +172,20 @@ class OMNILowRes:
 
         return file_paths, time_intervals
 
-    def _process_single_file(self, file_path):
+    def _process_single_file(self, file_path: Path) -> pd.DataFrame:
+        """Process yearly OMNI Low Resolution file to a DataFrame.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the file.
+
+        Returns
+        -------
+        pd.DataFrame
+            Yearly OMNI Low Resolution data.
+        """
+
         data = pd.read_csv(file_path, sep=r"\s+", names=self.HEADER)
         data["timestamp"] = data["year"].map(str).apply(lambda x: x + "-01-01 ")
         data["timestamp"] = data["year"].map(str).apply(lambda x: x + "-01-01 ") + data["hour"].map(str).apply(
@@ -162,8 +210,22 @@ class OMNILowRes:
         df.loc[round(df["kp"] % 1, 2) == 0.3, "kp"] = round(df.loc[round(df["kp"] % 1, 2) == 0.3, "kp"]) + 1 / 3
 
         return df
-
+    
+    @add_time_docs("read")
     def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
+        """
+        Read OMNI Low Resolution data for the given time range.
+
+        Parameters
+        ----------
+        download : bool, optional
+            Download data on the go, defaults to False.
+
+        Returns
+        -------
+        pd.DataFrame
+            OMNI Low Resolution data.
+        """
         START_YEAR = 1963
 
         if not start_time.tzinfo:
@@ -203,7 +265,19 @@ class OMNILowRes:
 
         return data_out
 
-    def _read_single_file(self, file_path) -> pd.DataFrame:
+    def _read_single_file(self, file_path: Path) -> pd.DataFrame:
+        """Read yearly OMNI Low Resolution file to a DataFrame.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the file.
+
+        Returns
+        -------
+        pd.DataFrame
+            Data from yearly OMNI Low Resolution file.
+        """
         df = pd.read_csv(file_path)
 
         df["t"] = pd.to_datetime(df["timestamp"])
