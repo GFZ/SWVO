@@ -79,8 +79,7 @@ class TestKpNiemegk:
         end_time = current_time + timedelta(days=2)
 
         kp_niemegk_instance.download_and_process(
-            current_time, end_time, reprocess_files=True, verbose=True
-        )
+            current_time, end_time, reprocess_files=True)
 
         file_paths, _ = kp_niemegk_instance._get_processed_file_list(current_time, end_time)
 
@@ -101,7 +100,7 @@ class TestKpNiemegk:
         past_time = datetime.now() - timedelta(days=32)
         end_time = past_time + timedelta(days=2)
 
-        kp_niemegk_instance.download_and_process(past_time, end_time, verbose=True)
+        kp_niemegk_instance.download_and_process(past_time, end_time)
 
         file_paths, _ = kp_niemegk_instance._get_processed_file_list(past_time, end_time)
 
@@ -184,8 +183,7 @@ class TestKpNiemegk:
         end_time = current_time + timedelta(days=1)
 
         kp_niemegk_instance.download_and_process(
-            current_time, end_time, reprocess_files=True, verbose=True
-        )
+            current_time, end_time, reprocess_files=True)
 
         file_paths, _ = kp_niemegk_instance._get_processed_file_list(current_time, end_time)
 
@@ -198,8 +196,7 @@ class TestKpNiemegk:
         assert initial_data is not None
 
         kp_niemegk_instance.download_and_process(
-            current_time, end_time, reprocess_files=False, verbose=True
-        )
+            current_time, end_time, reprocess_files=False)
 
         unchanged_data = pd.read_csv(file_path, names=["t", "kp"])
         pd.testing.assert_frame_equal(initial_data, unchanged_data)

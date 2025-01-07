@@ -196,7 +196,7 @@ class DSCOVR:
                 file_date = datetime.strptime(
                     file_path.stem.split("_")[-1], "%Y%m%d"
                 ).replace(tzinfo=timezone.utc)
-                self.download_and_process(file_date, verbose=False)
+                self.download_and_process(file_date)
 
             if not file_path.exists():
                 logging.warning(f"File {file_path} not found")
