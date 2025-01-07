@@ -21,14 +21,12 @@ class PlotKpHpOutput(PlotOutput):
     def _add_bar_color(data, key):
         color = []
         for i in range(len(data)):
-            if data[key][i] < 4:
+            if data[key][i] <= 3:
                 color.append([0.0, 0.5, 0.0, 1.0])
-            elif data[key][i] == 4:
+            elif (3 < data[key][i] and data[key][i] <= 6):
                 color.append([204 / 255.0, 204 / 255.0, 0.0, 1.0])
-            elif data[key][i] > 4:
+            elif 6 < data[key][i]:
                 color.append([1.0, 0.0, 0.0, 1.0])
-            elif data[key][i] >= 9.5:
-                color.append([0.0, 0.0, 0.0, 0.1])
         return color
 
     @staticmethod
