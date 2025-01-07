@@ -281,7 +281,7 @@ class PlasmaspherePlot(PlotOutput):
             self.ax_solar_wind_Bz.xaxis.set_major_locator(locator)
             self.ax_solar_wind_Bz.xaxis.set_major_formatter(formatter)
             bz_columns = [column for column in df_solar_wind.columns
-                          if "Bz" in column]
+                          if "bz_gsm" in column]
             self.ax_solar_wind_Bz = PlasmaspherePlot._plot_input(
                 self.ax_solar_wind_Bz, df_solar_wind,
                 time_column="t", input_columns=bz_columns
