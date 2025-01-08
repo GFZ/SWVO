@@ -28,14 +28,14 @@ if [ -z "$PYTHON_ENV" ]
     echo "You need to provide an absolute path to a python environment (-e option). Exiting..."
     exit
 fi
-source $PYTHON_ENV/bin/activate
+source "$PYTHON_ENV"/bin/activate
 
 if [ -z "$VENV_VARIABLES" ]
   then
     echo "You need to provide an absolute path and name to the environment variable script (-v option). Exiting..."
     exit
 fi
-source $VENV_VARIABLE
+source "$VENV_VARIABLES"
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 cd "$SCRIPT_DIR" || exit
