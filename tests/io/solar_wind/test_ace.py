@@ -96,7 +96,7 @@ class TestSWACE:
 
     def test_download_and_process(self, swace_instance):
         current_time = datetime.now(timezone.utc)
-        swace_instance.download_and_process(current_time, verbose=True)
+        swace_instance.download_and_process(current_time)
 
         expected_file = (
             DATA_DIR / f"ACE_SW_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"

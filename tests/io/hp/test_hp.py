@@ -133,7 +133,7 @@ class TestHpGFZ:
             hp30gfz, "_process_single_file", return_value=pd.DataFrame()
         )
 
-        hp30gfz.download_and_process(start_time, end_time, verbose=True)
+        hp30gfz.download_and_process(start_time, end_time)
 
         mocked.assert_called()
 

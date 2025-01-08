@@ -57,7 +57,7 @@ class TestKpSWPC:
 
         current_date = datetime.now(timezone.utc)
 
-        kp_swpc_instance.download_and_process(current_date, reprocess_files=True, verbose=True)
+        kp_swpc_instance.download_and_process(current_date, reprocess_files=True)
 
         expected_file = kp_swpc_instance.data_dir / f"SWPC_KP_FORECAST_{current_date.strftime('%Y%m%d')}.csv"
         assert expected_file.exists()
@@ -126,12 +126,12 @@ class TestKpSWPC:
         current_time = datetime.now(timezone.utc)
         file_path = kp_swpc_instance.data_dir / f"SWPC_KP_FORECAST_{current_time.strftime('%Y%m%d')}.csv"
 
-        kp_swpc_instance.download_and_process(current_time, reprocess_files=True, verbose=True)
+        kp_swpc_instance.download_and_process(current_time, reprocess_files=True)
         assert file_path.exists()
 
         initial_data = pd.read_csv(file_path, names=["t", "kp"])
 
-        kp_swpc_instance.download_and_process(current_time, reprocess_files=False, verbose=True)
+        kp_swpc_instance.download_and_process(current_time, reprocess_files=False)
         assert file_path.exists()
         unchanged_data = pd.read_csv(file_path, names=["t", "kp"])
         pd.testing.assert_frame_equal(initial_data, unchanged_data)

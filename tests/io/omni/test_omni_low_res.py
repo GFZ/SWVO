@@ -43,7 +43,7 @@ class TestOMNILowRes:
         start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
 
-        omni_low_res.download_and_process(start_time, end_time, verbose=True)
+        omni_low_res.download_and_process(start_time, end_time)
 
         assert (TEST_DIR / Path("data/omni2_2020.dat")).exists()
 

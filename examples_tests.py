@@ -24,16 +24,16 @@ start_time = datetime(start_time.year, start_time.month, start_time.day) + timed
 end_time = datetime(end_time.year, end_time.month, end_time.day) - timedelta(seconds=1)
 
 
-#KpNiemegk().download_and_process(datetime.today()-timedelta(days=5), datetime.today()+timedelta(days=2), reprocess_files=True, verbose=True)
+#KpNiemegk().download_and_process(datetime.today()-timedelta(days=5), datetime.today()+timedelta(days=2), reprocess_files=True)
 #print(KpNiemegk().read(start_time, end_time))
 
-#KpSWPC().download_and_process(datetime.today(), reprocess_files=True, verbose=True)
+#KpSWPC().download_and_process(datetime.today(), reprocess_files=True)
 #print(KpSWPC().read(datetime(2024, 5, 10)))
 
-#OMNIHighRes().download_and_process(start_time, end_time, cadence_min=1, reprocess_files=False, verbose=True)
+#OMNIHighRes().download_and_process(start_time, end_time, cadence_min=1, reprocess_files=False)
 #print(SWOMNI().read(start_time, end_time))
 
-#Hp60GFZ().download_and_process(datetime.today(), datetime.today(), reprocess_files=True, verbose=True)
+#Hp60GFZ().download_and_process(datetime.today(), datetime.today(), reprocess_files=True)
 #print(Hp60GFZ().read(datetime.today()-timedelta(days=365), datetime.today()+timedelta(days=10)))
 
 #print(Hp30Ensemble().read(datetime.today(), datetime.today()+timedelta(hours=30)))
@@ -57,7 +57,7 @@ end_time = datetime(end_time.year, end_time.month, end_time.day) - timedelta(sec
 # plt.grid()
 # plt.savefig('test.png')
 
-#SWACE().download_and_process(datetime.today(), reprocess_files=True, verbose=True)
+#SWACE().download_and_process(datetime.today(), reprocess_files=True)
 #print(SWACE().read(datetime.today()-timedelta(hours=4), datetime.today()+timedelta(hours=3)))
 
 

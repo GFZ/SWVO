@@ -91,7 +91,7 @@ class TestF107SWPC:
     def test_download_and_process(self, f107_instance):
         # mock_wget.side_effect = mock_download_response
 
-        f107_instance.download_and_process(verbose=True)
+        f107_instance.download_and_process()
 
         expected_file = MOCK_DATA_PATH / "SWPC_F107_2024.csv"
         assert expected_file.exists()
@@ -185,7 +185,7 @@ class TestF107SWPC:
         file_path = MOCK_DATA_PATH / "SWPC_F107_2024.csv"
         initial_data.to_csv(file_path, index=False)
 
-        f107_instance.download_and_process(verbose=True)
+        f107_instance.download_and_process()
 
         updated_data = pd.read_csv(file_path, parse_dates=["date"])
         assert len(updated_data) >= len(initial_data)
