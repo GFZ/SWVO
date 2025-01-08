@@ -132,11 +132,10 @@ class PlotKpHpOutput(PlotOutput):
                                              ylabel_fontsize=20,
                                              ylabel=r'${}$'.format(label))
 
-        red_patch = patches.Patch(color='red', label=r'${}$ > 4'.format(label))
+        red_patch = patches.Patch(color='red', label=r'${}$ > 6'.format(label))
         yellow_patch = patches.Patch(color=[204 / 255.0, 204 / 255.0, 0.0, 1.0],
-                                     label=r'${}$ = 4'.format(label))
-        green_patch = patches.Patch(color='green',
-                                    label=r'${}$ < 4'.format(label))
+                                     label=r'3 < ${}$ <= 6'.format(label))
+        green_patch = patches.Patch(color='green', label=r'${}$ <= 3'.format(label))
         transparent_patch = patches.Patch(color=[0, 0, 0, 0.1],
                                           label='Data not available')
 
@@ -235,10 +234,10 @@ class PlotKpHpEnsembleOutput(PlotKpHpOutput):
                                                 ylabel_fontsize=20,
                                                 ylabel=r'${}$'.format(label))
 
-        red_patch = patches.Patch(color='red', label=r'${}$ > 4'.format(label))
+        red_patch = patches.Patch(color='red', label=r'${}$ > 6'.format(label))
         yellow_patch = patches.Patch(color=[204 / 255.0, 204 / 255.0, 0.0, 1.0],
-                                     label=r'${}$ = 4'.format(label))
-        green_patch = patches.Patch(color='green', label=r'${}$ < 4'.format(label))
+                                     label=r'3 < ${}$ <= 6'.format(label))
+        green_patch = patches.Patch(color='green', label=r'${}$ <= 3'.format(label))
         transparent_patch = patches.Patch(color=[0, 0, 0, 0.1], label='Data not available')
 
         if legend:
