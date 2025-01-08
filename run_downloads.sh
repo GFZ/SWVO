@@ -3,22 +3,23 @@
 Help() {
 cat << EOF
 
-   Usage: make_local_environment.sh [-e PYTHON_ENV]
+   Usage: run_downloads.sh [-e PYTHON_ENV] [-v VENV_VARIABLES]
 
-   This script is used to prepare a local conda environment to run checks and plotting routines.
+   This script is used to download data.
 
-   optional arguments:
-       -e PYTHON_ENV   The name of the python conda environment to create. If not specified the
-                       default "data_management" will be used
+   arguments:
+       -e PYTHON_ENV   The name of the python environment to activate.
+       -v VENV_VARIABLES path to the script setting up the environment
+                         variables to save the output folders
 EOF
 }
 
-while getopts he: flag
+while getopts he:v: flag
 do
 	case "${flag}" in
 	        e) PYTHON_ENV=${OPTARG};;
 	        v) VENV_VARIABLES=${OPTARG};;
-	        v) Help ;;
+	        h) Help ;;
 	        *) exit;;
     esac
 done
@@ -40,3 +41,5 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 cd "$SCRIPT_DIR" || exit
 
 python3 ./download_daily_files.py
+
+deactivate
