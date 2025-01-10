@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Literal, Type, List
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -18,12 +18,11 @@ KpModel = KpEnsemble | KpNiemegk | KpOMNI | KpSWPC
 def read_kp_from_multiple_models(  # noqa: PLR0913
     start_time: datetime,
     end_time: datetime,
-    model_order: List[Type[KpModel]] | None = None,
+    model_order: list[KpModel] | None = None,
     reduce_ensemble: Literal["mean", "median"] | None = None,
     synthetic_now_time: datetime | None = None,
     *,
     download: bool = False,
-    **datadir_kwargs: dict[str, dict],
 ) -> pd.DataFrame | list[pd.DataFrame]:
     """Read Kp data from multiple models.
 
@@ -47,8 +46,6 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
         (OMNI, Niemegk). Defaults to None.
     download : bool, optional
         Flag to decide whether new data should be downloaded. Defaults to False.
-    datadir_kwargs : dict
-        Keyword arguments for the data directories of the models. The keys are the model names. If the environment variables are not set, the data directories can be provided as keyword arguments. Or if the directories are different from the environment variables, they can be provided as keyword arguments. It is advisable to set the enivronment variables for the data directories of the models.
 
     Returns
     -------
@@ -60,31 +57,14 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
         synthetic_now_time = datetime.now(timezone.utc)
 
     if model_order is None:
+        model_order = [KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()]
         logging.warning(
             "No model order specified, using default order: OMNI, Niemegk, Ensemble, SWPC"
         )
 
-        model_mapping = {
-            "KpOMNI": KpOMNI,
-            "KpNiemegk": KpNiemegk,
-            "KpEnsemble": KpEnsemble,
-            "KpSWPC": KpSWPC,
-        }
-
-        if datadir_kwargs:
-            model_order = []
-            for model_name, params in datadir_kwargs.items():
-                model_class = model_mapping[model_name]
-                model_order.append(model_class(params))
-        else:
-            model_order = [KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()]
-
     data_out = [pd.DataFrame()]
 
     for model in model_order:
-        logging.warning(
-            f"{model.__class__.__name__}: {model.data_dir.absolute().as_posix()}"
-        )
         data_one_model = _read_from_model(
             model,
             start_time,
