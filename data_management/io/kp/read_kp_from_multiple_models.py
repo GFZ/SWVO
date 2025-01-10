@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Literal
+from typing import Literal, Type, List
 
 import numpy as np
 import pandas as pd
@@ -18,7 +18,7 @@ KpModel = KpEnsemble | KpNiemegk | KpOMNI | KpSWPC
 def read_kp_from_multiple_models(  # noqa: PLR0913
     start_time: datetime,
     end_time: datetime,
-    model_order: list[KpModel] | None = None,
+    model_order: List[Type[KpModel]] | None = None,
     reduce_ensemble: Literal["mean", "median"] | None = None,
     synthetic_now_time: datetime | None = None,
     *,
