@@ -21,6 +21,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     synthetic_now_time: datetime | None = None,
     *,
     download: bool = False,
+    **datadir_kwargs: dict[str, dict],
 ) -> pd.DataFrame | list[pd.DataFrame]:
     """
     Read solar wind data from multiple models.
@@ -41,6 +42,8 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
         Time which represents "now". After this time, no data will be taken from historical models (OMNI, ACE). Defaults to None.
     download : bool, optional
         Flag which decides whether new data should be downloaded. Defaults to False.
+    datadir_kwargs : dict
+        Keyword arguments for the data directories of the models. The keys are the model names. If the environment variables are not set, the data directories can be provided as keyword arguments. Or if the directories are different from the environment variables, they can be provided as keyword arguments. It is advisable to set the enivronment variables for the data directories of the models.
 
     Returns
     -------
@@ -52,13 +55,30 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
         synthetic_now_time = datetime.now(timezone.utc)
 
     if model_order is None:
-        model_order = [SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble()]
-        logging.warning("No model order specified, using default order: OMNI, ACE, SWIFT ensemble")
+        logging.warning(
+            "No model order specified, using default order: OMNI, ACE, SWIFT ensemble"
+        )
+
+        model_mapping = {
+            "SWOMNI": SWOMNI,
+            "DSCOVR": DSCOVR,
+            "SWACE": SWACE,
+            "SWSWIFTEnsemble": SWSWIFTEnsemble,
+        }
+        if datadir_kwargs:
+            model_order = []
+            for model_name, params in datadir_kwargs.items():
+                model_class = model_mapping[model_name]
+                model_order.append(model_class(params))
+        else:
+            model_order = [SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble()]
 
     data_out = [pd.DataFrame()]
 
     for model in model_order:
-        logging.info(f"{model.__class__.__name__}: {model.data_dir.absolute().as_posix()}")
+        logging.info(
+            f"{model.__class__.__name__}: {model.data_dir.absolute().as_posix()}"
+        )
         data_one_model = _read_from_model(
             model,
             start_time,
@@ -122,7 +142,9 @@ def _read_from_model(  # noqa: PLR0913
 
     # Forecasting models are called with synthetic now time
     if isinstance(model, SWSWIFTEnsemble):
-        data_one_model = _read_latest_ensemble_files(model, synthetic_now_time, end_time)
+        data_one_model = _read_latest_ensemble_files(
+            model, synthetic_now_time, end_time
+        )
 
         num_ens_members = len(data_one_model)
 
@@ -140,7 +162,6 @@ def _read_historical_model(
     *,
     download: bool,
 ) -> tuple[pd.DataFrame, str]:
-    
     """Reads SW data from historical models (DSCOVR, SWACE or SWOMNI) within the specified time range.
 
     Parameters
@@ -181,8 +202,10 @@ def _read_historical_model(
 
     data_one_model = model.read(start_time, end_time, download=download)
     # set nan for 'future' values
-    data_one_model.loc[synthetic_now_time+timedelta(minutes=1):end_time] = np.nan
-    logging.info(f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}")
+    data_one_model.loc[synthetic_now_time + timedelta(minutes=1) : end_time] = np.nan
+    logging.info(
+        f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}"
+    )
 
     return data_one_model
 
@@ -230,7 +253,9 @@ def _read_latest_ensemble_files(
             target_time -= timedelta(days=1)
             continue
 
-        data_one_model = _interpolate_to_common_indices(target_time, end_time, synthetic_now_time, data_one_model)
+        data_one_model = _interpolate_to_common_indices(
+            target_time, end_time, synthetic_now_time, data_one_model
+        )
         break
 
     logging.info(f"Reading SWIFT ensemble from {target_time} to {end_time}")
@@ -239,7 +264,10 @@ def _read_latest_ensemble_files(
 
 
 def _interpolate_to_common_indices(
-    target_time: datetime, end_time: datetime, synthetic_now_time: datetime, data: list[pd.DataFrame]
+    target_time: datetime,
+    end_time: datetime,
+    synthetic_now_time: datetime,
+    data: list[pd.DataFrame],
 ) -> list[pd.DataFrame]:
     """
     Interpolate the data to a common index with a 1-minute frequency.
@@ -264,8 +292,21 @@ def _interpolate_to_common_indices(
     for ie, _ in enumerate(data):
         df_common_index = pd.DataFrame(
             index=pd.date_range(
-                datetime(target_time.year, target_time.month, target_time.day, tzinfo=timezone.utc),
-                datetime(end_time.year, end_time.month, end_time.day, 23, 59, 59, tzinfo=timezone.utc),
+                datetime(
+                    target_time.year,
+                    target_time.month,
+                    target_time.day,
+                    tzinfo=timezone.utc,
+                ),
+                datetime(
+                    end_time.year,
+                    end_time.month,
+                    end_time.day,
+                    23,
+                    59,
+                    59,
+                    tzinfo=timezone.utc,
+                ),
                 freq=timedelta(minutes=1),
                 tz="UTC",
             ),
@@ -277,17 +318,22 @@ def _interpolate_to_common_indices(
                 # this is the filename column
                 df_common_index[colname] = col.iloc[0]
             else:
-                df_common_index[colname] = np.interp(df_common_index.index, data[ie].index, col)
+                df_common_index[colname] = np.interp(
+                    df_common_index.index, data[ie].index, col
+                )
 
         data[ie] = df_common_index
         data[ie] = data[ie].truncate(
-            before=synthetic_now_time - timedelta(minutes=0.999999), after=end_time + timedelta(minutes=0.999999)
+            before=synthetic_now_time - timedelta(minutes=0.999999),
+            after=end_time + timedelta(minutes=0.999999),
         )
 
     return data
 
 
-def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"]) -> pd.DataFrame:
+def _reduce_ensembles(
+    data_ensembles: list[pd.DataFrame], method: Literal["mean"]
+) -> pd.DataFrame:
     """Reduce a list of data frames representing ensemble data to a single data frame using the provided method."""
     msg = "This reduction method has not been implemented yet!"
     raise NotImplementedError(msg)
