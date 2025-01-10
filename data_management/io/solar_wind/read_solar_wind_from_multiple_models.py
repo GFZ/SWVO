@@ -58,6 +58,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     data_out = [pd.DataFrame()]
 
     for model in model_order:
+        logging.info(f"{model.__class__.__name__}: {model.data_dir.absolute().as_posix()}")
         data_one_model = _read_from_model(
             model,
             start_time,
