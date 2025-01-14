@@ -2,6 +2,8 @@
 
 import os
 import logging
+import argparse
+
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import traceback
@@ -13,29 +15,17 @@ from data_management.io.omni import OMNILowRes, OMNIHighRes
 from data_management.io.solar_wind import SWACE, DSCOVR
 from data_management.io.f10_7 import F107SWPC, F107OMNI
 
-"""
-base_path = '/home/bhaas/FLAG_TEST/'
-kp_path = base_path + 'Kp/'
-
-ENV_VAR_NAMES = {'DAILY_DOWNLOAD_LOG_DIR': base_path + 'log/',
-                 'RT_KP_NIEMEGK_STREAM_DIR': kp_path + 'Niemegk/',
-                 'RT_KP_SWPC_STREAM_DIR': kp_path + 'SWPC/',
-                 'OMNI_LOW_RES_STREAM_DIR': base_path + 'OMNI/Low_res',
-                 'RT_HP_GFZ_STREAM_DIR' : base_path + 'HP/'}
-"""
-
-
-ENV_VAR_NAMES = {"DAILY_DOWNLOAD_LOG_DIR": "/home/pager/FLAG_DEV/logs/daily_downloads_external_data/"}
-# ENV_VAR_NAMES = {"DAILY_DOWNLOAD_LOG_DIR": "/home/pager/FLAG_DEV/code/external_data/data_management/data/logs"}
 
 if __name__ == "__main__":
 
-    for key, var in ENV_VAR_NAMES.items():
-        os.environ[key] = ENV_VAR_NAMES[key]
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-logs', action="store", default=None, type=str,
+                        help="Absolute path to the log folder")
+    args = parser.parse_args()
 
     time_now = datetime.now(timezone.utc)
 
-    log_dir = Path(os.environ.get("DAILY_DOWNLOAD_LOG_DIR")) / f"{time_now.year}" / f"{time_now.month}"
+    log_dir = Path(args.logs) / f"{time_now.year}" / f"{time_now.month}"
 
     log_dir.mkdir(parents=True, exist_ok=True)
 
