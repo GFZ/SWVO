@@ -3,9 +3,9 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
-
 
 
 @add_attributes_to_class_docstring
@@ -78,26 +78,43 @@ class KpEnsemble:
             key=lambda x: int(x.stem.split("_")[-1]),
         )
 
+        data = []
         if len(file_list) == 0:
             msg = f"No ensemble files found for requested date {str_date}"
-            logging.error(msg)
-            raise FileNotFoundError(msg)
+            logging.warning(msg)
 
-        data = []
-        for file in file_list:
-            df = pd.read_csv(file, names=["t", "kp"])
+            # initialize data frame with NaNs
+            t = pd.date_range(
+                datetime(start_time.year, start_time.month, start_time.day),
+                datetime(end_time.year, end_time.month, end_time.day, 23, 59, 59),
+                freq=timedelta(hours=3),
+            )
+            data_out = pd.DataFrame(index=t)
+            data_out.index = data_out.index.tz_localize(timezone.utc)
+            data_out["kp"] = np.array([np.nan] * len(t))
+            data_out = data_out.truncate(
+                before=start_time - timedelta(hours=2.9999),
+                after=end_time + timedelta(hours=2.9999)
+            )
 
-            df["t"] = pd.to_datetime(df["t"])
-            df.index = df["t"]
-            df.drop(labels=["t"], axis=1, inplace=True)
+            data.append(data_out)
+            return data
 
-            df["file_name"] = file
-            df.loc[df["kp"].isna(), "file_name"] = None
+        else:
+            for file in file_list:
+                df = pd.read_csv(file, names=["t", "kp"])
 
-            df.index = df.index.tz_localize("UTC")
+                df["t"] = pd.to_datetime(df["t"])
+                df.index = df["t"]
+                df.drop(labels=["t"], axis=1, inplace=True)
 
-            df = df.truncate(before=start_time - timedelta(hours=2.9999), after=end_time + timedelta(hours=2.9999))
+                df["file_name"] = file
+                df.loc[df["kp"].isna(), "file_name"] = None
 
-            data.append(df)
+                df.index = df.index.tz_localize("UTC")
 
-        return data
+                df = df.truncate(before=start_time - timedelta(hours=2.9999), after=end_time + timedelta(hours=2.9999))
+
+                data.append(df)
+
+            return data
