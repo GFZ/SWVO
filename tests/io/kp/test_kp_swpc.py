@@ -118,8 +118,9 @@ class TestKpSWPC:
         expected_file = kp_swpc_instance.data_dir / f"SWPC_KP_FORECAST_{current_time.strftime('%Y%m%d')}.csv"
         if expected_file.exists():
             expected_file.unlink()
-        with pytest.raises(FileNotFoundError):
-            data = kp_swpc_instance.read(current_time, end_time, download=False)
+
+        data = kp_swpc_instance.read(current_time, end_time, download=False)
+        assert data["kp"].isnull().all()
 
 
     def test_reprocess_files_flag(self, kp_swpc_instance):
