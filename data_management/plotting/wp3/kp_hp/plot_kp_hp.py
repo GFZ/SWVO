@@ -211,11 +211,10 @@ class PlotKpHpEnsembleOutput(PlotKpHpOutput):
 
         label = PlotKpHpEnsembleOutput._get_label(column_to_plot)
 
-
-        data_median = pd.DataFrame(np.median([d.values.flatten() for d in data], axis=0),
+        data_median = pd.DataFrame(np.median([d[[column_to_plot]].values.flatten() for d in data], axis=0),
                                    columns=[column_to_plot],
                                    index=data[0].index)
-        data_max = pd.DataFrame(np.max([d.values.flatten() for d in data], axis=0),
+        data_max = pd.DataFrame(np.max([d[[column_to_plot]].values.flatten() for d in data], axis=0),
                                 columns=[column_to_plot], index=data[0].index)
 
         fig = plt.figure(figsize=(15, 8))
