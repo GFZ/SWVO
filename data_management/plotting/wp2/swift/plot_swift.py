@@ -62,11 +62,11 @@ class PlotSWIFTOutput(PlotOutput):
                                      color=color, legend=legend,
                                      label=label,
                                      line_width=linewidth)
-        PlotSWIFTOutput._add_subplot(ax[2], data["b"], ylabel=r"$|B|(nT)$",
+        PlotSWIFTOutput._add_subplot(ax[2], data["bavg"], ylabel=r"$|B|(nT)$",
                                      color=color,
                                      legend=legend, label=label,
                                      line_width=linewidth)
-        PlotSWIFTOutput._add_subplot(ax[3], data["bz"],
+        PlotSWIFTOutput._add_subplot(ax[3], data["bz_gsm"],
                                      ylabel=r"$Bz(nT)$",
                                      color=color, legend=legend,
                                      label=label)
