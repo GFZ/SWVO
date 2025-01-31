@@ -274,25 +274,31 @@ class KpNiemegk:
 
         for _, row in data.iterrows():
             for i in range(8):
-                t = datetime(
-                    int("20" + str(row["t"])[0:2]),
-                    int(str(row["t"])[2:4]),
-                    int(str(row["t"])[4:6]),
-                    i * 3,
-                )
-                timestamp.append(t)
-                value = row[str(i)]
                 try:
-                    v = float(str(value)[0])
-                    if value[1] == "+":
-                        v += 1.0 / 3.0
-                    elif value[1] == "-":
-                        v -= 1.0 / 3.0
-                    else:
-                        pass
-                    kp.append(v)
-                except ValueError:
-                    kp.append(np.nan)
+                    t = datetime(
+                        int("20" + str(row["t"])[0:2]),
+                        int(str(row["t"])[2:4]),
+                        int(str(row["t"])[4:6]),
+                        i * 3,
+                    )
+                    timestamp.append(t)
+                    value = row[str(i)]
+                    try:
+                        v = float(str(value)[0])
+                        if value[1] == "+":
+                            v += 1.0 / 3.0
+                        elif value[1] == "-":
+                            v -= 1.0 / 3.0
+                        else:
+                            pass
+                        kp.append(v)
+                    except ValueError:
+                        kp.append(np.nan)
+
+                # Added to capture possible changes in the file structure
+                except:
+                    pass
+
 
         data = pd.DataFrame({"kp": kp, "t": timestamp})
         data.index.rename("t", inplace=True)
