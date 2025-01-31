@@ -33,45 +33,6 @@ class PlotSWIFTOutput(PlotOutput):
 
         return ax
 
-    @staticmethod
-    def plot_output(data, color="orange", legend=False, label="SWIFT", linewidth=1):
-        """
-        This function plots output data for SWIFT solar wind variables. The plot format is at the moment
-        fixed.
-
-        :param data: This is the standard output format of SWIFT products read by SWIFTReader class.
-        :type data: pandas.DataFrame
-        :return: A figure object of type matplotlib.figure.Figure containing the produced plot
-        """
-
-        fig, ax = plt.subplots(nrows=4, ncols=1, sharex=True, figsize=(10, 10))
-
-        fig.supxlabel("Time (UTC)", fontsize=15)
-
-        locator = matplotlib.dates.AutoDateLocator(minticks=3, maxticks=7)
-        formatter = matplotlib.dates.ConciseDateFormatter(locator)
-        ax[3].xaxis.set_major_locator(locator)
-        ax[3].xaxis.set_major_formatter(formatter)
-
-        PlotSWIFTOutput._add_subplot(ax[0], data["speed"], ylabel=r"$|U|(km/s)$",
-                                     color=color, legend=legend,
-                                     label=label,
-                                     line_width=linewidth)
-        PlotSWIFTOutput._add_subplot(ax[1], data["proton_density"],
-                                     ylabel=r"$N_{p}(cm^{-3})$",
-                                     color=color, legend=legend,
-                                     label=label,
-                                     line_width=linewidth)
-        PlotSWIFTOutput._add_subplot(ax[2], data["bavg"], ylabel=r"$|B|(nT)$",
-                                     color=color,
-                                     legend=legend, label=label,
-                                     line_width=linewidth)
-        PlotSWIFTOutput._add_subplot(ax[3], data["bz_gsm"],
-                                     ylabel=r"$Bz(nT)$",
-                                     color=color, legend=legend,
-                                     label=label)
-
-        return fig, ax
 
     @staticmethod
     def plot_ensemble_output(data, color="orange", legend=False, label="SWIFT", linewidth=1):
