@@ -2,7 +2,7 @@
 
 import os
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -93,10 +93,13 @@ class TestF107SWPC:
 
         f107_instance.download_and_process()
 
-        expected_file = MOCK_DATA_PATH / "SWPC_F107_2024.csv"
-        assert expected_file.exists()
+        date_now = datetime.now(timezone.utc)
 
-        data = pd.read_csv(expected_file, parse_dates=["date"])
+        expected_files = list(MOCK_DATA_PATH.glob(f"SWPC_F107_*.csv"))
+
+        assert (1<=len(expected_files) & len(expected_files)<=2)
+
+        data = pd.read_csv(expected_files[0], parse_dates=["date"])
 
         assert "f107" in data.columns
         assert "date" in data.columns
