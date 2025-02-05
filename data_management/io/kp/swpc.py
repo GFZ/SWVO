@@ -4,11 +4,14 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
 
-import numpy as np
 import pandas as pd
 import wget
 
-from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
+from data_management.io.decorators import (
+    add_time_docs,
+    add_attributes_to_class_docstring,
+    add_methods_to_class_docstring,
+)
 
 
 @add_attributes_to_class_docstring
@@ -38,7 +41,9 @@ class KpSWPC:
     def __init__(self, data_dir: str | Path = None):
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
+                raise ValueError(
+                    f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
+                )
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
@@ -47,13 +52,15 @@ class KpSWPC:
 
         logging.info(f"Kp SWPC  data directory: {self.data_dir}")
 
-    def download_and_process(self, target_date: datetime, reprocess_files: bool = False):
+    def download_and_process(
+        self, target_date: datetime, reprocess_files: bool = False
+    ):
         """Download and process SWPC Kp data file.
 
         Parameters
         ----------
         target_date : datetime
-            Target date for the Kp data, 
+            Target date for the Kp data,
         reprocess_files : bool, optional
                         Downloads and processes the files again, defaults to False, by default False
 
@@ -61,11 +68,15 @@ class KpSWPC:
         ------
         ValueError
             Raises `ValueError` if the target date is in the past.
-        """        
+        """
         if target_date.date() < datetime.now(timezone.utc).date():
-            raise ValueError("We can only download and progress a Kp SWPC file for the current day!")
+            raise ValueError(
+                "We can only download and progress a Kp SWPC file for the current day!"
+            )
 
-        file_path = self.data_dir / f"SWPC_KP_FORECAST_{target_date.strftime('%Y%m%d')}.csv"
+        file_path = (
+            self.data_dir / f"SWPC_KP_FORECAST_{target_date.strftime('%Y%m%d')}.csv"
+        )
 
         if file_path.exists():
             if reprocess_files:
@@ -92,9 +103,10 @@ class KpSWPC:
         finally:
             rmtree(temporary_dir)
 
-
     @add_time_docs("read")
-    def read(self, start_time: datetime, end_time: datetime = None, download: bool = False) -> pd.DataFrame:
+    def read(
+        self, start_time: datetime, end_time: datetime = None, download: bool = False
+    ) -> pd.DataFrame:
         """Read Kp data for the specified time range.
 
         Parameters
@@ -121,32 +133,26 @@ class KpSWPC:
             end_time = start_time + timedelta(days=3)
 
         if (end_time - start_time).days > 3:
-            msg = "We can only read 3 days at a time of Kp SWPC!"
-            logging.error(msg)
-            raise ValueError(msg)
+            raise ValueError("We can only read 3 days at a time of Kp SWPC!")
 
-        # initialize data frame with NaNs
-        t = pd.date_range(
-            datetime(start_time.year, start_time.month, start_time.day),
-            datetime(end_time.year, end_time.month, end_time.day, 23, 59, 59),
-            freq=timedelta(hours=3)
-        )
-        data_out = pd.DataFrame(index=t)
-        data_out.index = data_out.index.tz_localize(timezone.utc)
-        data_out["kp"] = np.array([np.nan] * len(t))
+        file_paths = self._get_processed_file_list(start_time)
 
-        file_path = self.data_dir / f"SWPC_KP_FORECAST_{start_time.strftime('%Y%m%d')}.csv"
-        if not file_path.exists() and download:
-            self.download_and_process(start_time)
-        if file_path.exists():
-            df_one_file = self._read_single_file(file_path)
-            data_out = df_one_file.combine_first(data_out)
-        else:
-            logging.warning(f"File {file_path} not found")
+        if not file_paths[0].exists():
+            if download:
+                self.download_and_process(start_time)
+            else:
+                logging.warning(f"File {file_paths[0]} not found")
 
+        for file_path in file_paths:
+            try:
+                data_out = self._read_single_file(file_path)
+            except FileNotFoundError:
+                continue
+
+        data_out.index = data_out.index.tz_localize("UTC")
         data_out = data_out.truncate(
             before=start_time - timedelta(hours=2.9999),
-            after=end_time + timedelta(hours=2.9999)
+            after=end_time + timedelta(hours=2.9999),
         )
 
         return data_out
@@ -165,17 +171,46 @@ class KpSWPC:
             Data from Kp file.
         """
         df = pd.read_csv(file_path, names=["t", "kp"])
+
         df["t"] = pd.to_datetime(df["t"])
         df.index = df["t"]
         df.drop(labels=["t"], axis=1, inplace=True)
-        if not df.index.tzinfo:
-            df.index = df.index.tz_localize(timezone.utc)
 
         df["file_name"] = file_path
         df.loc[df["kp"].isna(), "file_name"] = None
 
         return df
 
+    def _get_processed_file_list(self, start_time: datetime) -> list[str]:
+        """Get list of file paths and their corresponding time intervals.
+
+        Parameters
+        ----------
+        cadence_min : float
+            Cadence of the data in minutes.
+
+        Returns
+        -------
+        Tuple[List, List]
+            List of file paths and time intervals.
+        """
+        file_paths = []
+
+        current_time = datetime(
+            start_time.year, start_time.month, start_time.day, 0, 0, 0
+        )
+        end_time = current_time - timedelta(days=2)
+
+        while current_time >= end_time:
+            file_path = (
+                self.data_dir
+                / f"SWPC_KP_FORECAST_{current_time.strftime('%Y%m%d')}.csv"
+            )
+            file_paths.append(file_path)
+
+            current_time += timedelta(days=-1)
+
+        return file_paths
 
     def _process_single_file(self, temporary_dir: Path) -> pd.DataFrame:
         """Process Kp file to a DataFrame.
@@ -215,8 +250,13 @@ class KpSWPC:
                             processed_dates.append(f"{year} {d}")
                     dates = [datetime.strptime(d, "%Y %b %d") for d in processed_dates]
                     break
-                    
-        data = pd.read_csv(temporary_dir / self.NAME, skiprows=first_line + 2, sep=r"\s+", names=["0", "1", "2", "3"])
+
+        data = pd.read_csv(
+            temporary_dir / self.NAME,
+            skiprows=first_line + 2,
+            sep=r"\s+",
+            names=["0", "1", "2", "3"],
+        )
         kp = []
         timestamp = []
 
@@ -229,8 +269,12 @@ class KpSWPC:
         df["kp"] = kp
 
         # change rounded numbers to be equal to 1/3 or 2/3 to be consistent with other Kp products
-        df.loc[round(df["kp"] % 1, 2) == 0.67, "kp"] = round(df.loc[round(df["kp"] % 1, 2) == 0.67, "kp"]) + 2 / 3
-        df.loc[round(df["kp"] % 1, 2) == 0.33, "kp"] = round(df.loc[round(df["kp"] % 1, 2) == 0.33, "kp"]) + 1 / 3
+        df.loc[round(df["kp"] % 1, 2) == 0.67, "kp"] = (
+            round(df.loc[round(df["kp"] % 1, 2) == 0.67, "kp"]) + 2 / 3
+        )
+        df.loc[round(df["kp"] % 1, 2) == 0.33, "kp"] = (
+            round(df.loc[round(df["kp"] % 1, 2) == 0.33, "kp"]) + 1 / 3
+        )
 
         df.index.rename("t", inplace=True)
 

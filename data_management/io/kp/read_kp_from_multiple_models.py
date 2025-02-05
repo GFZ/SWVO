@@ -14,7 +14,6 @@ from data_management.io.utils import any_nans, construct_updated_data_frame
 
 KpModel = KpEnsemble | KpNiemegk | KpOMNI | KpSWPC
 
-
 def read_kp_from_multiple_models(  # noqa: PLR0913
     start_time: datetime,
     end_time: datetime,
@@ -73,7 +72,6 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
             reduce_ensemble,
             download=download,
         )
-
         data_out = construct_updated_data_frame(data_out, data_one_model, model.LABEL)
         if not any_nans(data_out):
             break
@@ -118,23 +116,27 @@ def _read_from_model(  # noqa: PLR0913
     """
     # Read from historical models
     if isinstance(model, (KpOMNI, KpNiemegk)):
-        data_one_model = _read_historical_model(
-            model,
-            start_time,
-            end_time,
-            synthetic_now_time,
-            download=download,
-        )
+        data_one_model = [
+            _read_historical_model(
+                model,
+                start_time,
+                end_time,
+                synthetic_now_time,
+                download=download,
+            )
+        ]
 
     # Forecasting models are called with synthetic now time
     if isinstance(model, KpSWPC):
-        logging.info(f"Reading swpc from {synthetic_now_time} to {end_time}")
+        logging.info(
+            f"Reading swpc from {synthetic_now_time.replace(hour=0, minute=0, second=0)} to {end_time}\noriginal synthetic_now_time: {synthetic_now_time}"
+        )
         data_one_model = [
             model.read(
                 synthetic_now_time.replace(hour=0, minute=0, second=0),
                 end_time,
                 download=download,
-            ),
+            )
         ]
 
     if isinstance(model, KpEnsemble):
@@ -157,7 +159,7 @@ def _read_historical_model(
     synthetic_now_time: datetime,
     *,
     download: bool,
-) -> tuple[pd.DataFrame, str]:
+) -> pd.DataFrame:
     """Reads Kp data from historical models (KpOMNI or KpNiemegk) within the specified time range.
 
     Parameters
@@ -196,7 +198,7 @@ def _read_historical_model(
         np.nan
     )
     logging.info(
-        f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}"
+        f"Setting NaNs in {model.LABEL} from {synthetic_now_time + timedelta(hours=3)} to {end_time}"
     )
 
     return data_one_model
@@ -212,6 +214,9 @@ def _read_latest_ensemble_files(
 
     If the file for the target time is not found, the function iterates backward in hourly
     increments, up to 3 days, until a valid file is located.
+
+    Ensures that the last index of every dataframe is the next higher multiple of 3 hours
+    than the target time.
 
     Parameters
     ----------
@@ -233,8 +238,6 @@ def _read_latest_ensemble_files(
         If no valid file is found within the 3-day window.
 
     """
-    # we are trying to read the most recent file; it this fails, we go 1 hour back and see if this file is present
-
     target_time = synthetic_now_time
     data_one_model = pd.DataFrame(data={"kp": []})
 
@@ -250,7 +253,23 @@ def _read_latest_ensemble_files(
 
     logging.info(f"Reading PAGER Kp ensemble from {target_time} to {end_time}")
 
-    return data_one_model
+    # Ensure the last index of every DataFrame is the next higher multiple of 3 hours than target_time
+    adjusted_data = []
+    next_multiple_of_3 = ((end_time.hour // 3) + 1) * 3
+    if next_multiple_of_3 >= 24:
+        next_multiple_of_3 = 0  # Wrap around for midnight
+        end_time += timedelta(days=1)
+
+    next_time_index = end_time.replace(hour=next_multiple_of_3, minute=0, second=0)
+    #please work in production, I have spent a lot of time on debugging this, please work
+    for df in data_one_model:
+        if not df.empty:
+            df = df.reindex(
+                pd.date_range(df.index[0], next_time_index, freq="3h"),
+                method="ffill",
+            )
+        adjusted_data.append(df)
+    return adjusted_data
 
 
 def _reduce_ensembles(
