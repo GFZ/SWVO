@@ -14,6 +14,7 @@ from data_management.io.utils import any_nans, construct_updated_data_frame
 
 KpModel = KpEnsemble | KpNiemegk | KpOMNI | KpSWPC
 
+
 def read_kp_from_multiple_models(  # noqa: PLR0913
     start_time: datetime,
     end_time: datetime,
@@ -116,15 +117,13 @@ def _read_from_model(  # noqa: PLR0913
     """
     # Read from historical models
     if isinstance(model, (KpOMNI, KpNiemegk)):
-        data_one_model = [
-            _read_historical_model(
-                model,
-                start_time,
-                end_time,
-                synthetic_now_time,
-                download=download,
-            )
-        ]
+        data_one_model = _read_historical_model(
+            model,
+            start_time,
+            end_time,
+            synthetic_now_time,
+            download=download,
+        )
 
     # Forecasting models are called with synthetic now time
     if isinstance(model, KpSWPC):
@@ -261,7 +260,7 @@ def _read_latest_ensemble_files(
         end_time += timedelta(days=1)
 
     next_time_index = end_time.replace(hour=next_multiple_of_3, minute=0, second=0)
-    #please work in production, I have spent a lot of time on debugging this, please work
+    # please work in production, I have spent a lot of time on debugging this, please work
     for df in data_one_model:
         if not df.empty:
             df = df.reindex(
