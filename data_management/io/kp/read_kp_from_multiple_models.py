@@ -254,19 +254,11 @@ def _read_latest_ensemble_files(
 
     # Ensure the last index of every DataFrame is the next higher multiple of 3 hours than target_time
     adjusted_data = []
-    next_multiple_of_3 = ((end_time.hour // 3) + 1) * 3
-    if next_multiple_of_3 >= 24:
-        next_multiple_of_3 = 0  # Wrap around for midnight
-        end_time += timedelta(days=1)
 
-    next_time_index = end_time.replace(hour=next_multiple_of_3, minute=0, second=0)
-    # please work in production, I have spent a lot of time on debugging this, please work
     for df in data_one_model:
         if not df.empty:
-            df = df.reindex(
-                pd.date_range(df.index[0], next_time_index, freq="3h"),
-                method="ffill",
-            )
+            if df.index[-1] < end_time and (df.index[-1] - end_time) < timedelta(hours=3):
+                df.loc[df.index[-1] + timedelta(hours=3)] = df.loc[df.index[-1]]
         adjusted_data.append(df)
     return adjusted_data
 
