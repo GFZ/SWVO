@@ -97,7 +97,7 @@ class TestKpNiemegk:
 
     def test_download_past_month(self, kp_niemegk_instance):
 
-        past_time = datetime.now() - timedelta(days=32)
+        past_time = datetime.now(timezone.utc) - timedelta(days=32)
         end_time = past_time + timedelta(days=2)
 
         kp_niemegk_instance.download_and_process(past_time, end_time)
@@ -148,26 +148,23 @@ class TestKpNiemegk:
 
         try:
 
-            sample_data = """24021 2o 2+ 3- 3o 3+ 4- 4o 4+\n"""
+            sample_data = '#\n' * 30
+            sample_data +="""2025 01 08 00.0 01.50 33976.00000 33976.06250  3.667   22 1
+            2025 01 08 03.0 04.50 33976.12500 33976.18750  2.333    9 1"""
 
-            with open(temp_dir / "qlyymm.tab", "w") as f:
+
+            with open(temp_dir / "Kp_ap_nowcast.txt", "w") as f:
                 f.write(sample_data)
 
             df = instance._process_single_file(temp_dir)
 
             assert isinstance(df, pd.DataFrame)
             assert "kp" in df.columns
-            assert len(df) == 8
+            assert len(df) == 2
 
             expected_values = [
-                2.0,
-                2.333,
-                2.667,
-                3.0,
-                3.333,
                 3.667,
-                4.0,
-                4.333,
+                2.333,
             ]
 
             for actual, expected in zip(df["kp"].values, expected_values):
@@ -179,7 +176,7 @@ class TestKpNiemegk:
 
     def test_reprocess_files_flag(self, kp_niemegk_instance):
 
-        current_time = datetime.now()
+        current_time = datetime.now(timezone.utc)
         end_time = current_time + timedelta(days=1)
 
         kp_niemegk_instance.download_and_process(
