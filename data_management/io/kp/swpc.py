@@ -143,17 +143,19 @@ class KpSWPC:
             else:
                 logging.warning(f"File {file_paths[0]} not found")
 
+        data_out = pd.DataFrame({"t": [], "kp": [], "file_name": []})
         for file_path in file_paths:
             try:
                 data_out = self._read_single_file(file_path)
             except FileNotFoundError:
                 continue
-
-        data_out.index = data_out.index.tz_localize("UTC")
-        data_out = data_out.truncate(
-            before=start_time - timedelta(hours=2.9999),
-            after=end_time + timedelta(hours=2.9999),
-        )
+        
+        if not data_out.empty:
+            data_out.index = data_out.index.tz_localize("UTC")
+            data_out = data_out.truncate(
+                before=start_time - timedelta(hours=2.9999),
+                after=end_time + timedelta(hours=2.9999),
+            )
 
         return data_out
 
