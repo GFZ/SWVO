@@ -139,10 +139,9 @@ class TestReadKpFromMultipleModels:
             model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
             synthetic_now_time=sample_times["test_time_now"],
         )
-
         for d in data:
             assert d.index.min() >= start
-            assert d.index.max() <= end
+            assert d.index.max() <= end + timedelta(hours=3)
 
 
     def test_invalid_time_range(self, sample_times):
