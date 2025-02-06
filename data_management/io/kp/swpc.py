@@ -144,6 +144,8 @@ class KpSWPC:
                 logging.warning(f"File {file_paths[0]} not found")
 
         data_out = pd.DataFrame({"t": [], "kp": [], "file_name": []})
+        data_out.index = data_out["t"]
+        data_out.drop(labels=["t"], axis=1, inplace=True)
         for file_path in file_paths:
             try:
                 data_out = self._read_single_file(file_path)
