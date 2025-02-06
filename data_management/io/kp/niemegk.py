@@ -9,8 +9,11 @@ import numpy as np
 import pandas as pd
 import wget
 
-from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
-
+from data_management.io.decorators import (
+    add_time_docs,
+    add_attributes_to_class_docstring,
+    add_methods_to_class_docstring,
+)
 
 
 @add_attributes_to_class_docstring
@@ -32,7 +35,7 @@ class KpNiemegk:
     ENV_VAR_NAME = "RT_KP_NIEMEGK_STREAM_DIR"
 
     URL = "https://kp.gfz-potsdam.de/app/files/"
-    NAME = "qlyymm.tab"
+    NAME = "Kp_ap_nowcast.txt"
 
     DAYS_TO_SAVE_EACH_FILE = 3
     LABEL = "niemegk"
@@ -67,10 +70,9 @@ class KpNiemegk:
         FileNotFoundError
             Raise `FileNotFoundError` if the file is not downloaded successfully.
         """
-
-        if start_time.month != datetime.now(timezone.utc).month:
+        if start_time < datetime.now(timezone.utc) - timedelta(days=30):
             logging.info(
-                "We can only download and progress a Kp Niemegk file for the current month!"
+                "We can only download and process a Kp Niemegk file from the last 30 days!"
             )
             return
 
@@ -264,47 +266,38 @@ class KpNiemegk:
         pd.DataFrame
             Nimegk Kp data.
         """
-        kp = []
-        timestamp = []
 
-        header = ["t", "0", "1", "2", "3", "4", "5", "6", "7", "last", "last2", "last3"]
+        header = [
+            "#YYY",
+            "MM",
+            "DD",
+            "hh.h",
+            "hh._m",
+            "days",
+            "days_m",
+            "Kp",
+            "ap",
+            "D",
+        ]
 
-        data = pd.read_csv(temporary_dir / self.NAME, names=header, sep=r"\s+")
-        data.drop(labels=["last", "last2", "last3"], axis=1, inplace=True)
-
-        for _, row in data.iterrows():
-            for i in range(8):
-                try:
-                    t = datetime(
-                        int("20" + str(row["t"])[0:2]),
-                        int(str(row["t"])[2:4]),
-                        int(str(row["t"])[4:6]),
-                        i * 3,
-                    )
-                    timestamp.append(t)
-                    value = row[str(i)]
-                    try:
-                        v = float(str(value)[0])
-                        if value[1] == "+":
-                            v += 1.0 / 3.0
-                        elif value[1] == "-":
-                            v -= 1.0 / 3.0
-                        else:
-                            pass
-                        kp.append(v)
-                    except ValueError:
-                        kp.append(np.nan)
-
-                # Added to capture possible changes in the file structure
-                except:
-                    pass
-
-
-        data = pd.DataFrame({"kp": kp, "t": timestamp})
+        data = pd.read_csv(
+            temporary_dir / self.NAME, names=header, sep=r"\s+", comment="#"
+        )
+        data["t"] = pd.to_datetime(
+            data[["#YYY", "MM", "DD", "hh.h"]].astype(str).agg("-".join, axis=1),
+            format="%Y-%m-%d-%H.%f",
+        )
+        data["kp"] = data["Kp"]
+        data.drop(
+            labels=header,
+            axis=1,
+            inplace=True,
+        )
         data.index.rename("t", inplace=True)
         data.index = data["t"]
         data.index = data.index.tz_localize(timezone.utc)
         data.drop(labels=["t"], axis=1, inplace=True)
         data.dropna(inplace=True)
+        data = data[data["kp"] != -1.0]
 
         return data
