@@ -106,7 +106,6 @@ class KpEnsemble:
                 before=start_time - timedelta(hours=2.9999),
                 after=end_time + timedelta(hours=2.9999),
             )
-
             data.append(df)
 
         return data
