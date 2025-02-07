@@ -6,8 +6,6 @@ variables:
   PRE_RELEASE_BRANCH: PAGER-alpha
   DEVELOPMENT_BRANCH: PAGER-dev
   REGISTER: localhost
-  TEST_BRANCH: tests
-  GEOML_BRANCH: sync_with_GeoML
 
 before_script:
   - eval "$(conda shell.bash hook)"
@@ -30,8 +28,7 @@ unittest:
     - echo "Running unittests for data_management"
     - conda activate deploy
     - python -m pytest -s tests/io/
-  rules:
-    - if: ($CI_COMMIT_BRANCH == $TEST_BRANCH || $CI_COMMIT_BRANCH == $TEST_BRANCH || $CI_COMMIT_BRANCH == $TEST_BRANCH || $CI_COMMIT_BRANCH == $GEOML_BRANCH)
+
 #integrationtest:
 #  stage: integration-tests
 #  tags:
