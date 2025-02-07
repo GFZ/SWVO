@@ -5,9 +5,8 @@ from pathlib import Path
 from shutil import rmtree
 
 import pandas as pd
-import wget
 import numpy as np
-
+import wget
 
 from data_management.io.decorators import (
     add_time_docs,
@@ -139,6 +138,12 @@ class KpSWPC:
 
         file_paths = self._get_processed_file_list(start_time)
 
+        if not file_paths[0].exists():
+            if download:
+                self.download_and_process(start_time)
+            else:
+                logging.warning(f"File {file_paths[0]} not found")
+
         t = pd.date_range(
             datetime(start_time.year, start_time.month, start_time.day),
             datetime(end_time.year, end_time.month, end_time.day, 23, 59, 59),
@@ -148,13 +153,6 @@ class KpSWPC:
         data_out.index = data_out.index.tz_localize(timezone.utc)
         data_out["kp"] = np.array([np.nan] * len(t))
 
-
-        if not file_paths[0].exists():
-            if download:
-                self.download_and_process(start_time)
-            else:
-                logging.warning(f"File {file_paths[0]} not found")
-
         for file_path in file_paths:
             try:
                 data_out = self._read_single_file(file_path)
@@ -162,7 +160,8 @@ class KpSWPC:
                 continue
         
         if not data_out.empty:
-            data_out.index = data_out.index.tz_convert("UTC")
+            if data_out.index.tzinfo is None:
+                data_out.index = data_out.index.tz_localize("UTC")
             data_out = data_out.truncate(
                 before=start_time - timedelta(hours=2.9999),
                 after=end_time + timedelta(hours=2.9999),

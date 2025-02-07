@@ -250,11 +250,10 @@ def _read_latest_ensemble_files(
             target_time -= timedelta(hours=1)
             continue
 
-    logging.info(f"Reading PAGER Kp ensemble from {target_time} to {end_time}")
+    logging.info(f"Read PAGER Kp ensemble from {target_time} to {end_time}")
 
     # Ensure the last index of every DataFrame is the next higher multiple of 3 hours than target_time
     adjusted_data = []
-
     for df in data_one_model:
         if not df.empty:
             if df.index[-1] < end_time and (df.index[-1] - end_time) < timedelta(hours=3):
