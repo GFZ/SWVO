@@ -9,7 +9,6 @@ import warnings
 
 import pandas as pd
 import pytest
-import test
 
 from data_management.io.f10_7.swpc import F107SWPC
 
@@ -185,7 +184,7 @@ class TestF107SWPC:
         assert "f107" in updated_data.columns
 
 
-    def test_read_with_partial_data(self, f107_instance, caplog):
+    def test_read_with_partial_data(self, f107_instance):
         sample_data = pd.DataFrame(
             {
                 "date": pd.date_range(start="2020-01-01", end="2020-12-31", freq="D"),
