@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
 from typing import List, Tuple
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -11,7 +12,7 @@ import wget
 
 from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
 
-
+logging.captureWarnings(True)
 
 @add_attributes_to_class_docstring
 @add_methods_to_class_docstring
@@ -244,23 +245,30 @@ class OMNILowRes:
         assert start_time < end_time
 
         file_paths, _ = self._get_processed_file_list(start_time, end_time)
-
-        dfs = []
+        t = pd.date_range(
+            datetime(start_time.year, start_time.month, start_time.day),
+            datetime(end_time.year, end_time.month, end_time.day, 23, 00, 00),
+            freq=timedelta(hours=1),
+        )
+        data_out = pd.DataFrame(index=t)
+        data_out["kp"] = np.array([np.nan] * len(t))
+        data_out["dst"] = np.array([np.nan] * len(t))
+        data_out["f107"] = np.array([np.nan] * len(t))
+        data_out["file_name"] = np.array([None] * len(t))
 
         for file_path in file_paths:
             if not file_path.exists():
                 if download:
                     self.download_and_process(start_time, end_time)
                 else:
-                    logging.warning(f"File {file_path} not found")
+                    warnings.warn(f"File {file_path} not found")
                     continue
 
-            dfs.append(self._read_single_file(file_path))
-
-        data_out = pd.concat(dfs)
+            df_one_file = self._read_single_file(file_path)
+            data_out = df_one_file.combine_first(data_out)
 
         if not data_out.empty:
-            if not data_out.index.tzinfo:
+            if data_out.index.tzinfo is None:
                 data_out.index = data_out.index.tz_localize("UTC")
 
         return data_out

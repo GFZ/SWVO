@@ -4,6 +4,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 from data_management.io.kp import KpOMNI
 import pandas as pd
+import numpy as np
 
 from unittest.mock import patch
 
@@ -73,8 +74,13 @@ class TestKpOMNI:
     def test_read_without_download(self, kp_omni, mocker):
         start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2021, 12, 31, tzinfo=timezone.utc)
-        with pytest.raises(ValueError): #value error is raised when no files are found hence no concatenation is possible
-            kp_omni.read(start_time, end_time, download=False)
+        df = kp_omni.read(start_time, end_time, download=False)
+
+        #returns NaN dataframe
+        assert not df.empty
+        assert "kp" in df.columns
+        assert all(df["kp"].isna())
+        assert all(df["file_name"].isnull())
 
 
     def test_read_with_download(self, kp_omni, mock_kp_omni_data, mocker):

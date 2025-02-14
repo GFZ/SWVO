@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 from data_management.io.f10_7 import F107OMNI
 import pandas as pd
-
+import warnings
 from unittest.mock import patch
 
 TEST_DIR = os.path.dirname(__file__)
@@ -66,10 +66,14 @@ class TestF107OMNI:
     def test_read_without_download(self, f107omni):
         start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2021, 12, 31, tzinfo=timezone.utc)
-        with pytest.raises(
-            ValueError
-        ):  # value error is raised when no files are found hence no concatenation is possible
-            f107omni.read(start_time, end_time, download=False)
+        with warnings.catch_warnings(record=True) as w:
+            df = f107omni.read(start_time, end_time, download=False)
+            assert "OMNI_LOW_RES_2021.csv not found" in str(w[-1].message)
+            assert not df.empty
+            assert "f107" in df.columns
+            assert all(df["f107"].isna())
+            assert all(df["file_name"].isnull())
+
 
     def test_read_with_download(self, f107omni, mock_f107omni_data, mocker):
         mocker.patch("pathlib.Path.exists", return_value=False)

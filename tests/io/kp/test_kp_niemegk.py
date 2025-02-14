@@ -21,7 +21,7 @@ class TestKpNiemegk:
         yield
 
         if TEST_DIR.exists():
-            shutil.rmtree(TEST_DIR)
+            shutil.rmtree(TEST_DIR, ignore_errors=True)
 
 
     @pytest.fixture
@@ -171,7 +171,7 @@ class TestKpNiemegk:
                 assert np.isclose(actual, expected, atol=0.001)
 
         finally:
-            shutil.rmtree(temp_dir)
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
 
     def test_reprocess_files_flag(self, kp_niemegk_instance):

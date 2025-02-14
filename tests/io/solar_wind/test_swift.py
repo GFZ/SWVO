@@ -5,6 +5,7 @@ from pathlib import Path
 import json
 from unittest.mock import patch
 import logging
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -26,7 +27,7 @@ class TestSWIFT:
         yield
 
         if TEST_DATA_DIR.exists():
-            shutil.rmtree(TEST_DATA_DIR)
+            shutil.rmtree(TEST_DATA_DIR, ignore_errors=True)
 
 
     @pytest.fixture
@@ -189,7 +190,7 @@ class TestSWIFT:
             assert all(col in df.columns for col in expected_columns)
 
     def test_read_with_missing_gsm_files(
-        self, swift_instance, create_mock_swift_files, caplog
+        self, swift_instance, create_mock_swift_files,
     ):
         base_date = datetime.now().replace(microsecond=0, minute=0, second=0)
         task_dir = create_mock_swift_files(base_date, num_tasks=1)
@@ -197,12 +198,11 @@ class TestSWIFT:
         gsm_file = next(task_dir.rglob("gsm_*.json"))
         gsm_file.unlink()
 
-        with caplog.at_level(logging.WARNING):
+        with warnings.catch_warnings(record=True) as w:
             result = swift_instance.read(base_date, base_date + timedelta(days=1))
-
-        assert len(result) == 0
-        assert "GSM SWIFT output file for date" in caplog.text
-        assert "not found...impossible to read" in caplog.text
+            print(result)
+            assert "GSM SWIFT output file for date" in str(w[-1].message)
+            assert len(result) == 0
 
     def test_read_with_default_times(self, swift_instance, create_mock_swift_files):
         base_date = datetime.now(timezone.utc).replace(
@@ -220,12 +220,11 @@ class TestSWIFT:
             assert df.index.max() >= base_date + timedelta(days=3)
 
     def test_with_propagation(self):
-        start_time = datetime(2024, 11, 21, tzinfo=timezone.utc)
-        end_time = datetime(2024, 11, 24, tzinfo=timezone.utc)
+        start_time = datetime(2024, 11, 23, tzinfo=timezone.utc)
+        end_time = datetime(2024, 11, 25, tzinfo=timezone.utc)
 
-        swace_instance = SWSWIFTEnsemble(Path(__file__).parent / "data" / "DSCOVR")
+        swace_instance = SWSWIFTEnsemble(Path(__file__).parent / "data" / "ensemble")
         data = swace_instance.read(start_time, end_time, propagation=True)
-
         assert isinstance(data, list)
         for df in data:
             assert any(

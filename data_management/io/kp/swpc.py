@@ -3,6 +3,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
+import warnings
 
 import pandas as pd
 import numpy as np
@@ -14,12 +15,15 @@ from data_management.io.decorators import (
     add_methods_to_class_docstring,
 )
 
+logging.captureWarnings(True)
+
 
 @add_attributes_to_class_docstring
 @add_methods_to_class_docstring
 class KpSWPC:
     """
-    A class for handling SWPC Kp data.
+    A class for handling SWPC Kp data. 
+    In SWPC data, the file for current day always contains the forecast for the next 3 days. Keep this in mind when using the `read` and `download_and_process` methods.
 
     Parameters
     ----------
@@ -134,16 +138,11 @@ class KpSWPC:
             end_time = start_time + timedelta(days=3)
 
         if (end_time - start_time).days > 3:
-            raise ValueError("We can only read 3 days at a time of Kp SWPC!")
+            msg = "We can only read 3 days at a time of Kp SWPC!"
+            logging.error(msg)
+            raise ValueError(msg)
 
-        file_paths = self._get_processed_file_list(start_time)
-
-        if not file_paths[0].exists():
-            if download:
-                self.download_and_process(start_time)
-            else:
-                logging.warning(f"File {file_paths[0]} not found")
-
+        # initialize data frame with NaNs
         t = pd.date_range(
             datetime(start_time.year, start_time.month, start_time.day),
             datetime(end_time.year, end_time.month, end_time.day, 23, 59, 59),
@@ -152,20 +151,24 @@ class KpSWPC:
         data_out = pd.DataFrame(index=t)
         data_out.index = data_out.index.tz_localize(timezone.utc)
         data_out["kp"] = np.array([np.nan] * len(t))
+        data_out["file_name"] = np.array([np.nan] * len(t))
 
-        for file_path in file_paths:
-            try:
-                data_out = self._read_single_file(file_path)
-            except FileNotFoundError:
-                continue
-        
-        if not data_out.empty:
-            if data_out.index.tzinfo is None:
-                data_out.index = data_out.index.tz_localize("UTC")
-            data_out = data_out.truncate(
-                before=start_time - timedelta(hours=2.9999),
-                after=end_time + timedelta(hours=2.9999),
-            )
+        file_name_time = start_time - timedelta(days=1)
+        file_path = (
+            self.data_dir / f"SWPC_KP_FORECAST_{file_name_time.strftime('%Y%m%d')}.csv"
+        )
+        if not file_path.exists() and download:
+            self.download_and_process(start_time)
+        if file_path.exists():
+            df_one_file = self._read_single_file(file_path)
+            data_out = df_one_file.combine_first(data_out)
+        else:
+            warnings.warn(f"File {file_path} not found")
+
+        data_out = data_out.truncate(
+            before=start_time - timedelta(hours=2.9999),
+            after=end_time + timedelta(hours=2.9999),
+        )
 
         return data_out
 
@@ -184,7 +187,7 @@ class KpSWPC:
         """
         df = pd.read_csv(file_path, names=["t", "kp"])
 
-        df["t"] = pd.to_datetime(df["t"])
+        df["t"] = pd.to_datetime(df["t"], utc=True)
         df.index = df["t"]
         df.drop(labels=["t"], axis=1, inplace=True)
 
@@ -192,37 +195,6 @@ class KpSWPC:
         df.loc[df["kp"].isna(), "file_name"] = None
 
         return df
-
-    def _get_processed_file_list(self, start_time: datetime) -> list[str]:
-        """Get list of file paths and their corresponding time intervals.
-
-        Parameters
-        ----------
-        cadence_min : float
-            Cadence of the data in minutes.
-
-        Returns
-        -------
-        Tuple[List, List]
-            List of file paths and time intervals.
-        """
-        file_paths = []
-
-        current_time = datetime(
-            start_time.year, start_time.month, start_time.day, 0, 0, 0
-        )
-        end_time = current_time - timedelta(days=2)
-
-        while current_time >= end_time:
-            file_path = (
-                self.data_dir
-                / f"SWPC_KP_FORECAST_{current_time.strftime('%Y%m%d')}.csv"
-            )
-            file_paths.append(file_path)
-
-            current_time += timedelta(days=-1)
-
-        return file_paths
 
     def _process_single_file(self, temporary_dir: Path) -> pd.DataFrame:
         """Process Kp file to a DataFrame.

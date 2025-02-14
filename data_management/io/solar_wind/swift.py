@@ -4,7 +4,7 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-
+import warnings
 import numpy as np
 import pandas as pd
 from data_management.io.utils import sw_mag_propagation
@@ -13,6 +13,8 @@ from data_management.io.decorators import (
     add_attributes_to_class_docstring,
     add_methods_to_class_docstring,
 )
+
+logging.captureWarnings(True)
 
 
 @add_attributes_to_class_docstring
@@ -24,7 +26,7 @@ class SWSWIFTEnsemble:
     Parameters
     ----------
     data_dir : str | Path, optional
-        Data directory for the Hp data. If not provided, it will be read from the environment variable
+        Data directory for the SWIFT Ensemble data. If not provided, it will be read from the environment variable
 
     Raises
     ------
@@ -96,7 +98,7 @@ class SWSWIFTEnsemble:
             end_time = start_time.replace(tzinfo=timezone.utc) + timedelta(days=3)
 
         if propagation:
-            logging.info("Shiting start day by -1 day to account for propagation")
+            logging.info("Shifting start day by -1 day to account for propagation")
             start_time = start_time - timedelta(days=1)
 
         str_date = start_time.strftime("%Y%m%dt0000")
@@ -108,6 +110,12 @@ class SWSWIFTEnsemble:
 
         logging.info(f"Found {len(ensemble_folders)} SWIFT tasks folders...")
         gsm_s = []
+
+        if len(ensemble_folders) == 0:
+            msg = f"SWIFT ensemble folder for date {str_date} not found...impossible to read, returning DataFrame with NaNs"
+            warnings.warn(msg)
+            data_out = self._nan_dataframe(start_time, end_time)
+            gsm_s.append(data_out)
 
         for ensemble_folder in ensemble_folders:
             try:
@@ -127,7 +135,7 @@ class SWSWIFTEnsemble:
                 gsm_s.append(data_gsm)
             except IndexError:
                 msg = f"GSM SWIFT output file for date {str_date} and task {ensemble_folder} not found...impossible to read"
-                logging.warning(msg)
+                warnings.warn(msg)
 
         return gsm_s
 
@@ -227,10 +235,31 @@ class SWSWIFTEnsemble:
             return row["file_name"]
 
         file_date_str = Path(row["file_name"]).stem.split("_")[-1]
-        file_date = pd.to_datetime(file_date_str, format="%Y%m%d").date()
+        file_date = pd.to_datetime(file_date_str, format="%Y-%m-%dt0000").date()
         index_date = row.name.date()
         return (
             "propagated from previous SWIFT FORECAST file"
             if file_date != index_date
             else row["file_name"]
         )
+
+    def _nan_dataframe(self, start_time, end_time):
+        t = pd.date_range(start_time, end_time, freq="5min")
+        data_out = pd.DataFrame(
+            {
+                "proton_density": [np.nan] * len(t),
+                "speed": [np.nan] * len(t),
+                "bavg": [np.nan] * len(t),
+                "temperature": [np.nan] * len(t),
+                "bx_gsm": [np.nan] * len(t),
+                "by_gsm": [np.nan] * len(t),
+                "bz_gsm": [np.nan] * len(t),
+                "file_name": [np.nan] * len(t),
+            },
+            index=t,
+        )
+
+        if data_out.index.tzinfo is None:
+            data_out.index = data_out.index.tz_localize(timezone.utc)
+
+        return data_out
