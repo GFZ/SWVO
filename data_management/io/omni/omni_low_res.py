@@ -143,7 +143,7 @@ class OMNILowRes:
                 processed_df.to_csv(file_path, index=True, header=True)
 
         finally:
-            rmtree(temporary_dir)
+            rmtree(temporary_dir, ignore_errors=True)
 
     @add_time_docs(None)
     def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
