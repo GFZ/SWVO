@@ -220,8 +220,8 @@ class F107SWPC:
                 data_out.index = data_out.index.tz_localize("UTC")
         data_out.drop("date", axis=1, inplace=True)
         data_out = data_out.truncate(
-            before=start_time - timedelta(hours=2.9999),
-            after=end_time + timedelta(hours=2.9999),
+            before=start_time - timedelta(hours=23.9999),
+            after=end_time + timedelta(hours=23.9999),
         )
 
         return data_out
