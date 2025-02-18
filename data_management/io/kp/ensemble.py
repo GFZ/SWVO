@@ -2,6 +2,7 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -10,7 +11,7 @@ from data_management.io.decorators import (
     add_attributes_to_class_docstring,
     add_methods_to_class_docstring,
 )
-
+logging.captureWarnings(True)
 
 @add_attributes_to_class_docstring
 @add_methods_to_class_docstring
@@ -88,7 +89,7 @@ class KpEnsemble:
         data = []
         if len(file_list) == 0:
             msg = f"No ensemble files found for requested date {str_date}"
-            logging.warning(msg)
+            warnings.warn(f"{msg}! Returning NaNs dataframe.")
 
             # initialize data frame with NaNs
             t = pd.date_range(
