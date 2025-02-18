@@ -249,6 +249,7 @@ class OMNILowRes:
             datetime(start_time.year, start_time.month, start_time.day),
             datetime(end_time.year, end_time.month, end_time.day, 23, 00, 00),
             freq=timedelta(hours=1),
+            tz=timezone.utc,
         )
         data_out = pd.DataFrame(index=t)
         data_out["kp"] = np.array([np.nan] * len(t))
@@ -266,11 +267,7 @@ class OMNILowRes:
 
             df_one_file = self._read_single_file(file_path)
             data_out = df_one_file.combine_first(data_out)
-
-        if not data_out.empty:
-            if data_out.index.tzinfo is None:
-                data_out.index = data_out.index.tz_localize("UTC")
-
+            
         return data_out
 
     def _read_single_file(self, file_path: Path) -> pd.DataFrame:
@@ -288,7 +285,7 @@ class OMNILowRes:
         """
         df = pd.read_csv(file_path)
 
-        df["t"] = pd.to_datetime(df["timestamp"])
+        df["t"] = pd.to_datetime(df["timestamp"], utc=True)
         df.index = df["t"]
 
         df["file_name"] = file_path

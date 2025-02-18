@@ -69,7 +69,8 @@ class TestOMNILowRes:
             "_read_single_file",
             return_value=pd.DataFrame(
                 index=pd.date_range(
-                    start=datetime(2022, 1, 1), end=datetime(2022, 12, 31)
+                    start=datetime(2022, 1, 1), end=datetime(2022, 12, 31),
+                    tz=timezone.utc
                 )
             ),
         )

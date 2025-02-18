@@ -33,7 +33,7 @@ class TestKpOMNI:
                 "timestamp": test_dates.strftime("%Y-%m-%d %H:%M:%S"),
             }
         )
-        test_data.index = test_dates
+        test_data.index = test_dates.tz_localize("UTC")
         return test_data
 
 

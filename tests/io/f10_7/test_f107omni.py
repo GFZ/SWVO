@@ -30,7 +30,7 @@ class TestF107OMNI:
                 "timestamp": test_dates.strftime("%Y-%m-%d %H:%M:%S"),
             }
         )
-        test_data.index = test_dates
+        test_data.index = test_dates.tz_localize("UTC")
         return test_data
 
     def test_initialization_with_env_var(self, f107omni):

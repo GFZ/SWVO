@@ -244,7 +244,7 @@ class SWSWIFTEnsemble:
         )
 
     def _nan_dataframe(self, start_time, end_time):
-        t = pd.date_range(start_time, end_time, freq="5min")
+        t = pd.date_range(start_time, end_time, freq="5min", utc=True)
         data_out = pd.DataFrame(
             {
                 "proton_density": [np.nan] * len(t),
@@ -258,8 +258,4 @@ class SWSWIFTEnsemble:
             },
             index=t,
         )
-
-        if data_out.index.tzinfo is None:
-            data_out.index = data_out.index.tz_localize(timezone.utc)
-
         return data_out
