@@ -138,7 +138,7 @@ class KpSWPC:
             end_time = start_time + timedelta(days=3)
 
         if (end_time - start_time).days > 3:
-            msg = "We can only read 3 days at a time of Kp SWPC!"
+            msg = "The difference between `end_time` and `start_time` should be less than 3 days. We can only read 3 days at a time of Kp SWPC!"
             logging.error(msg)
             raise ValueError(msg)
 
