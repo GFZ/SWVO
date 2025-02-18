@@ -231,12 +231,6 @@ def _read_latest_ensemble_files(
     -------
     list[pd.DataFrame]
         A list of data frames containing ensemble data for the specified range.
-
-    Raises
-    ------
-    FileNotFoundError
-        If no valid file is found within the 3-day window.
-
     """
     target_time = synthetic_now_time
     data_one_model = pd.DataFrame(data={"kp": []})
