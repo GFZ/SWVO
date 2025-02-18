@@ -162,7 +162,7 @@ class F107SWPC:
     def read(
         self, start_time: datetime, end_time: datetime, *, download: bool = False
     ) -> pd.DataFrame:
-        """Read OMNI Low Resolution data for the given time range.
+        """Read F10.7 SWPC data for the given time range.
 
         Parameters
         ----------
@@ -188,8 +188,6 @@ class F107SWPC:
             start_time = start_time.replace(tzinfo=timezone.utc)
         if not end_time.tzinfo:
             end_time = end_time.replace(tzinfo=timezone.utc)
-
-        file_paths, file_intervals = self._get_processed_file_list(start_time, end_time)
 
         file_paths, _ = self._get_processed_file_list(start_time, end_time)
         t = pd.date_range(
@@ -239,7 +237,7 @@ class F107SWPC:
         Returns
         -------
         pd.DataFrame
-            Data from yearly OMNI Low Resolution file.
+            Data from yearly F10.7 SWPC Resolution file.
         """
         df = pd.read_csv(file_path)
 
