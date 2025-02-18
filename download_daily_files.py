@@ -59,46 +59,19 @@ if __name__ == "__main__":
         logging.error("Encountered error while downloading SWPC Kp. Traceback:")
         logging.error(traceback.format_exc())
 
-    logging.info("OMNI low resolution...")
-    omni_low_res_start_date = date_yesterday_start
-    omni_low_res_end_date = time_now
-    while True:
-        try:
-            OMNILowRes().download_and_process(omni_low_res_start_date, omni_low_res_end_date, reprocess_files=True)
-            break
+    logging.info("OMNI low resolution...\n")
+    try:
+        OMNILowRes().download_and_process(date_yesterday_start, time_now, reprocess_files=True)
+    except Exception:
+        logging.error("Encountered error while downloading OMNI low res. Traceback:")
+        logging.error(traceback.format_exc())
 
-        except HTTPError as e:
-            logging.error(f"HTTPError: {e}")
-            logging.error(f"Could not download file for {omni_low_res_start_date.year}.")
-            logging.info(f"Reverting to {date_yesterday_start.year - 1}")
-            omni_low_res_start_date = omni_low_res_start_date.replace(year=omni_low_res_start_date.year - 1)
-            omni_low_res_end_date = datetime(omni_low_res_start_date.year, 12, 31)
-            continue
-
-        except Exception:
-            logging.error("Encountered error while downloading OMNI low res. Traceback:")
-            logging.error(traceback.format_exc())
-
-
-    logging.info("OMNI high resolution...")
-    omni_high_res_start_date = date_yesterday_start
-    omni_high_res_end_date = time_now
-    while True:
-        try:
-            OMNIHighRes().download_and_process(date_yesterday_start, omni_high_res_end_date, reprocess_files=True)
-            break
-
-        except HTTPError as e:
-            logging.error(f"HTTPError: {e}")
-            logging.error(f"Could not download file for {omni_high_res_start_date.year}.")
-            logging.info(f"Reverting to {date_yesterday_start.year - 1}")
-            omni_high_res_start_date = omni_high_res_start_date.replace(year=omni_high_res_start_date.year - 1)
-            omni_high_res_end_date = datetime(omni_high_res_start_date.year, 12, 31)
-            continue
-
-        except Exception:
-            logging.error("Encountered error while downloading OMNI high res. Traceback:")
-            logging.error(traceback.format_exc())
+    logging.info("OMNI high resolution...\n")
+    try:
+        OMNIHighRes().download_and_process(date_yesterday_start, time_now, reprocess_files=True)
+    except Exception:
+        logging.error("Encountered error while downloading OMNI high res. Traceback:")
+        logging.error(traceback.format_exc())
 
     logging.info("Hp30 GFZ...")
     try:
