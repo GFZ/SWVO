@@ -24,7 +24,7 @@ class TestHpEnsemble:
         yield
 
         if TEST_DIR.exists():
-            shutil.rmtree(TEST_DIR)
+            shutil.rmtree(TEST_DIR, ignore_errors=True)
 
 
     @pytest.fixture

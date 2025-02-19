@@ -4,6 +4,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
 from typing import List, Tuple
+import warnings
+
 
 import numpy as np
 import pandas as pd
@@ -14,6 +16,7 @@ from data_management.io.decorators import (
     add_attributes_to_class_docstring,
     add_methods_to_class_docstring,
 )
+logging.captureWarnings(True)
 
 
 @add_attributes_to_class_docstring
@@ -207,7 +210,7 @@ class SWACE:
                 self.download_and_process(file_date)
 
             if not file_path.exists():
-                logging.warning(f"File {file_path} not found")
+                warnings.warn(f"File {file_path} not found")
                 continue
 
             df_one_day = self._read_single_file(file_path)

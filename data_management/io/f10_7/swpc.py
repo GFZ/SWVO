@@ -3,17 +3,22 @@ from __future__ import annotations
 import logging
 import os
 import shutil
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import List, Tuple
+import warnings
+
 
 import pandas as pd
+import numpy as np
 import wget
 from data_management.io.decorators import (
     add_time_docs,
     add_attributes_to_class_docstring,
     add_methods_to_class_docstring,
 )
+
+logging.captureWarnings(True)
 
 
 @add_attributes_to_class_docstring
@@ -95,7 +100,7 @@ class F107SWPC:
 
             logging.debug("Processing F10.7 data...")
 
-            new_data = self._read_f107_file(temp_dir / self.NAME_F107)
+            new_data = self._process_single_file(temp_dir / self.NAME_F107)
 
             for year, year_data in new_data.groupby(new_data.date.dt.year):
                 file_path = self.data_dir / f"SWPC_F107_{year}.csv"
@@ -124,9 +129,9 @@ class F107SWPC:
 
         finally:
             # ...
-            shutil.rmtree(temp_dir)
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def _read_f107_file(self, file_path: Path) -> pd.DataFrame:
+    def _process_single_file(self, file_path: Path) -> pd.DataFrame:
         """Read and process the F10.7 data file.
 
         Parameters
@@ -157,7 +162,7 @@ class F107SWPC:
     def read(
         self, start_time: datetime, end_time: datetime, *, download: bool = False
     ) -> pd.DataFrame:
-        """Read OMNI Low Resolution data for the given time range.
+        """Read F10.7 SWPC data for the given time range.
 
         Parameters
         ----------
@@ -184,57 +189,62 @@ class F107SWPC:
         if not end_time.tzinfo:
             end_time = end_time.replace(tzinfo=timezone.utc)
 
-        current_year = datetime.now(tz=timezone.utc).year
-        file_paths, file_intervals = self._get_processed_file_list(start_time, end_time)
+        file_paths, _ = self._get_processed_file_list(start_time, end_time)
+        t = pd.date_range(
+            datetime(start_time.year, start_time.month, start_time.day),
+            datetime(
+                end_time.year,
+                end_time.month,
+                end_time.day,
+            ),
+            freq=timedelta(days=1),
+        )
+        data_out = pd.DataFrame(index=t)
+        data_out["f107"] = np.array([np.nan] * len(t))
+        data_out["date"] = data_out.index
+        data_out["file_name"] = np.array([None] * len(t))
 
-        years_requested = range(start_time.year, end_time.year + 1)
+        for file_path in file_paths:
+            if not file_path.exists():
+                if download:
+                    self.download_and_process()
+                else:
+                    warnings.warn(f"File {file_path} not found")
+                    continue
 
-        if download:
-            self.download_and_process()
+            df_one_file = self._read_single_file(file_path)
+            data_out = df_one_file.combine_first(data_out)
 
-        available_years = [
-            path.stem[-4:] for path in self.data_dir.glob("SWPC_F107_*.csv")
-        ]
+        if not data_out.empty:
+            if data_out.index.tzinfo is None:
+                data_out.index = data_out.index.tz_localize("UTC")
+        data_out.drop("date", axis=1, inplace=True)
+        data_out = data_out.truncate(
+            before=start_time - timedelta(hours=23.9999),
+            after=end_time + timedelta(hours=23.9999),
+        )
 
-        missing_files = [
-            year
-            for year in years_requested
-            if str(year) not in available_years and year < current_year
-        ]
+        return data_out
 
-        if missing_files:
-            logging.warning(
-                f"Data for year(s) {', '.join(map(str, missing_files))} not found."
-            )
+    def _read_single_file(self, file_path: Path) -> pd.DataFrame:
+        """Read yearly F107 file to a DataFrame.
 
-            if len(available_years) != 0:
-                logging.warning(
-                    f"Only data for {', '.join(available_years)} are available."
-                )
-            else:
-                logging.warning("No data available. Set `download` to `True`")
+        Parameters
+        ----------
+        file_path : Path
+            Path to the file.
 
-        dfs = []
+        Returns
+        -------
+        pd.DataFrame
+            Data from yearly F10.7 SWPC Resolution file.
+        """
+        df = pd.read_csv(file_path)
 
-        available_file_paths = []
-        for path in file_paths:
-            if any(year in str(path) for year in available_years):
-                available_file_paths.append(path)
-            else:
-                logging.warning(f"File {path} not found")
+        df["date"] = pd.to_datetime(df["date"])
+        df.index = df["date"]
 
-        for file_path in available_file_paths:
-            year_data = pd.read_csv(file_path, parse_dates=["date"])
-            dfs.append(year_data)
+        df["file_name"] = file_path
+        df.loc[df["f107"].isna(), "file_name"] = None
 
-        if not dfs:
-            return pd.DataFrame(columns=["f107"])
-
-        data_out = pd.concat(dfs)
-
-        data_out.index = pd.to_datetime(data_out["date"])
-        data_out = data_out.drop(columns=["date"])
-        data_out.index = data_out.index.tz_localize("UTC")
-        data_out = data_out.truncate(before=start_time, after=end_time)
-
-        return data_out  # noqa: RET504
+        return df

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
 from typing import List, Tuple
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -14,6 +15,8 @@ from data_management.io.decorators import (
     add_attributes_to_class_docstring,
     add_methods_to_class_docstring,
 )
+
+logging.captureWarnings(True)
 
 
 @add_attributes_to_class_docstring
@@ -153,6 +156,7 @@ class KpNiemegk:
         data_out = pd.DataFrame(index=t)
         data_out.index = data_out.index.tz_localize(timezone.utc)
         data_out["kp"] = np.array([np.nan] * len(t))
+        data_out["file_name"] = np.array([None] * len(t))
 
         for file_path, time_interval in zip(file_paths, time_intervals):
             if not file_path.exists():
@@ -161,7 +165,7 @@ class KpNiemegk:
 
             # if we request a date in the future, the file will still not be found here
             if not file_path.exists():
-                logging.warning(f"File {file_path} not found")
+                warnings.warn(f"File {file_path} not found")
                 continue
             df_one_file = self._read_single_file(file_path)
 

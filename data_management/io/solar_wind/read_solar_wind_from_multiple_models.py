@@ -196,11 +196,11 @@ def _read_latest_ensemble_files(
     """
     Reads the most recent SW ensemble data file available from the specified model.
 
-    If the file for the target time is not found, the function iterates backward in hourly increments, up to 3 days, until a valid file is located.
+    If the file for the target time is not found, the function iterates backward in hourly increments, up to 5 days, until a valid file is located.
 
     Parameters
     ----------
-    model : KpEnsemble
+    model : SWSWIFTEnsemble
         The ensemble model from which to read the data.
     synthetic_now_time : datetime
         Represents "now". The function starts searching for files from this time.
@@ -211,12 +211,6 @@ def _read_latest_ensemble_files(
     -------
     list[pd.DataFrame]
         A list of data frames containing ensemble data for the specified range.
-
-    Raises
-    ------
-    FileNotFoundError
-        If no valid file is found within the 5-day window.
-
     """
 
     target_time = min(synthetic_now_time, end_time)

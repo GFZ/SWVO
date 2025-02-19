@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Literal
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -230,26 +231,22 @@ def _read_latest_ensemble_files(
     -------
     list[pd.DataFrame]
         A list of data frames containing ensemble data for the specified range.
-
-    Raises
-    ------
-    FileNotFoundError
-        If no valid file is found within the 3-day window.
-
     """
     target_time = synthetic_now_time
     data_one_model = pd.DataFrame(data={"kp": []})
 
     while target_time > (synthetic_now_time - timedelta(days=3)):
         target_time = target_time.replace(minute=0, second=0)
-
         try:
-            data_one_model = model.read(target_time, end_time)
-            break
-        except FileNotFoundError:
-            target_time -= timedelta(hours=1)
-            continue
-
+            with warnings.catch_warnings():
+                warnings.simplefilter("error")
+                data_one_model = model.read(target_time, end_time)
+                break
+        except UserWarning as e:
+            if "No ensemble files found" in str(e):
+                target_time -= timedelta(hours=1)
+                continue
+        
     logging.info(f"Read PAGER Kp ensemble from {target_time} to {end_time}")
 
     # Ensure the last index of every DataFrame is the next higher multiple of 3 hours than target_time

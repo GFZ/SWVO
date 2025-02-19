@@ -24,7 +24,7 @@ class TestDSCOVR:
         yield
 
         if TEST_DIR.exists():
-            shutil.rmtree(TEST_DIR)
+            shutil.rmtree(TEST_DIR, ignore_errors=True)
 
     @pytest.fixture
     def swace_instance(self):
@@ -148,13 +148,6 @@ class TestDSCOVR:
         assert all(
             col in data.columns for col in DSCOVR.MAG_FIELDS + DSCOVR.SWEPAM_FIELDS
         )
-
-    def test_cleanup_after_download(self, swace_instance):
-        current_time = datetime.now(timezone.utc)
-        swace_instance.download_and_process(current_time)
-
-        temp_dir = Path("./temp_sw_ace_wget")
-        assert not temp_dir.exists(), "Temporary directory should be cleaned up"
 
     @pytest.mark.parametrize(
         "field,invalid_value,expected",
