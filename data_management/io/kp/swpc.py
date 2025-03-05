@@ -8,6 +8,7 @@ import warnings
 import pandas as pd
 import numpy as np
 import wget
+import re
 
 from data_management.io.decorators import (
     add_time_docs,
@@ -22,7 +23,7 @@ logging.captureWarnings(True)
 @add_methods_to_class_docstring
 class KpSWPC:
     """
-    A class for handling SWPC Kp data. 
+    A class for handling SWPC Kp data.
     In SWPC data, the file for current day always contains the forecast for the next 3 days. Keep this in mind when using the `read` and `download_and_process` methods.
 
     Parameters
@@ -39,7 +40,7 @@ class KpSWPC:
     ENV_VAR_NAME = "RT_KP_SWPC_STREAM_DIR"
 
     URL = "https://services.swpc.noaa.gov/text/"
-    NAME = "3-day-geomag-forecast.txt"
+    NAME = "3-day-forecast.txt"
 
     LABEL = "swpc"
 
@@ -87,7 +88,6 @@ class KpSWPC:
             if reprocess_files:
                 file_path.unlink()
             else:
-                # nothing to do
                 return
 
         temporary_dir = Path("./temp_kp_swpc_wget")
@@ -142,7 +142,6 @@ class KpSWPC:
             logging.error(msg)
             raise ValueError(msg)
 
-        # initialize data frame with NaNs
         t = pd.date_range(
             datetime(start_time.year, start_time.month, start_time.day),
             datetime(end_time.year, end_time.month, end_time.day, 23, 59, 59),
@@ -153,7 +152,7 @@ class KpSWPC:
         data_out["kp"] = np.array([np.nan] * len(t))
         data_out["file_name"] = np.array([np.nan] * len(t))
 
-        file_name_time = start_time - timedelta(days=1)
+        file_name_time = start_time
         file_path = (
             self.data_dir / f"SWPC_KP_FORECAST_{file_name_time.strftime('%Y%m%d')}.csv"
         )
@@ -210,49 +209,56 @@ class KpSWPC:
             Kp data.
         """
         first_line = None
-        dates = None
+        dates = []
         year = None
+        kp_data = []
 
         with open(temporary_dir / self.NAME) as f:
             lines = f.readlines()
-
-            for i, line in enumerate(lines):
-                if i == 1:
-                    year = int(line.split(" ")[1].lstrip().rstrip())
-                if "Kp index" in line:
-                    first_line = i
-                    l_ = lines[i + 1].lstrip().rstrip()
-                    dates = l_.split("   ")
-                    # Handle year change for January dates when current month is December
-                    processed_dates = []
-                    for d in dates:
-                        d = d.lstrip().rstrip()
-                        month = d.split(" ")[0]
-                        if any("Dec" in date for date in dates) and month == "Jan":
-                            processed_dates.append(f"{year + 1} {d}")
-                        else:
-                            processed_dates.append(f"{year} {d}")
-                    dates = [datetime.strptime(d, "%Y %b %d") for d in processed_dates]
+            for line in lines:
+                if ":Issued:" in line:
+                    year = int(re.search(r"(\d{4})", line).group(1))
                     break
 
-        data = pd.read_csv(
-            temporary_dir / self.NAME,
-            skiprows=first_line + 2,
-            sep=r"\s+",
-            names=["0", "1", "2", "3"],
-        )
+            for i, line in enumerate(lines):
+                if "NOAA Kp index breakdown" in line:
+                    first_line = i + 2
+                    break
+
+            headers = lines[first_line].split()
+            headers = [
+                headers[i] + " " + headers[i + 1] for i in range(0, len(headers), 2)
+            ]
+            for d in headers:
+                try:
+                    if any("Dec" in month for month in headers) and "Jan" in d:
+                        parsed_date = self._parse_date(d, year + 1)
+                    else:
+                        parsed_date = self._parse_date(d, year)
+                    dates.append(parsed_date)
+                except ValueError:
+                    raise
+
+            for line in lines[first_line + 1 : first_line + 9]:
+                values = [
+                    float(val)
+                    for val in line.split()[1:]
+                    if re.match(r"^\d+\.\d+$", val)
+                ]
+
+                kp_data.append(values)
+
         kp = []
         timestamp = []
-
-        for i in range(1, 4):
-            timestamp += [dates[i - 1] + timedelta(hours=3 * j) for j in range(8)]
-            kp += list(data[str(i)].values)
+        for i, day in enumerate(dates):
+            for j in range(8):
+                timestamp.append(day + timedelta(hours=3 * j))
+                kp.append(kp_data[j][i])
 
         time_in = [timestamp[0]] * 24
         df = pd.DataFrame({"t_forecast": timestamp}, index=time_in)
         df["kp"] = kp
 
-        # change rounded numbers to be equal to 1/3 or 2/3 to be consistent with other Kp products
         df.loc[round(df["kp"] % 1, 2) == 0.67, "kp"] = (
             round(df.loc[round(df["kp"] % 1, 2) == 0.67, "kp"]) + 2 / 3
         )
@@ -263,3 +269,6 @@ class KpSWPC:
         df.index.rename("t", inplace=True)
 
         return df
+
+    def _parse_date(self, date_str, year):
+        return datetime.strptime(f"{year} {date_str}", "%Y %b %d")
