@@ -1,1 +1,1 @@
-import data_management.plotting.wp2.swift.plot_swift
+import data_management.plotting.swift.plot_swift

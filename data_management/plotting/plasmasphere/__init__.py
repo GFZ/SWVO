@@ -1,1 +1,1 @@
-import data_management.plotting.wp3.plasmasphere.plasmasphere_plot
+import data_management.plotting.plasmasphere.plasmasphere_plot
