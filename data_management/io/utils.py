@@ -39,7 +39,7 @@ def _nan_percentage(data: pd.DataFrame) -> float:
     :rtype: None
     """
     float_columns = data.select_dtypes(include=['float64', 'float32']).columns
-    nan_percentage = (data[float_columns].isna().sum().sum() / (data.shape[0] * data.shape[1])) * 100
+    nan_percentage = (data[float_columns].isna().sum().sum() / (data.shape[0])) * 100
     logging.info(f"Percentage of NaNs in data frame: {nan_percentage:.2f}%")
 
     return None
