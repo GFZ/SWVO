@@ -57,7 +57,7 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
         A data frame or a list of data frames containing data for the requested period.
     """
     if synthetic_now_time is None:
-        synthetic_now_time = datetime.now(timezone.utc)
+        synthetic_now_time = min(datetime.now(timezone.utc), end_time)
 
     hp_index = hp_index.lower()
 
