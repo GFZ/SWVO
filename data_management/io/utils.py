@@ -20,29 +20,29 @@ def any_nans(data: list[pd.DataFrame] | pd.DataFrame) -> bool:
 
     if isinstance(data, list):
         for df in data:
-            _nan_percentage(df)
+            _ =  nan_percentage(df)
 
     if isinstance(data, pd.DataFrame):
-        _nan_percentage(data)
+        _ = nan_percentage(data)
 
     return any((df.isna().any(axis=None) > 0) for df in data)
 
 
-def _nan_percentage(data: pd.DataFrame) -> float:
+def nan_percentage(data: pd.DataFrame) -> float:
     """
     Calculate the percentage of NaN values in the data column of data frame and log it.
 
     :param
     data: The data frame to process
     :type data: pd.DataFrame
-    :return: None
-    :rtype: None
+    :return: Nan percentage in the data frame
+    :rtype: float
     """
     float_columns = data.select_dtypes(include=['float64', 'float32']).columns
     nan_percentage = (data[float_columns].isna().sum().sum() / (data.shape[0])) * 100
     logging.info(f"Percentage of NaNs in data frame: {nan_percentage:.2f}%")
 
-    return None
+    return nan_percentage
 
 
 def construct_updated_data_frame(
