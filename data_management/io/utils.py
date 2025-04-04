@@ -20,7 +20,7 @@ def any_nans(data: list[pd.DataFrame] | pd.DataFrame) -> bool:
 
     if isinstance(data, list):
         for df in data:
-            _ =  nan_percentage(df)
+            _ = nan_percentage(df)
 
     if isinstance(data, pd.DataFrame):
         _ = nan_percentage(data)
