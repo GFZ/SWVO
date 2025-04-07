@@ -143,7 +143,7 @@ class DSTWDC:
         return file_paths, time
 
     def _process_single_file(self, file_path: Path, year, month) -> pd.DataFrame:
-        """Process yearlyWDC Dst file to a DataFrame.
+        """Process yearly WDC Dst file to a DataFrame.
 
         Parameters
         ----------
