@@ -49,7 +49,8 @@ def read_f107_from_multiple_models(
     """
 
     if synthetic_now_time is None:
-        synthetic_now_time = datetime.now(timezone.utc)
+        synthetic_now_time = min(datetime.now(timezone.utc), end_time)
+
 
     if model_order is None:
         model_order = [F107OMNI(), F107SWPC()]

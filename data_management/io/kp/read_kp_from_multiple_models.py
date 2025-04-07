@@ -55,7 +55,7 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
 
     """
     if synthetic_now_time is None:
-        synthetic_now_time = datetime.now(timezone.utc)
+        synthetic_now_time = min(datetime.now(timezone.utc), end_time)
 
     if model_order is None:
         model_order = [KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()]

@@ -5,6 +5,7 @@ import numpy as np
 from scipy.ndimage import gaussian_filter1d
 from functools import wraps
 import inspect
+import logging
 
 
 def any_nans(data: list[pd.DataFrame] | pd.DataFrame) -> bool:
@@ -16,7 +17,32 @@ def any_nans(data: list[pd.DataFrame] | pd.DataFrame) -> bool:
     :return: Bool if any data frame of the list contains any nan values
     :rtype: bool
     """
+
+    if isinstance(data, list):
+        for df in data:
+            _ = nan_percentage(df)
+
+    if isinstance(data, pd.DataFrame):
+        _ = nan_percentage(data)
+
     return any((df.isna().any(axis=None) > 0) for df in data)
+
+
+def nan_percentage(data: pd.DataFrame) -> float:
+    """
+    Calculate the percentage of NaN values in the data column of data frame and log it.
+
+    :param
+    data: The data frame to process
+    :type data: pd.DataFrame
+    :return: Nan percentage in the data frame
+    :rtype: float
+    """
+    float_columns = data.select_dtypes(include=['float64', 'float32']).columns
+    nan_percentage = (data[float_columns].isna().sum().sum() / (data.shape[0])) * 100
+    logging.info(f"Percentage of NaNs in data frame: {nan_percentage:.2f}%")
+
+    return nan_percentage
 
 
 def construct_updated_data_frame(
