@@ -123,7 +123,10 @@ class DSTWDC:
         time = []
 
         current_time = datetime(start_time.year, start_time.month, 1)
-        end_time = datetime(end_time.year, end_time.month + 1, 1)
+        if end_time.month == 12 and end_time.month == 12:
+            end_time = datetime(end_time.year + 1, 1, 1, 0, 0, 0)
+        else:
+            end_time = datetime(end_time.year, end_time.month + 1, 1)
 
         while current_time < end_time:
             file_path = self.data_dir / f"WDC_DST_{current_time.strftime('%Y%m')}.csv"

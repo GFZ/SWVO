@@ -64,6 +64,8 @@ class DSTOMNI(OMNILowRes):
         assert start_time < end_time
 
         file_paths, _ = self._get_processed_file_list(start_time, end_time)
+        
+
         t = pd.date_range(
             datetime(start_time.year, start_time.month, start_time.day),
             datetime(end_time.year, end_time.month, end_time.day, 23, 00, 00),
@@ -84,14 +86,15 @@ class DSTOMNI(OMNILowRes):
 
             df_one_file = self._read_single_file(file_path)
             data_out = df_one_file.combine_first(data_out)
-
-        data_out.drop(columns=["timestamp", "t"], inplace=True)
-
-
+    
         data_out = data_out.truncate(
             before=start_time - timedelta(hours=23.9999),
             after=end_time + timedelta(hours=23.9999),
         )
+        if all(data_out["dst"].isna()):
+            return data_out
+            
+        data_out.drop(columns=["timestamp", "t"], inplace=True)
 
         return data_out
 
@@ -109,7 +112,6 @@ class DSTOMNI(OMNILowRes):
             Data from yearly OMNI DST file.
         """
         df = pd.read_csv(file_path)
-
         df.drop(columns=["kp", "f107"], inplace=True)
 
         df["t"] = pd.to_datetime(df["timestamp"], utc=True)
