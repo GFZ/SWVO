@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
@@ -225,7 +226,7 @@ class DSTWDC:
         if not end_time.tzinfo:
             end_time = end_time.replace(tzinfo=timezone.utc)
 
-        assert start_time < end_time
+        assert start_time < end_time, "Start time must be before end time!"
 
         file_paths, _ = self._get_processed_file_list(start_time, end_time)
         t = pd.date_range(
@@ -249,7 +250,10 @@ class DSTWDC:
             df_one_file = self._read_single_file(file_path)
             data_out = df_one_file.combine_first(data_out)
 
-        data_out.drop(columns=["timestamp"], inplace=True)
+        data_out = data_out.truncate(
+            before=start_time - timedelta(hours=0.9999),
+            after=end_time + timedelta(hours=0.9999),
+        )
 
         return data_out
 
