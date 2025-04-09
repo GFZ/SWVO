@@ -9,6 +9,7 @@ from pathlib import Path
 import traceback
 from urllib.error import HTTPError
 
+from data_management.io.dst import DSTWDC
 from data_management.io.kp import KpNiemegk, KpSWPC
 from data_management.io.hp import Hp30GFZ, Hp60GFZ
 from data_management.io.omni import OMNILowRes, OMNIHighRes
@@ -100,11 +101,19 @@ if __name__ == "__main__":
     except Exception:
         logging.error("Encountered error while downloading F10.7cm solar wind. Traceback:")
         logging.error(traceback.format_exc())
+
     logging.info("SW DSCOVR...")
     try:
         DSCOVR().download_and_process(time_now)
     except Exception:
-        logging.error("Encountered error while downloading DSCOVR data. Traceback:")
+        logging.error("Encountered error while downloading DSCOVR solar wind. Traceback:")
+        logging.error(traceback.format_exc())
+
+    logging.info("DST WDC...")
+    try:
+        DSTWDC().download_and_process(date_yesterday_start, time_now, reprocess_files=True)
+    except Exception:
+        logging.error("Encountered error while downloading WDC Dst data. Traceback:")
         logging.error(traceback.format_exc())
 
     logging.info("Finished downloading and processing!")
