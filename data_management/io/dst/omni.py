@@ -88,8 +88,8 @@ class DSTOMNI(OMNILowRes):
             data_out = df_one_file.combine_first(data_out)
     
         data_out = data_out.truncate(
-            before=start_time - timedelta(hours=23.9999),
-            after=end_time + timedelta(hours=23.9999),
+            before=start_time - timedelta(hours=0.9999),
+            after=end_time + timedelta(hours=0.9999),
         )
         if all(data_out["dst"].isna()):
             return data_out

@@ -59,32 +59,21 @@ def read_dst_from_multiple_models(
     data_out = pd.DataFrame()
 
     for model in model_order:
-        if isinstance(model, DSTOMNI):
-            logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
-            data_one_model = model.read(start_time, end_time, download=download)
+        logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
+        data_one_model = model.read(start_time, end_time, download=download)
 
-            index_range = pd.date_range(
-                start=synthetic_now_time, end=end_time, freq="h"
-            )
-            data_one_model = data_one_model.reindex(
-                data_one_model.index.union(index_range)
-            )
+        index_range = pd.date_range(
+            start=synthetic_now_time, end=end_time, freq="h"
+        )
+        data_one_model = data_one_model.reindex(
+            data_one_model.index.union(index_range)
+        )
 
-            data_one_model.loc[synthetic_now_time:end_time, "dst"] = np.nan
-            data_one_model = data_one_model.fillna({"file_name": np.nan})
-            logging.info(
-                f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}"
-            )
-
-        if isinstance(model, DSTWDC):
-            logging.info(
-                f"Reading WDC from {synthetic_now_time.replace(hour=0, minute=0, second=0)} to {end_time}"
-            )
-            data_one_model = model.read(
-                synthetic_now_time.replace(hour=0, minute=0, second=0),
-                end_time,
-                download=download,
-            )
+        data_one_model.loc[data_one_model.index > synthetic_now_time, "dst"] = np.nan
+        data_one_model = data_one_model.fillna({"file_name": np.nan})
+        logging.info(
+            f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}"
+        )
 
         data_out = construct_updated_data_frame(data_out, data_one_model, model.LABEL)
 
