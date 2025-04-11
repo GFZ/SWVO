@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime as dt
 from datetime import timezone
 from dataclasses import replace
-from typing import Any
+from typing import Any, ClassVar
 from data_management.io.RBMDataSet.custom_enums import ElPasoMFMEnum
 from data_management.io.RBMDataSet.utils import matlab2python, python2matlab
 import numpy as np
@@ -50,7 +50,37 @@ class RBMDataSetElPaso:
 
     """
 
-    _variable_mapping: dict[str, str]
+    _variable_mapping: ClassVar[dict[str, str]] = {
+        "Epoch_posixtime": "time",
+        "Energy_FEDU": "energy_channels",
+        "Energy_FPDU": "energy_channels",
+        "Energy_FEIU": "energy_channels",
+        "Energy_FEDO": "energy_channels",
+        "PA_local": "alpha_local",
+        "PA_eq_": "alpha_eq_model",
+        "alpha_eq_real": "alpha_eq_real",
+        "invMu_": "InvMu",
+        "InvMu_real": "InvMu_real",
+        "invK_": "InvK",
+        "InvV": "InvV",
+        "Lstar_": "Lstar",
+        "FEDU": "Flux",
+        "FPDU": "Flux",
+        "FEIU": "Flux",
+        "FEDO": "Flux",
+        "PSD_FEDU": "PSD",
+        "PSD_FPDU": "PSD",
+        "PSD_FEIU": "PSD",
+        "PSD_FEDO": "PSD",
+        "MLT_": "MLT",
+        "B_SM": "B_SM",
+        "B_eq_": "B_total",
+        "B_local_": "B_sat",
+        "xGEO": "xGEO",
+        "P": "P",
+        "R_eq_": "R0",
+        "density": "density",
+    }
 
     datetime: list[dt.datetime]
     time: NDArray[np.float64]
@@ -103,40 +133,6 @@ class RBMDataSetElPaso:
         self._instrument = instrument
         self._mfm = mfm
         self._mfm_prefix = ElPasoMFMEnum[self._mfm.name].value
-        self._variable_mapping = {
-            "Epoch": "time",
-            "Energy_FEDU": "energy_channels",
-            "Energy_FPDU": "energy_channels",
-            "Energy_FEIU": "energy_channels",
-            "Energy_FEDO": "energy_channels",
-            "PA_local_FEDU": "alpha_local",
-            "PA_local_FPDU": "alpha_local",
-            "PA_local_FEIU": "alpha_local",
-            "PA_local_FEDO": "alpha_local",
-            "PA_eq_": "alpha_eq_model",
-            "alpha_eq_real": "alpha_eq_real",
-            "invMu_": "InvMu",
-            "InvMu_real": "InvMu_real",
-            "invK_": "InvK",
-            "InvV": "InvV",
-            "Lstar_": "Lstar",
-            "FEDU": "Flux",
-            "FPDU": "Flux",
-            "FEIU": "Flux",
-            "FEDO": "Flux",
-            "PSD_FEDU": "PSD",
-            "PSD_FPDU": "PSD",
-            "PSD_FEIU": "PSD",
-            "PSD_FEDO": "PSD",
-            "MLT_": "MLT",
-            "B_SM": "B_SM",
-            "B_eq_": "B_total",
-            "B_local_": "B_sat",
-            "xGEO": "xGEO",
-            "P": "P",
-            "R_eq_": "R0",
-            "density": "density",
-        }
 
     @property
     def satellite(self) -> SatelliteEnum:
@@ -170,19 +166,19 @@ class RBMDataSetElPaso:
             Dictionary containing the data to be loaded into the object.
 
         """
-        for source_key, value in source_dict.items():
-            if source_key in self._variable_mapping:
-                target_attr = self._variable_mapping[source_key]
+        for _, value in source_dict.items():
+            if value.standard_name in self._variable_mapping:
+                target_attr = self._variable_mapping[value.standard_name]
 
-                if source_key == "Epoch" and target_attr == "time":
+                if value.standard_name == "Epoch_posixtime" and target_attr == "time":
                     datetimes = [dt.datetime.fromtimestamp(ts, tz=timezone.utc) for ts in value.data]
                     setattr(self, "datetime", datetimes)
                     setattr(self, "time", [python2matlab(i) for i in datetimes])
                 else:
                     setattr(self, target_attr, value.data)
 
-            elif source_key.endswith(self._mfm_prefix):
-                base_key = source_key.replace(self._mfm_prefix, "")
+            elif value.standard_name.endswith(self._mfm_prefix):
+                base_key = value.standard_name.replace(self._mfm_prefix, "")
                 if base_key in self._variable_mapping:
                     target_attr = self._variable_mapping[base_key]
                     setattr(self, target_attr, value.data)
@@ -211,14 +207,13 @@ class RBMDataSetElPaso:
         InvV = self.InvMu * (inv_K_repeated + 0.5) ** 2
         return InvV
 
-    def __getattribute__(self, name: str) -> Any:
-        _variable_mapping = super().__getattribute__("_variable_mapping")
-        if name in _variable_mapping.values():
-            if name not in super().__getattribute__("__dict__"):
-                raise AttributeError(
-                    f"'{self.__class__.__name__}' object has no attribute '{name}'  This may be due to a missing variable in the ElPaso magnetic field calculation."
-                )
-        return super().__getattribute__(name)
+    def __getattr__(self, name: str) -> Any:
+        if name in self._variable_mapping.values():
+            raise AttributeError(
+                f"Attribute '{name}' is mapped but has not been set. "
+                "Make sure data is loaded or that this attribute is properly assigned."
+            )
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.satellite}, {self.instrument}, {self.mfm}, {self._el_paso_mfm})"
