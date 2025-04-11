@@ -216,7 +216,7 @@ class RBMDataSetElPaso:
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self.satellite}, {self.instrument}, {self.mfm}, {self._el_paso_mfm})"
+        return f"{self.__class__.__name__}({self.satellite}, {self.instrument}, {self.mfm})"
 
     def __str__(self):
         return self.__repr__()
