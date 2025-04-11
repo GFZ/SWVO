@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, overload
 
-from RBMDataSet.custom_enums import (
+from data_management.io.RBMDataSet.custom_enums import (
     FolderTypeEnum,
     InstrumentEnum,
     MfmEnum,
@@ -12,7 +12,7 @@ from RBMDataSet.custom_enums import (
     SatelliteEnum,
     SatelliteLike,
 )
-from RBMDataSet.RBMDataSet import RBMDataSet
+from data_management.io.RBMDataSet.RBMDataSet import RBMDataSet
 
 RBMDataSetHash = tuple[
     datetime,

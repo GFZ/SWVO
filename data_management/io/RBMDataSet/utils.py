@@ -89,12 +89,12 @@ def round_seconds(obj: datetime) -> datetime:
 def python2matlab(datenum: datetime) -> float:
     mdn = datenum + timedelta(days=366)
     frac = (
-        datenum - datetime(datenum.year, datenum.month, datenum.day, 0, 0, 0)
+        datenum - datetime(datenum.year, datenum.month, datenum.day, 0, 0, 0, tzinfo=timezone.utc)
     ).seconds / (24.0 * 60.0 * 60.0)
     return mdn.toordinal() + round(frac, 6)
 
 
-def matlab2python(datenum: float) -> datetime:
+def matlab2python(datenum: float | Iterable) -> datetime:
     warnings.filterwarnings(
         "ignore", message="Discarding nonzero nanoseconds in conversion"
     )

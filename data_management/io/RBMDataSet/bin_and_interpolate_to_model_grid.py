@@ -14,12 +14,16 @@ from matplotlib import pyplot as plt
 from numpy.typing import NDArray
 from tqdm import tqdm
 
-from RBMDataSet import RBMDataSet
-from RBMDataSet.utils import pol2cart
+from data_management.io.RBMDataSet.utils import pol2cart
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from data_management.io.RBMDataSet import RBMDataSet, RBMDataSetElPaso
 
 
 def bin_and_interpolate_to_model_grid(
-    self: RBMDataSet,
+    self: RBMDataSet | RBMDataSetElPaso,
     sim_time: list[datetime],
     grid_R: NDArray[np.float64],
     grid_mu_V: NDArray[np.float64],

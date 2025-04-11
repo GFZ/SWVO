@@ -13,7 +13,7 @@ from numpy.typing import NDArray
 from tqdm import tqdm
 
 if TYPE_CHECKING:
-    from .RBMDataSet import RBMDataSet
+    from data_management.io.RBMDataSet import RBMDataSet
 
 
 class TargetType(Enum):
