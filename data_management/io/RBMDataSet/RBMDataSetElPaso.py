@@ -16,6 +16,7 @@ from data_management.io.RBMDataSet import (
     MfmEnum,
     SatelliteEnum,
     SatelliteLike,
+    Variable,
     VariableEnum,
 )
 
@@ -160,7 +161,7 @@ class RBMDataSetElPaso:
     def __dir__(self):
         return super().__dir__() + [var.var_name for var in VariableEnum]
 
-    def update_from_dict(self, source_dict: dict[str, Any]) -> None:
+    def update_from_dict(self, source_dict: dict[str, Variable]) -> None:
         """Get data from ElPaso data dictionary and update the object.
 
         Parameters
