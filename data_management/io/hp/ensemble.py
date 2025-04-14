@@ -84,12 +84,12 @@ class HpEnsemble:
 
         start_date = start_time.replace(microsecond=0, minute=0, second=0)
         str_date = start_date.strftime("%Y%m%dT%H0000")
-        file_list_old_name = sorted(
-            self.data_dir.glob(f"FORECAST_{self.index.upper()}_{str_date}_ensemble_*.csv"),
+        file_list_new_name = sorted(
+            self.data_dir.glob(f"FORECAST_{self.index.title()}_{str_date}_ensemble_*.csv"),
             key=lambda x: int(x.stem.split("_")[-1]),
         )
 
-        file_list_new_name = sorted(
+        file_list_old_name = sorted(
             self.data_dir.glob(f"FORECAST_{self.index.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_*.csv"),   
             key=lambda x: int(x.stem.split("_")[-1]),
         )
