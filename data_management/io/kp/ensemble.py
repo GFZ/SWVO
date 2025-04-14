@@ -90,7 +90,7 @@ class KpEnsemble:
 
 
         file_list_new_name = sorted(
-            self.data_dir.glob(f"FORECAST_Kp_swift_{str_date}_ensemble_*.csv"),
+            self.data_dir.glob(f"FORECAST_Kp_{str_date}_ensemble_*.csv"),
             key=lambda x: int(x.stem.split("_")[-1]),
         )
         data = []
