@@ -4,6 +4,7 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import warnings
 from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
 
 
@@ -83,13 +84,26 @@ class HpEnsemble:
 
         start_date = start_time.replace(microsecond=0, minute=0, second=0)
         str_date = start_date.strftime("%Y%m%dT%H0000")
-        file_list = sorted(
-            self.data_dir.glob(
-                f"FORECAST_{self.index.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_*.csv"
-            )
+        file_list_old_name = sorted(
+            self.data_dir.glob(f"FORECAST_{self.index.upper()}_{str_date}_ensemble_*.csv"),
+            key=lambda x: int(x.stem.split("_")[-1]),
         )
 
+        file_list_new_name = sorted(
+            self.data_dir.glob(f"FORECAST_{self.index.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_*.csv"),   
+            key=lambda x: int(x.stem.split("_")[-1]),
+        )
         data = []
+
+        if len(file_list_new_name) == 0 and len(file_list_old_name) == 0:
+            file_list = []
+        elif len(file_list_new_name) > 0:
+            file_list = file_list_new_name
+        elif len(file_list_old_name) > 0:
+            warnings.warn(
+                "The use of FORECAST_HP*_SWIFT_DRIVEN_swift_* files is deprecated. However since we still have files with this prefix, this will be supported",
+                DeprecationWarning,)
+            file_list = file_list_old_name
 
         if len(file_list) == 0:
             msg = f"No {self.index} ensemble file found for requested date {start_date}"
