@@ -65,7 +65,7 @@ class TestKpEnsemble:
                 }
             )
 
-            filename = f"FORECAST_PAGER_SWIFT_swift_{str_date}_ensemble_{i+1}.csv"
+            filename = f"FORECAST_Kp_swift_{str_date}_ensemble_{i+1}.csv"
             file_path = kp_ensemble_instance.data_dir / filename
             df.to_csv(file_path, index=False, header=False)
 
@@ -102,7 +102,7 @@ class TestKpEnsemble:
                 "kp": np.random.uniform(0, 9, size=len(test_dates)),
             }
         )
-        filename = f"FORECAST_PAGER_SWIFT_swift_{str_date}_ensemble_1.csv"
+        filename = f"FORECAST_Kp_swift_{str_date}_ensemble_1.csv"
         file_path = kp_ensemble_instance.data_dir / filename
         df.to_csv(file_path, index=False, header=False)
 
