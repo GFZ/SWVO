@@ -87,7 +87,7 @@ class TestHpEnsemble:
                 }
             )
 
-            filename = f"FORECAST_{index_name.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_{i+1}.csv"
+            filename = f"FORECAST_{index_name.upper()}_{str_date}_ensemble_{i+1}.csv"
             file_path = instance.data_dir / filename
             df.to_csv(file_path, index=False, header=False)
 
