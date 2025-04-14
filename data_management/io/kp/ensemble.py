@@ -11,7 +11,9 @@ from data_management.io.decorators import (
     add_attributes_to_class_docstring,
     add_methods_to_class_docstring,
 )
+
 logging.captureWarnings(True)
+
 
 @add_attributes_to_class_docstring
 @add_methods_to_class_docstring
@@ -81,12 +83,28 @@ class KpEnsemble:
         start_time = start_time.replace(microsecond=0, minute=0, second=0)
         str_date = start_time.strftime("%Y%m%dT%H0000")
 
-        file_list = sorted(
+        file_list_old_name = sorted(
             self.data_dir.glob(f"FORECAST_PAGER_SWIFT_swift_{str_date}_ensemble_*.csv"),
             key=lambda x: int(x.stem.split("_")[-1]),
         )
 
+
+        file_list_new_name = sorted(
+            self.data_dir.glob(f"FORECAST_Kp_{str_date}_ensemble_*.csv"),
+            key=lambda x: int(x.stem.split("_")[-1]),
+        )
         data = []
+
+        if len(file_list_new_name) == 0 and len(file_list_old_name) == 0:
+            file_list = []
+        elif len(file_list_new_name) > 0:
+            file_list = file_list_new_name
+        elif len(file_list_old_name) > 0:
+            warnings.warn(
+                "The use of FORECAST_PAGER_SWIFT_swift_* files is deprecated. However since we still have these files from the PAGER project with this prefix, this will be supported",
+                DeprecationWarning,)
+            file_list = file_list_old_name
+
         if len(file_list) == 0:
             msg = f"No ensemble files found for requested date {str_date}"
             warnings.warn(f"{msg}! Returning NaNs dataframe.")
