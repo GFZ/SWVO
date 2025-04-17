@@ -10,7 +10,8 @@ from data_management.io.RBMDataSet.custom_enums import (
     SatelliteEnum,
     InstrumentEnum,
     MfmEnum,
-    ElPasoMFMEnum
+    ElPasoMFMEnum,
+    SatelliteLiteral
 )
 from data_management.io.RBMDataSet.RBMDataSetManager import RBMDataSetManager
 from data_management.io.RBMDataSet.interp_functions import TargetType

@@ -92,9 +92,9 @@ class SatelliteEnum(Satellite, Enum):
     RBSPA = "rbspa", "RBSP"
     RBSPB = "rbspb", "RBSP"
 
-    GOES13 = "GOES13", "GOES"
-    GOES14 = "GOES14", "GOES"
-    GOES15 = "GOES15", "GOES"
+    GOES13 = "goes13", "GOES"
+    GOES14 = "goes14", "GOES"
+    GOES15 = "goes15", "GOES"
 
     GOESPrimary = "primary", "GOES"
     GOESSecondary = "secondary", "GOES"

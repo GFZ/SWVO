@@ -92,9 +92,6 @@ class RBMDataSetManager:
 
         return_list: list[RBMDataSet] | RBMDataSet = []
         for sat in satellite:
-            if isinstance(sat, str):
-                sat = SatelliteEnum[sat]
-
             key_tuple = (
                 start_time,
                 end_time,

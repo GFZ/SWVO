@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime as dt
 from datetime import timezone
 from dataclasses import replace
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TypeVar
 from data_management.io.RBMDataSet.custom_enums import ElPasoMFMEnum
 from data_management.io.RBMDataSet.utils import matlab2python, python2matlab
 import numpy as np
@@ -16,10 +16,10 @@ from data_management.io.RBMDataSet import (
     MfmEnum,
     SatelliteEnum,
     SatelliteLike,
-    Variable,
     VariableEnum,
 )
 
+Variable = TypeVar("Variable") #this is a placeholder for the actual Variable class from elpaso and not the one in RBMDataSet
 
 class RBMDataSetElPaso:
     """RBMDataSetElPaso class for loading ElPaso data to RBMDataSet.
@@ -62,7 +62,7 @@ class RBMDataSetElPaso:
         "invMu_": "InvMu",
         "InvMu_real": "InvMu_real",
         "invK_": "InvK",
-        "InvV": "InvV",
+        # "InvV": "InvV",# computed property
         "Lstar_": "Lstar",
         "FEDU": "Flux",
         "FPDU": "Flux",
@@ -77,7 +77,7 @@ class RBMDataSetElPaso:
         "B_eq_": "B_total",
         "B_local_": "B_sat",
         "xGEO": "xGEO",
-        "P": "P",
+        # "P": "P",# computed property
         "R_eq_": "R0",
         "density": "density",
     }
@@ -122,7 +122,16 @@ class RBMDataSetElPaso:
             Magnetic field model enum.
 
         """
-        satellite_enum = SatelliteEnum[satellite.upper()] if isinstance(satellite, str) else satellite
+        if isinstance(satellite, str):
+            if satellite.lower() == "goesprimary":
+                satellite_enum = SatelliteEnum["GOESPrimary"]
+            elif satellite.lower() == "goessecondary":
+                satellite_enum = SatelliteEnum["GOESSecondary"]
+            else:
+                satellite_enum = SatelliteEnum[satellite.upper()]
+        else:
+            satellite_enum = satellite
+
         if isinstance(instrument, str):
             instrument = InstrumentEnum[instrument.upper()]
         satellite_obj = replace(
