@@ -10,3 +10,4 @@ pytest-cov
 wget
 deprecation
 scipy
+distance
