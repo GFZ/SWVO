@@ -12,3 +12,7 @@ deprecation
 scipy
 distance
 mat73
+scipy
+numpy
+tqdm
+icecream
