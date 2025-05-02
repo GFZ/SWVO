@@ -34,7 +34,7 @@ class PlotKpHpOutput(PlotOutput):
         if data_column == "kp":
             return 9.1
         elif data_column in ["hp60", "hp30"]:
-            return np.maximum(9.1, np.max(data[data_column].values) + 0.1)
+            return 9.1
 
     @staticmethod
     def _set_yaxis_style(ax, ylim, ylabel_fontsize=20, ylabel=None):
