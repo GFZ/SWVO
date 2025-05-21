@@ -35,6 +35,11 @@ class PlotKpHpOutput(PlotOutput):
             return 9.1
         elif data_column in ["hp60", "hp30"]:
             return np.maximum(9.1, np.nanmax(data[data_column].values) + 0.1)
+        if data_column.startswith("kp") or data_column.startswith("Kp"):
+            return 9.1
+        elif data_column.startswith("hp") or data_column.startswith("Hp"):
+            return np.maximum(9.1, np.nanmax(data[data_column].values) + 0.1)
+        
 
     @staticmethod
     def _set_yaxis_style(ax, ylim, ylabel_fontsize=20, ylabel=None):
