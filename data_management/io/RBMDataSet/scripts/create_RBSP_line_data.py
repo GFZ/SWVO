@@ -8,7 +8,7 @@ from typing import Iterable, Literal
 import numpy as np
 from numpy.typing import NDArray
 
-from RBMDataSet import (
+from data_management.io.RBMDataSet import (
     InstrumentEnum,
     MfmEnum,
     RBMDataSet,

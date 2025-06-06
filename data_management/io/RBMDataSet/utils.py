@@ -32,26 +32,28 @@ def get_file_path_any_format(
         )
         return None
 
-    if len(all_files) > 1:
+    if len(all_files) >= 1:
         extensions_found = [file.suffix[1:] for file in all_files]
         if preferred_ext in extensions_found:
-            warnings.warn(
-                (
-                    f"Several files found for {folder_path / (file_stem + '.*')} with extensions: {extensions_found}. "
-                    f"Choosing: {preferred_ext}."
-                ),
-                stacklevel=2,
-            )
+            if len(all_files) > 1:
+                warnings.warn(
+                    (
+                        f"Several files found for {folder_path / (file_stem + '.*')} with extensions: {extensions_found}. "
+                        f"Choosing: {preferred_ext}."
+                    ),
+                    stacklevel=2,
+                )
 
-            return folder_path / (file_stem + "." + preferred_ext)
+                return folder_path / (file_stem + "." + preferred_ext)
+            return all_files[0]
         else:
             warnings.warn(
                 f"File not found: {folder_path / (file_stem + '.' + preferred_ext)}",
                 stacklevel=2,
             )
             return None
-
-    return all_files[0]
+        
+    return None
 
 
 def load_file_any_format(file_path: Path) -> dict[str, Any]:
@@ -89,16 +91,17 @@ def round_seconds(obj: datetime) -> datetime:
 def python2matlab(datenum: datetime) -> float:
     mdn = datenum + timedelta(days=366)
     frac = (
-        datenum - datetime(datenum.year, datenum.month, datenum.day, 0, 0, 0)
+        datenum - datetime(datenum.year, datenum.month, datenum.day, 0, 0, 0, tzinfo=timezone.utc)
     ).seconds / (24.0 * 60.0 * 60.0)
     return mdn.toordinal() + round(frac, 6)
 
 
-def matlab2python(datenum: float) -> datetime:
+def matlab2python(datenum: float | Iterable) -> Iterable[datetime] | datetime:
     warnings.filterwarnings(
         "ignore", message="Discarding nonzero nanoseconds in conversion"
     )
 
+    datenum = np.asarray(datenum, dtype=float)
     datenum = pd.to_datetime(
         datenum - 719529, unit="D", origin=pd.Timestamp("1970-01-01")
     ).to_pydatetime()

@@ -12,7 +12,7 @@ import numpy as np
 from dateutil.relativedelta import relativedelta
 from numpy.typing import NDArray
 
-from RBMDataSet import (
+from data_management.io.RBMDataSet import (
     FileCadenceEnum,
     FolderTypeEnum,
     InstrumentEnum,
@@ -22,7 +22,7 @@ from RBMDataSet import (
     Variable,
     VariableEnum,
 )
-from RBMDataSet.utils import (
+from data_management.io.RBMDataSet.utils import (
     get_file_path_any_format,
     join_var,
     load_file_any_format,
@@ -31,6 +31,34 @@ from RBMDataSet.utils import (
 
 
 class RBMDataSet:
+    """RBMDataSet class for loading and managing data.
+
+    Attributes
+    ----------
+    datetime : list[dt.datetime]
+    time : NDArray[np.float64]
+    energy_channels : NDArray[np.float64]
+    alpha_local : NDArray[np.float64]
+    alpha_eq_model : NDArray[np.float64]
+    alpha_eq_real : NDArray[np.float64]
+    InvMu : NDArray[np.float64]
+    InvMu_real : NDArray[np.float64]
+    InvK : NDArray[np.float64]
+    InvV : NDArray[np.float64]
+    Lstar : NDArray[np.float64]
+    Flux : NDArray[np.float64]
+    PSD : NDArray[np.float64]
+    MLT : NDArray[np.float64]
+    B_SM : NDArray[np.float64]
+    B_total : NDArray[np.float64]
+    B_sat : NDArray[np.float64]
+    xGEO : NDArray[np.float64]
+    P : NDArray[np.float64]
+    R0 : NDArray[np.float64]
+    density : NDArray[np.float64]
+
+    """
+
     _preferred_ext: str
 
     datetime: list[dt.datetime]
@@ -79,7 +107,6 @@ class RBMDataSet:
         if isinstance(satellite, str):
             satellite = SatelliteEnum[satellite.upper()]
         self._satellite = satellite
-
         self._instrument = instrument
         self._mfm = mfm
         self._folder_path = Path(folder_path)
@@ -92,6 +119,9 @@ class RBMDataSet:
         self._file_name_stem = self._create_file_name_stem()
         self._file_cadence = self._satellite.file_cadence
         self._date_of_files = self._create_date_list()
+
+    def __dir__(self):
+        return super().__dir__() + [var.var_name for var in VariableEnum]
 
     def __getattr__(self, name: str):
         # check if a sat variable is requested
@@ -119,10 +149,10 @@ class RBMDataSet:
 
         if levenstein_info["min_distance"] <= 2:
             msg = f"{self.__class__.__name__} object has no attribute {name}. Maybe you meant {levenstein_info['var_name']}?"
-            raise AttributeError(msg)
         else:
             msg = f"{self.__class__.__name__} object has no attribute {name}"
-            raise AttributeError(msg)
+
+        raise AttributeError(msg)
 
     # def __getitem__(self, key:str):
     #     return getattr(self, key:str)
@@ -144,9 +174,7 @@ class RBMDataSet:
                 raise ValueError(msg)
 
         start_date = self._start_time.date()
-        date_of_files = np.asarray(
-            [dt.datetime(start_date.year, start_date.month, 1, tzinfo=timezone.utc)]
-        )
+        date_of_files = np.asarray([dt.datetime(start_date.year, start_date.month, 1, tzinfo=timezone.utc)])
         while (date_of_files[-1] + time_delta) < self._end_time:
             date_of_files = np.append(date_of_files, date_of_files[-1] + time_delta)
 
@@ -156,14 +184,8 @@ class RBMDataSet:
         # implement special cases here
         # if self._satellite == SatelliteEnum.THEMIS:
         #     pass
-
         if self._folder_type == FolderTypeEnum.DataServer:
-            return (
-                self._folder_path
-                / self._satellite.mission
-                / self._satellite.sat_name
-                / "Processed_Mat_Files"
-            )
+            return self._folder_path / self._satellite.mission / self._satellite.sat_name / "Processed_Mat_Files"
 
         if self._folder_type == FolderTypeEnum.SingleFolder:
             return self._folder_path
@@ -206,9 +228,7 @@ class RBMDataSet:
 
         # computed values
         if isinstance(var, VariableEnum) and var == VariableEnum.INV_V:
-            inv_K_repeated = np.repeat(
-                self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1
-            )
+            inv_K_repeated = np.repeat(self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1)
 
             self.InvV = self.InvMu * (inv_K_repeated + 0.5) ** 2
             return
@@ -221,15 +241,9 @@ class RBMDataSet:
             if self._folder_type == FolderTypeEnum.DataServer:
                 start_month = date.replace(day=1)
                 next_month = start_month + relativedelta(months=1, days=-1)
-                date_str = (
-                    start_month.strftime("%Y%m%d")
-                    + "to"
-                    + next_month.strftime("%Y%m%d")
-                )
+                date_str = start_month.strftime("%Y%m%d") + "to" + next_month.strftime("%Y%m%d")
 
-                file_name_no_format = (
-                    self._file_name_stem + date_str + "_" + var.data_server_file_prefix
-                )
+                file_name_no_format = self._file_name_stem + date_str + "_" + var.data_server_file_prefix
 
                 if var.data_server_has_B:
                     file_name_no_format += "_" + self._mfm.value
@@ -238,9 +252,7 @@ class RBMDataSet:
             else:
                 raise NotImplementedError
 
-            full_file_path = get_file_path_any_format(
-                self._file_path_stem, file_name_no_format, self._preferred_ext
-            )
+            full_file_path = get_file_path_any_format(self._file_path_stem, file_name_no_format, self._preferred_ext)
 
             if full_file_path is None:
                 print(f"File not found {full_file_path}")
@@ -259,9 +271,7 @@ class RBMDataSet:
             file_content["datetime"] = datetimes
 
             # limit in time
-            correct_time_idx = (datetimes >= self._start_time) & (
-                datetimes <= self._end_time
-            )
+            correct_time_idx = (datetimes >= self._start_time) & (datetimes <= self._end_time)
 
             for key in file_content:
                 # if key == 'time' and var not in [VariableEnum.Time, VariableEnum.DateTime]:
@@ -269,10 +279,9 @@ class RBMDataSet:
                 #    continue
 
                 var_arr = file_content[key]
-                if (
-                    (not isinstance(var_arr, np.ndarray))
-                    or (not np.issubdtype(var_arr.dtype, np.number))
-                ) and (key != "datetime"):
+                if ((not isinstance(var_arr, np.ndarray)) or (not np.issubdtype(var_arr.dtype, np.number))) and (
+                    key != "datetime"
+                ):
                     # var represents some strings or metadata objects; don't read them
                     continue
                 var_arr = typing.cast(NDArray[np.number], var_arr)
@@ -281,11 +290,7 @@ class RBMDataSet:
                 if var_arr.shape[0] == correct_time_idx.shape[0]:
                     var_arr = var_arr[correct_time_idx.reshape(-1), ...]
 
-                    joined_value = (
-                        join_var(loaded_var_arrs[key], var_arr)
-                        if key in loaded_var_arrs
-                        else var_arr
-                    )
+                    joined_value = join_var(loaded_var_arrs[key], var_arr) if key in loaded_var_arrs else var_arr
                 else:
                     joined_value = var_arr
 

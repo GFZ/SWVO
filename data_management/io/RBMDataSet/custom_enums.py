@@ -11,11 +11,13 @@ class FolderTypeEnum(Enum):
     Default = 0
     SingleFolder = 1
     DataServer = 2
+    NoFolder = -1
 
 
 class FileCadenceEnum(Enum):
     Daily = 0
     Monthly = 1
+    NoCadence = -1
 
 
 @dataclass(frozen=True)
@@ -90,9 +92,9 @@ class SatelliteEnum(Satellite, Enum):
     RBSPA = "rbspa", "RBSP"
     RBSPB = "rbspb", "RBSP"
 
-    GOES13 = "GOES13", "GOES"
-    GOES14 = "GOES14", "GOES"
-    GOES15 = "GOES15", "GOES"
+    GOES13 = "goes13", "GOES"
+    GOES14 = "goes14", "GOES"
+    GOES15 = "goes15", "GOES"
 
     GOESPrimary = "primary", "GOES"
     GOESSecondary = "secondary", "GOES"
@@ -105,6 +107,8 @@ class SatelliteEnum(Satellite, Enum):
     NOAA19 = "noaa19", "poes"
     METOP1 = "metop1", "poes"
     METOP2 = "metop2", "poes"
+
+    DSX = "dsx", "DSX"
 
 
 SatelliteLiteral = Literal[
@@ -122,6 +126,7 @@ SatelliteLiteral = Literal[
     "NOAA19",
     "METOP1",
     "METOP2",
+    "DSX",
 ]
 SatelliteLike: TypeAlias = SatelliteLiteral | SatelliteEnum | Satellite
 
@@ -151,3 +156,8 @@ class InstrumentEnum(Enum):
 class MfmEnum(Enum):
     T89 = "n4_4_T89"
     T04s = "n4_4_T04s"
+
+class ElPasoMFMEnum(Enum):
+    T89 = "T89"
+    T04s = "T04s"
+    T04 = "T04"
