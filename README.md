@@ -1,9 +1,11 @@
 # data_management
 
-The aim of this project is to contain frameworks and scripts that deal with data produced at different steps of the PAGER project pipeline.
+## Installation
+To install the package, run the following command:
 
-REQUIREMENTS:
-		have the ffmpeg package installed on your operating system
-		run install.sh before using these scripts
-		have access to the /PAGER folder from the spacepager machines (mount it with sshfs if needed)
-		if expecting to use this scripts in a docker application, have sudo access
+```bash
+pip install .
+```
+
+## Introduction
+This package provides a set of tools for managing solar data in Python. It includes functionalities for reading, writing, and processing data from various sources.
