@@ -1,3 +1,7 @@
+"""
+Module for handling Niemegk Kp data.
+"""
+
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -10,17 +14,10 @@ import numpy as np
 import pandas as pd
 import wget
 
-from data_management.io.decorators import (
-    add_time_docs,
-    add_attributes_to_class_docstring,
-    add_methods_to_class_docstring,
-)
 
 logging.captureWarnings(True)
 
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class KpNiemegk:
     """A class to handle Niemegk Kp data.
 
@@ -28,6 +25,11 @@ class KpNiemegk:
     ----------
     data_dir : str | Path, optional
         Data directory for the Niemegk Kp data. If not provided, it will be read from the environment variable
+
+    Methods
+    -------
+    download_and_process
+    read
 
     Raises
     ------
@@ -57,7 +59,6 @@ class KpNiemegk:
 
         logging.info(f"Kp Niemegk  data directory: {self.data_dir}")
 
-    @add_time_docs("download")
     def download_and_process(
         self, start_time: datetime, end_time: datetime, reprocess_files: bool = False
     ) -> None:
@@ -65,6 +66,10 @@ class KpNiemegk:
 
         Parameters
         ----------
+        start_time : datetime
+            Start time of the data to download and process.
+        end_time : datetime
+            End time of the data to download and process.
         reprocess_files : bool, optional
             Downloads and processes the files again, defaults to False, by default False
 
@@ -122,7 +127,6 @@ class KpNiemegk:
         finally:
             rmtree(temporary_dir)
 
-    @add_time_docs("read")
     def read(
         self, start_time: datetime, end_time: datetime, download: bool = False
     ) -> pd.DataFrame:
@@ -130,12 +134,16 @@ class KpNiemegk:
 
         Parameters
         ----------
+        start_time : datetime
+            Start time of the data to read.
+        end_time : datetime
+            End time of the data to read.
         download : bool, optional
             Download data on the go, defaults to False.
 
         Returns
         -------
-        pd.DataFrame
+        :class:`pandas.DataFrame`
             Niemegk Kp dataframe.
         """
 
@@ -179,7 +187,6 @@ class KpNiemegk:
 
         return data_out
 
-    @add_time_docs(None)
     def _get_processed_file_list(
         self, start_time: datetime, end_time: datetime
     ) -> Tuple[List, List]:

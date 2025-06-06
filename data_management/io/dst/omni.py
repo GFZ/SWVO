@@ -1,3 +1,7 @@
+"""
+Module for handling OMNI Dst data.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -9,18 +13,10 @@ import numpy as np
 import pandas as pd
 
 from data_management.io.omni import OMNILowRes
-from data_management.io.decorators import (
-    add_time_docs,
-    add_attributes_to_class_docstring,
-    add_methods_to_class_docstring,
-)
-
 
 logging.captureWarnings(True)
 
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class DSTOMNI(OMNILowRes):
     """
     Class for reading F10.7 data from OMNI DST files.
@@ -39,7 +35,6 @@ class DSTOMNI(OMNILowRes):
         super().__init__(data_dir=data_dir)
 
     # data is downloaded along with OMNI data, check file name in parent class
-    @add_time_docs("read")
     def read(
         self, start_time: datetime, end_time: datetime, download: bool = False
     ) -> pd.DataFrame:
@@ -48,12 +43,16 @@ class DSTOMNI(OMNILowRes):
 
         Parameters
         ----------
+        start_time : datetime
+            Start time of the data to read. Must be timezone-aware.
+        end_time : datetime
+            End time of the data to read. Must be timezone-aware.
         download : bool, optional
             Download data on the go, defaults to False.
 
         Returns
         -------
-        pd.DataFrame
+        :class:`pandas.DataFrame`
             OMNI DST data.
         """
         if not start_time.tzinfo:

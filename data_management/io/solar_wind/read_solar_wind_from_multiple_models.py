@@ -44,7 +44,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
 
     Returns
     -------
-    pd.DataFrame or list of pandas.DataFrame
+    Union[:class:`pandas.DataFrame`, list[:class:`pandas.DataFrame`]]
         A data frame or a list of data frames containing data for the requested period.
     """
 

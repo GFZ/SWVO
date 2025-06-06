@@ -1,3 +1,7 @@
+"""
+Module for handling SWPC Kp data.
+"""
+
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -10,17 +14,10 @@ import numpy as np
 import wget
 import re
 
-from data_management.io.decorators import (
-    add_time_docs,
-    add_attributes_to_class_docstring,
-    add_methods_to_class_docstring,
-)
 
 logging.captureWarnings(True)
 
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class KpSWPC:
     """
     A class for handling SWPC Kp data.
@@ -30,6 +27,11 @@ class KpSWPC:
     ----------
     data_dir : str | Path, optional
         Data directory for the SWPC Kp data. If not provided, it will be read from the environment variable
+
+    Methods
+    -------
+    download_and_process
+    read
 
     Raises
     ------
@@ -61,7 +63,8 @@ class KpSWPC:
     def download_and_process(
         self, target_date: datetime, reprocess_files: bool = False
     ):
-        """Download and process SWPC Kp data file.
+        """
+        Download and process SWPC Kp data file.
 
         Parameters
         ----------
@@ -108,14 +111,18 @@ class KpSWPC:
         finally:
             rmtree(temporary_dir)
 
-    @add_time_docs("read")
     def read(
         self, start_time: datetime, end_time: datetime = None, download: bool = False
     ) -> pd.DataFrame:
-        """Read Kp data for the specified time range.
+        """
+        Read Kp data for the specified time range.
 
         Parameters
         ----------
+        start_time : datetime
+            Start time of the data to read.
+        end_time : datetime, optional
+            End time of the data to read. If not provided, it will be set to 3 days after `start_time`.
         download : bool, optional
             Download data on the go, defaults to False.
 

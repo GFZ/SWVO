@@ -1,3 +1,7 @@
+"""
+Module for handling WDC Dst data.
+"""
+
 import logging
 import os
 import re
@@ -11,29 +15,27 @@ import numpy as np
 import pandas as pd
 import wget
 
-from data_management.io.decorators import (
-    add_time_docs,
-    add_attributes_to_class_docstring,
-    add_methods_to_class_docstring,
-)
 
 logging.captureWarnings(True)
 
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class DSTWDC:
-    """This is a class for theWDC Dst data.
+    """This is a class for the WDC Dst data.
 
     Parameters
     ----------
     data_dir : str | Path, optional
         Data directory for the WDC Dst data. If not provided, it will be read from the environment variable
 
+    Methods
+    -------
+    download_and_process
+    read
+
     Raises
     ------
     ValueError
-        Returns `ValueError` if necessary environment variable is not set.
+        Raises `ValueError` if necessary environment variable is not set.
     """
 
     ENV_VAR_NAME = "WDC_STREAM_DIR"
@@ -55,14 +57,17 @@ class DSTWDC:
 
         logging.info(f"WDC Dst data directory: {self.data_dir}")
 
-    @add_time_docs("download")
     def download_and_process(
         self, start_time: datetime, end_time: datetime, reprocess_files: bool = False
     ) -> None:
-        """Download and processWDC Dst data files.
+        """Download and process WDC Dst data files.
 
         Parameters
         ----------
+        start_time : datetime
+            Start time of the data to download. Must be timezone-aware.
+        end_time : datetime
+            End time of the data to download. Must be timezone-aware.
         reprocess_files : bool, optional
             Downloads and processes the files again, defaults to False, by default False
 
@@ -108,7 +113,6 @@ class DSTWDC:
         finally:
             rmtree(temporary_dir, ignore_errors=True)
 
-    @add_time_docs(None)
     def _get_processed_file_list(
         self, start_time: datetime, end_time: datetime
     ) -> Tuple[List, List]:
@@ -201,22 +205,24 @@ class DSTWDC:
 
         return df
 
-    @add_time_docs("read")
     def read(
         self, start_time: datetime, end_time: datetime, download: bool = False
     ) -> pd.DataFrame:
         """
-        Read WDC Dst data for the given time range. it always returns the data until the last day of the month or incase of
-        current month, until the current day.
+        Read WDC Dst data for the given time range. it always returns the data until the last day of the month or incase of current month, until the current day.
 
         Parameters
         ----------
+        start_time : datetime
+            Start time of the data to read. Must be timezone-aware.
+        end_time : datetime
+            End time of the data to read. Must be timezone-aware.
         download : bool, optional
             Download data on the go, defaults to False.
 
         Returns
         -------
-        pd.DataFrame
+        :class:`pandas.DataFrame`
            WDC Dst data.
         """
 

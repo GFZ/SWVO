@@ -5,14 +5,10 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import warnings
-from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
-
 
 import pandas as pd
 
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class HpEnsemble:
     """This is a base class for Hp ensemble data.
 
@@ -22,6 +18,10 @@ class HpEnsemble:
         Hp index Possible options are: hp30, hp60.
     data_dir : str | Path, optional
         Data directory for the Hp data. If not provided, it will be read from the environment variable
+
+    Methods
+    -------
+    read
 
     Raises
     ------
@@ -57,13 +57,20 @@ class HpEnsemble:
 
         self.index_number = index[2:]
 
-    @add_time_docs("read")
-    def read(self, start_time: datetime, end_time: datetime) -> list:
-        """Read Hp ensemble data for the requested period.
+    def read(self, start_time: datetime, end_time: datetime) -> list[pd.DataFrame]:
+        """
+        Read Hp ensemble data for the requested period.
+
+        Parameters
+        ----------
+        start_time : datetime
+            Start time of the data to read. Must be timezone-aware.
+        end_time : datetime
+            End time of the data to read. Must be timezone-aware.
 
         Returns
         -------
-        list
+        list[:class:`pandas.DataFrame`]
             List of ensemble data frames containing data for the requested period.
 
         Raises
@@ -85,12 +92,16 @@ class HpEnsemble:
         start_date = start_time.replace(microsecond=0, minute=0, second=0)
         str_date = start_date.strftime("%Y%m%dT%H0000")
         file_list_new_name = sorted(
-            self.data_dir.glob(f"FORECAST_{self.index.title()}_{str_date}_ensemble_*.csv"),
+            self.data_dir.glob(
+                f"FORECAST_{self.index.title()}_{str_date}_ensemble_*.csv"
+            ),
             key=lambda x: int(x.stem.split("_")[-1]),
         )
 
         file_list_old_name = sorted(
-            self.data_dir.glob(f"FORECAST_{self.index.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_*.csv"),   
+            self.data_dir.glob(
+                f"FORECAST_{self.index.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_*.csv"
+            ),
             key=lambda x: int(x.stem.split("_")[-1]),
         )
         data = []
@@ -102,7 +113,8 @@ class HpEnsemble:
         elif len(file_list_old_name) > 0:
             warnings.warn(
                 "The use of FORECAST_HP*_SWIFT_DRIVEN_swift_* files is deprecated. However since we still have these files from the PAGER project with this prefix, this will be supported",
-                DeprecationWarning,)
+                DeprecationWarning,
+            )
             file_list = file_list_old_name
 
         if len(file_list) == 0:
@@ -127,8 +139,6 @@ class HpEnsemble:
         return data
 
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class Hp30Ensemble(HpEnsemble):
     """A class to handle Hp30 ensemble data.
 
@@ -144,8 +154,6 @@ class Hp30Ensemble(HpEnsemble):
         super().__init__("hp30", data_dir)
 
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class Hp60Ensemble(HpEnsemble):
     """A class to handle Hp30 ensemble data.
 

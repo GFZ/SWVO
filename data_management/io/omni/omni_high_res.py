@@ -1,3 +1,7 @@
+"""
+Module for handling OMNI high resolution data.
+"""
+
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -9,12 +13,7 @@ import numpy as np
 import pandas as pd
 import wget
 
-from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
 
-
-
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class OMNIHighRes:
     """This is a class for the OMNI High Resolution data.
 
@@ -22,6 +21,11 @@ class OMNIHighRes:
     ----------
     data_dir : str | Path, optional
         Data directory for the OMNI High Resolution data. If not provided, it will be read from the environment variable
+
+    Methods
+    -------
+    download_and_process
+    read
 
     Raises
     ------
@@ -102,7 +106,6 @@ class OMNIHighRes:
 
         logging.info(f"OMNI high resolution data directory: {self.data_dir}")
 
-    @add_time_docs("download")
     def download_and_process(
         self,
         start_time: datetime,
@@ -114,6 +117,10 @@ class OMNIHighRes:
 
         Parameters
         ----------
+        start_time : datetime
+            Start time for data download.
+        end_time : datetime
+            End time for data download.
         cadence_min : float, optional
             Cadence of the data in minutes, defaults to 1
         reprocess_files : bool, optional
@@ -165,7 +172,6 @@ class OMNIHighRes:
         finally:
             rmtree(temporary_dir, ignore_errors=True)
 
-    @add_time_docs("read")
     def read(
         self,
         start_time: datetime,
@@ -178,6 +184,10 @@ class OMNIHighRes:
 
         Parameters
         ----------
+        start_time : datetime
+            Start time for reading data.
+        end_time : datetime
+            End time for reading data.
         cadence_min : float, optional
             Cadence of the data in minutes, defaults to 1
         download : bool, optional
@@ -185,7 +195,7 @@ class OMNIHighRes:
 
         Returns
         -------
-        pd.DataFrame
+        :class:`pandas.DataFrame`
             OMNI High Resolution data.
 
         Raises
@@ -241,7 +251,6 @@ class OMNIHighRes:
 
         return data_out
 
-    @add_time_docs(None)
     def _get_processed_file_list(
         self, start_time: datetime, end_time: datetime, cadence_min: float
     ) -> Tuple[List, List]:

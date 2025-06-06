@@ -18,12 +18,14 @@ from scipy.io import loadmat as sci_loadmat
 def join_var(
     var1: NDArray[np.generic], var2: NDArray[np.generic]
 ) -> NDArray[np.generic]:
+    """Join two variables along the first axis."""
     return np.concatenate((var1, var2), axis=0)
 
 
 def get_file_path_any_format(
     folder_path: Path, file_stem: str, preferred_ext: str
 ) -> Path | None:
+    """Get the file path for a given file stem and preferred extension."""
     all_files = list(folder_path.glob(file_stem + ".*"))
 
     if len(all_files) == 0:
@@ -52,11 +54,12 @@ def get_file_path_any_format(
                 stacklevel=2,
             )
             return None
-        
+
     return None
 
 
 def load_file_any_format(file_path: Path) -> dict[str, Any]:
+    """Load a file in any supported format and return its content."""
     match file_path.suffix:
         case ".mat":
             try:
@@ -83,20 +86,26 @@ def load_file_any_format(file_path: Path) -> dict[str, Any]:
 
 
 def round_seconds(obj: datetime) -> datetime:
+    """Round datetime object to the nearest second."""
     if obj.microsecond >= 500_000:
         obj += timedelta(seconds=1)
     return obj.replace(microsecond=0)
 
 
 def python2matlab(datenum: datetime) -> float:
+    """Convert Python datetime to MATLAB datenum."""
     mdn = datenum + timedelta(days=366)
     frac = (
-        datenum - datetime(datenum.year, datenum.month, datenum.day, 0, 0, 0, tzinfo=timezone.utc)
+        datenum
+        - datetime(
+            datenum.year, datenum.month, datenum.day, 0, 0, 0, tzinfo=timezone.utc
+        )
     ).seconds / (24.0 * 60.0 * 60.0)
     return mdn.toordinal() + round(frac, 6)
 
 
 def matlab2python(datenum: float | Iterable) -> Iterable[datetime] | datetime:
+    """Convert MATLAB datenum to Python datetime."""
     warnings.filterwarnings(
         "ignore", message="Discarding nonzero nanoseconds in conversion"
     )
@@ -115,14 +124,18 @@ def matlab2python(datenum: float | Iterable) -> Iterable[datetime] | datetime:
     return datenum
 
 
-def pol2cart(theta, radius):
+def pol2cart(
+    theta: NDArray[np.float64], radius: NDArray[np.float64]
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """transforms polar coordinates theta (in rad) and radius to cartesian coordinates x, y"""
     x = radius * np.cos(theta)
     y = radius * np.sin(theta)
     return (x, y)
 
 
-def cart2pol(x, y):
+def cart2pol(
+    x: NDArray[np.float64], y: NDArray[np.float64]
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """transforms cartesian coordinates x, y to polar coordinates theta (in rad) and radius"""
     z = x + 1j * y
     return np.angle(z), np.abs(z)

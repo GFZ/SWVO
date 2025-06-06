@@ -44,9 +44,8 @@ def read_dst_from_multiple_models(
 
     Returns
     -------
-    pd.DataFrame or list of pd.DataFrame
-        A data frame or a list of data frames containing data for the requested
-        period.
+    :class:`pandas.DataFrame`
+        A data frame containing data for the requested period.
     """
 
     if synthetic_now_time is None:

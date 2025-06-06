@@ -1,3 +1,9 @@
+"""
+Module for handling SWIFT solar wind ensemble data.
+"""
+
+
+
 import datetime as dt
 import json
 import logging
@@ -8,17 +14,9 @@ import warnings
 import numpy as np
 import pandas as pd
 from data_management.io.utils import sw_mag_propagation
-from data_management.io.decorators import (
-    add_time_docs,
-    add_attributes_to_class_docstring,
-    add_methods_to_class_docstring,
-)
-
 logging.captureWarnings(True)
 
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class SWSWIFTEnsemble:
     """
     This is a class for SWIFT ensemble data.
@@ -27,6 +25,10 @@ class SWSWIFTEnsemble:
     ----------
     data_dir : str | Path, optional
         Data directory for the SWIFT Ensemble data. If not provided, it will be read from the environment variable
+
+    Methods
+    -------
+    read
 
     Raises
     ------
@@ -59,7 +61,6 @@ class SWSWIFTEnsemble:
                 f"Data directory {self.data_dir} does not exist! Impossible to retrieve data!"
             )
 
-    @add_time_docs("read")
     def read(
         self, start_time: datetime, end_time: datetime, propagation: bool = False
     ) -> list:
@@ -70,12 +71,19 @@ class SWSWIFTEnsemble:
 
         Parameters
         ----------
+        start_time : datetime
+            Start time of the data to read. Must be timezone-aware.
+        end_time : datetime
+            End time of the data to read. Must be timezone-aware.
+            If not provided, it defaults to 3 days after the start time.
+            If `propagation` is True, it defaults to 2 days after the start time.
+            If `propagation` is False, it defaults to 3 days after the start time.
         propagation : bool, optional
             Propagate the data from L1 to near-Earth, defaults to False.
 
         Returns
         -------
-        list
+        list[:class:`pandas.DataFrame`]
             A list of data frames containing ensemble data for the requested period.
 
         Raises

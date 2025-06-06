@@ -43,8 +43,8 @@ def read_f107_from_multiple_models(
 
     Returns
     -------
-    pd.DataFrame or list of pd.DataFrame
-        A data frame or a list of data frames containing data for the requested 
+    :class:`pandas.DataFrame`
+        A data frame containing data for the requested 
         period.
     """
 

@@ -11,8 +11,6 @@ import pandas as pd
 
 from data_management.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ
 from data_management.io.utils import any_nans, construct_updated_data_frame
-from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
-
 
 
 HpModel = Hp30Ensemble | Hp30GFZ | Hp60Ensemble | Hp60GFZ
@@ -53,7 +51,7 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
 
     Returns
     -------
-    pd.DataFrame | list of pd.DataFrame
+    Union[:class:`pandas.DataFrame`, list[:class:`pandas.DataFrame`]]
         A data frame or a list of data frames containing data for the requested period.
     """
     if synthetic_now_time is None:
@@ -93,7 +91,7 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     return data_out
 
 
-@add_time_docs(None)
+
 def _read_from_model(  # noqa: PLR0913
     model: HpModel,
     start_time: datetime,
@@ -103,26 +101,7 @@ def _read_from_model(  # noqa: PLR0913
     *,
     download: bool,
 ) -> list[pd.DataFrame] | pd.DataFrame:
-    """
 
-    Parameters
-    ----------
-    start_time : datetime
-        _description_
-    end_time : datetime
-        _description_
-    synthetic_now_time : datetime
-        _description_
-    reduce_ensemble : str
-        _description_
-    download : bool
-        _description_
-
-    Returns
-    -------
-    list[pd.DataFrame] | pd.DataFrame
-        _description_
-    """
     # Read from historical models
     if isinstance(model, (Hp30GFZ, Hp60GFZ)):
         data_one_model = _read_historical_model(
