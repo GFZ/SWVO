@@ -22,7 +22,7 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     model_order: list[HpModel] | None = None,
     hp_index: str = "hp30",
     reduce_ensemble: Literal["mean", "median"] | None = None,
-    synthetic_now_time: datetime | None = None,
+    historical_data_cutoff_time: datetime | None = None,
     *,
     download: bool = False,
 ) -> pd.DataFrame | list[pd.DataFrame]:
@@ -44,7 +44,7 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
         Order in which data will be read from the models, defaults to [OMNI, Niemegk, Ensemble, SWPC].
     reduce_ensemble : {"mean"}, optional
         The method to reduce ensembles to a single time series, defaults to None.
-    synthetic_now_time : datetime, optional
+    historical_data_cutoff_time : datetime, optional
         Time, which represents "now". After this time, no data will be taken from historical models (OMNI, Niemegk), defaults to None.
     download : bool, optional
         Flag which decides whether new data should be downloaded, defaults to False.
@@ -54,8 +54,8 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     Union[:class:`pandas.DataFrame`, list[:class:`pandas.DataFrame`]]
         A data frame or a list of data frames containing data for the requested period.
     """
-    if synthetic_now_time is None:
-        synthetic_now_time = min(datetime.now(timezone.utc), end_time)
+    if historical_data_cutoff_time is None:
+        historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
 
     hp_index = hp_index.lower()
 
@@ -75,7 +75,7 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
             model,
             start_time,
             end_time,
-            synthetic_now_time,
+            historical_data_cutoff_time,
             reduce_ensemble,
             download=download,
         )
@@ -96,7 +96,7 @@ def _read_from_model(  # noqa: PLR0913
     model: HpModel,
     start_time: datetime,
     end_time: datetime,
-    synthetic_now_time: datetime,
+    historical_data_cutoff_time: datetime,
     reduce_ensemble: str,
     *,
     download: bool,
@@ -109,13 +109,13 @@ def _read_from_model(  # noqa: PLR0913
             start_time,
             end_time,
             model.index,
-            synthetic_now_time,
+            historical_data_cutoff_time,
             download=download,
         )
 
     if isinstance(model, (Hp30Ensemble, Hp60Ensemble)):
         data_one_model = _read_latest_ensemble_files(
-            model, model.index, synthetic_now_time, end_time
+            model, model.index, historical_data_cutoff_time, end_time
         )
 
         num_ens_members = len(data_one_model)
@@ -133,7 +133,7 @@ def _read_historical_model(
     start_time: datetime,
     end_time: datetime,
     hp_index: str,
-    synthetic_now_time: datetime,
+    historical_data_cutoff_time: datetime,
     *,
     download: bool,
 ) -> pd.DataFrame:
@@ -151,7 +151,7 @@ def _read_historical_model(
         The end time for the data reading.
     hp_index : str
         The index to be used for setting NaN values.
-    synthetic_now_time : datetime
+    historical_data_cutoff_time : datetime
         The synthetic current time to determine future values.
     download : bool
         Flag indicating whether to download the data.
@@ -176,9 +176,9 @@ def _read_historical_model(
     data_one_model = model.read(start_time, end_time, download=download)
 
     # set nan for 'future' values
-    data_one_model.loc[synthetic_now_time:end_time, hp_index] = np.nan
+    data_one_model.loc[historical_data_cutoff_time:end_time, hp_index] = np.nan
     logging.info(
-        f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}"
+        f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}"
     )
 
     return data_one_model
@@ -187,7 +187,7 @@ def _read_historical_model(
 def _read_latest_ensemble_files(
     model: Hp30Ensemble | Hp60Ensemble,
     hp_index: str,
-    synthetic_now_time: datetime,
+    historical_data_cutoff_time: datetime,
     end_time: datetime,
 ) -> list[pd.DataFrame]:
     # we are trying to read the most recent file; it this fails, we go 1 hour back and see if this file is present
@@ -202,7 +202,7 @@ def _read_latest_ensemble_files(
         The model from which to read ensemble data.
     hp_index : str
         The index to be used for setting NaN values.
-    synthetic_now_time : datetime
+    historical_data_cutoff_time : datetime
         The synthetic current time to determine future values.
     end_time : datetime
         The end time for the data reading.
@@ -216,11 +216,11 @@ def _read_latest_ensemble_files(
     -------
     FileNotFoundError
     """
-    target_time = synthetic_now_time
+    target_time = historical_data_cutoff_time
 
     data_one_model = pd.DataFrame(data={hp_index: []})
 
-    while target_time > (synthetic_now_time - timedelta(days=3)):
+    while target_time > (historical_data_cutoff_time - timedelta(days=3)):
         # ONLY READ MIDNIGHT FILE FOR NOW; OTHER FILES BREAK
         target_time = target_time.replace(hour=0, minute=0, second=0)
 

@@ -62,7 +62,7 @@ class TestReadSolarWindFromMultipleModels:
             start_time=sample_times["past_start"],
             end_time=sample_times["past_end"],
             model_order=[SWOMNI(), DSCOVR(), SWACE()],
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
 
         assert isinstance(data, pd.DataFrame)
@@ -77,7 +77,7 @@ class TestReadSolarWindFromMultipleModels:
             start_time=sample_times["future_start"],
             end_time=sample_times["future_end"],
             model_order=[SWSWIFTEnsemble()],
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
         assert all(isinstance(d, pd.DataFrame) for d in data)
         assert all(not d["file_name"].isna().all() for d in data)
@@ -92,7 +92,7 @@ class TestReadSolarWindFromMultipleModels:
             end_time=sample_times["future_end"],
             model_order=[SWSWIFTEnsemble()],
             reduce_ensemble=None,
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
 
         assert isinstance(data, list)
@@ -107,7 +107,7 @@ class TestReadSolarWindFromMultipleModels:
             start_time=sample_times["past_start"],
             end_time=sample_times["future_end"],
             model_order=[SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble()],
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
 
         for d in data:
@@ -122,7 +122,7 @@ class TestReadSolarWindFromMultipleModels:
             start_time=sample_times["past_start"],
             end_time=sample_times["past_end"],
             model_order=[SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble()],
-            synthetic_now_time=sample_times["test_time_now"] - timedelta(days=3),
+            historical_data_cutoff_time=sample_times["test_time_now"] - timedelta(days=3),
         )
 
         for d in data:
@@ -139,7 +139,7 @@ class TestReadSolarWindFromMultipleModels:
             start_time=start,
             end_time=end,
             model_order=[SWOMNI(), SWSWIFTEnsemble()],
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
 
         for d in data:
@@ -159,7 +159,7 @@ class TestReadSolarWindFromMultipleModels:
             "start_time": sample_times["past_start"],
             "end_time": sample_times["future_start"],
             "model_order": [SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble()],
-            "synthetic_now_time": sample_times["test_time_now"],
+            "historical_data_cutoff_time": sample_times["test_time_now"],
         }
 
         data1 = read_solar_wind_from_multiple_models(**params)

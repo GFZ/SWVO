@@ -18,7 +18,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     end_time: datetime,
     model_order: list[SWModel] | None = None,
     reduce_ensemble: str | None = None,
-    synthetic_now_time: datetime | None = None,
+    historical_data_cutoff_time: datetime | None = None,
     *,
     download: bool = False,
 ) -> pd.DataFrame | list[pd.DataFrame]:
@@ -37,7 +37,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
         Order in which data will be read from the models. Defaults to [OMNI, ACE, SWIFT].
     reduce_ensemble : {'mean'}, optional
         The method to reduce ensembles to a single time series. Defaults to None.
-    synthetic_now_time : datetime, optional
+    historical_data_cutoff_time : datetime, optional
         Time which represents "now". After this time, no data will be taken from historical models (OMNI, ACE). Defaults to None.
     download : bool, optional
         Flag which decides whether new data should be downloaded. Defaults to False.
@@ -48,8 +48,8 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
         A data frame or a list of data frames containing data for the requested period.
     """
 
-    if synthetic_now_time is None:
-        synthetic_now_time = min(datetime.now(timezone.utc), end_time)
+    if historical_data_cutoff_time is None:
+        historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
 
     if model_order is None:
         model_order = [SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble()]
@@ -62,7 +62,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
             model,
             start_time,
             end_time,
-            synthetic_now_time,
+            historical_data_cutoff_time,
             reduce_ensemble,
             download=download,
         )
@@ -81,7 +81,7 @@ def _read_from_model(  # noqa: PLR0913
     model: SWModel,
     start_time: datetime,
     end_time: datetime,
-    synthetic_now_time: datetime,
+    historical_data_cutoff_time: datetime,
     reduce_ensemble: str,
     *,
     download: bool,
@@ -96,7 +96,7 @@ def _read_from_model(  # noqa: PLR0913
         The start time of the data range.
     end_time : datetime
         The end time of the data range.
-    synthetic_now_time : datetime
+    historical_data_cutoff_time : datetime
         Represents "now". Used for defining boundaries for historical or forecast data.
     reduce_ensemble : str
         The method to reduce ensemble data (e.g., "mean"). If None, ensemble members are not reduced.
@@ -115,13 +115,13 @@ def _read_from_model(  # noqa: PLR0913
             model,
             start_time,
             end_time,
-            synthetic_now_time,
+            historical_data_cutoff_time,
             download=download,
         )
 
     # Forecasting models are called with synthetic now time
     if isinstance(model, SWSWIFTEnsemble):
-        data_one_model = _read_latest_ensemble_files(model, synthetic_now_time, end_time)
+        data_one_model = _read_latest_ensemble_files(model, historical_data_cutoff_time, end_time)
 
         num_ens_members = len(data_one_model)
 
@@ -135,7 +135,7 @@ def _read_historical_model(
     model: DSCOVR | SWACE | SWOMNI,
     start_time: datetime,
     end_time: datetime,
-    synthetic_now_time: datetime,
+    historical_data_cutoff_time: datetime,
     *,
     download: bool,
 ) -> tuple[pd.DataFrame, str]:
@@ -150,7 +150,7 @@ def _read_historical_model(
         The start time of the data range.
     end_time : datetime
         The end time of the data range.
-    synthetic_now_time : datetime
+    historical_data_cutoff_time : datetime
         Represents "now". Data after this time is set to NaN.
     download : bool, optional
         Whether to download new data or not.
@@ -158,7 +158,7 @@ def _read_historical_model(
     Returns
     -------
     pd.DataFrame
-        A data frame containing the model data with future values (after synthetic_now_time) set to NaN.
+        A data frame containing the model data with future values (after historical_data_cutoff_time) set to NaN.
 
     Raises
     ------
@@ -180,15 +180,15 @@ def _read_historical_model(
 
     data_one_model = model.read(start_time, end_time, download=download)
     # set nan for 'future' values
-    data_one_model.loc[synthetic_now_time+timedelta(minutes=1):end_time] = np.nan
-    logging.info(f"Setting NaNs in {model.LABEL} from {synthetic_now_time} to {end_time}")
+    data_one_model.loc[historical_data_cutoff_time+timedelta(minutes=1):end_time] = np.nan
+    logging.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
 
     return data_one_model
 
 
 def _read_latest_ensemble_files(
     model: SWSWIFTEnsemble,
-    synthetic_now_time: datetime,
+    historical_data_cutoff_time: datetime,
     end_time: datetime,
 ) -> list[pd.DataFrame]:
     # we are trying to read the most recent file; it this fails, we go one step back (1 day) and see if this file is present
@@ -202,7 +202,7 @@ def _read_latest_ensemble_files(
     ----------
     model : SWSWIFTEnsemble
         The ensemble model from which to read the data.
-    synthetic_now_time : datetime
+    historical_data_cutoff_time : datetime
         Represents "now". The function starts searching for files from this time.
     end_time : datetime
         The end time of the data range.
@@ -213,17 +213,17 @@ def _read_latest_ensemble_files(
         A list of data frames containing ensemble data for the specified range.
     """
 
-    target_time = min(synthetic_now_time, end_time)
+    target_time = min(historical_data_cutoff_time, end_time)
     data_one_model = []
 
-    while target_time > (synthetic_now_time - timedelta(days=5)):
+    while target_time > (historical_data_cutoff_time - timedelta(days=5)):
         data_one_model = model.read(target_time, end_time)
 
         if len(data_one_model) == 0:
             target_time -= timedelta(days=1)
             continue
 
-        data_one_model = _interpolate_to_common_indices(target_time, end_time, synthetic_now_time, data_one_model)
+        data_one_model = _interpolate_to_common_indices(target_time, end_time, historical_data_cutoff_time, data_one_model)
         break
 
     logging.info(f"Reading SWIFT ensemble from {target_time} to {end_time}")
@@ -232,7 +232,7 @@ def _read_latest_ensemble_files(
 
 
 def _interpolate_to_common_indices(
-    target_time: datetime, end_time: datetime, synthetic_now_time: datetime, data: list[pd.DataFrame]
+    target_time: datetime, end_time: datetime, historical_data_cutoff_time: datetime, data: list[pd.DataFrame]
 ) -> list[pd.DataFrame]:
     """
     Interpolate the data to a common index with a 1-minute frequency.
@@ -243,7 +243,7 @@ def _interpolate_to_common_indices(
         The start time for the interpolation.
     end_time : datetime
         The end time for the interpolation.
-    synthetic_now_time : datetime
+    historical_data_cutoff_time : datetime
         The "now" time, used for truncating data after interpolation.
     data : list[pd.DataFrame]
         The list of data frames to interpolate.
@@ -274,7 +274,7 @@ def _interpolate_to_common_indices(
 
         data[ie] = df_common_index
         data[ie] = data[ie].truncate(
-            before=synthetic_now_time - timedelta(minutes=0.999999), after=end_time + timedelta(minutes=0.999999)
+            before=historical_data_cutoff_time - timedelta(minutes=0.999999), after=end_time + timedelta(minutes=0.999999)
         )
 
     return data
