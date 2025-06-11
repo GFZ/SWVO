@@ -170,6 +170,7 @@ class DSCOVR:
         -------
         :class:`pandas.DataFrame`
             DataFrame containing DSCOVR Solar Wind data for the requested period.
+            
         Raises
         ------
         AssertionError
