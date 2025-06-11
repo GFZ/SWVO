@@ -2,7 +2,12 @@
 Welcome to data_management documentation!
 =========================================
 
-API:
+.. include:: ../README.md
+   :parser: myst_parser.sphinx_
+
+
+
+API
 ----
 
 .. autosummary::
