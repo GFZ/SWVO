@@ -3,6 +3,7 @@ from datetime import datetime, timezone, timedelta
 import pandas as pd
 import numpy as np
 import os
+from data_management.io import hp
 from data_management.io.hp import (
     Hp30Ensemble,
     Hp30GFZ,
@@ -154,6 +155,16 @@ class TestHpFromMultipleModels:
         data2 = read_hp_from_multiple_models(**params)
 
         pd.testing.assert_frame_equal(data1, data2)
+
+    def test_synthetic_now_time_deprecation_with_message(self, sample_times, hp_index, models):
+        with pytest.warns(DeprecationWarning, match="synthetic_now_time.*deprecated"):
+            read_hp_from_multiple_models(
+                start_time=sample_times["past_start"],
+                end_time=sample_times["future_end"],
+                synthetic_now_time=sample_times["test_time_now"],
+                hp_index=hp_index,
+                model_order=[models[0]()],
+            )
 
 
 def test_invalid_hp_index():
