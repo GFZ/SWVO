@@ -15,6 +15,8 @@ from data_management.io.utils import any_nans, construct_updated_data_frame
 
 KpModel = KpEnsemble | KpNiemegk | KpOMNI | KpSWPC
 
+logging.captureWarnings(True)
+
 
 def read_kp_from_multiple_models(  # noqa: PLR0913
     start_time: datetime,
@@ -23,6 +25,7 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
     reduce_ensemble: Literal["mean", "median"] | None = None,
     historical_data_cutoff_time: datetime | None = None,
     *,
+    synthetic_now_time: datetime | None = None,  # deprecated
     download: bool = False,
 ) -> pd.DataFrame | list[pd.DataFrame]:
     """Read Kp data from multiple models.
@@ -54,6 +57,16 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
         A data frame or a list of data frames containing data for the requested period.
 
     """
+    if synthetic_now_time is not None:
+        warnings.warn(
+            "`synthetic_now_time` is deprecated and will be removed in a future version. "
+            "Use `historical_data_cutoff_time` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if historical_data_cutoff_time is None:
+            historical_data_cutoff_time = synthetic_now_time
+
     if historical_data_cutoff_time is None:
         historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
 
@@ -194,9 +207,9 @@ def _read_historical_model(
 
     data_one_model = model.read(start_time, end_time, download=download)
     # set nan for 'future' values
-    data_one_model.loc[historical_data_cutoff_time + timedelta(hours=3) : end_time, "kp"] = (
-        np.nan
-    )
+    data_one_model.loc[
+        historical_data_cutoff_time + timedelta(hours=3) : end_time, "kp"
+    ] = np.nan
     logging.info(
         f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time + timedelta(hours=3)} to {end_time}"
     )
@@ -246,14 +259,16 @@ def _read_latest_ensemble_files(
             if "No ensemble files found" in str(e):
                 target_time -= timedelta(hours=1)
                 continue
-        
+
     logging.info(f"Read PAGER Kp ensemble from {target_time} to {end_time}")
 
     # Ensure the last index of every DataFrame is the next higher multiple of 3 hours than target_time
     adjusted_data = []
     for df in data_one_model:
         if not df.empty:
-            if df.index[-1] < end_time and (df.index[-1] - end_time) < timedelta(hours=3):
+            if df.index[-1] < end_time and (df.index[-1] - end_time) < timedelta(
+                hours=3
+            ):
                 df.loc[df.index[-1] + timedelta(hours=3)] = df.loc[df.index[-1]]
         adjusted_data.append(df)
     return adjusted_data

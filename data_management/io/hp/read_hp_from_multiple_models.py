@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Literal
-
+import warnings
 import numpy as np
 import pandas as pd
 
@@ -14,6 +14,8 @@ from data_management.io.utils import any_nans, construct_updated_data_frame
 
 
 HpModel = Hp30Ensemble | Hp30GFZ | Hp60Ensemble | Hp60GFZ
+
+logging.captureWarnings(True)
 
 
 def read_hp_from_multiple_models(  # noqa: PLR0913
@@ -24,6 +26,7 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     reduce_ensemble: Literal["mean", "median"] | None = None,
     historical_data_cutoff_time: datetime | None = None,
     *,
+    synthetic_now_time: datetime | None = None,  # deprecated
     download: bool = False,
 ) -> pd.DataFrame | list[pd.DataFrame]:
     """
@@ -54,6 +57,16 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     Union[:class:`pandas.DataFrame`, list[:class:`pandas.DataFrame`]]
         A data frame or a list of data frames containing data for the requested period.
     """
+    if synthetic_now_time is not None:
+        warnings.warn(
+            "`synthetic_now_time` is deprecated and will be removed in a future version. "
+            "Use `historical_data_cutoff_time` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if historical_data_cutoff_time is None:
+            historical_data_cutoff_time = synthetic_now_time
+
     if historical_data_cutoff_time is None:
         historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
 
@@ -91,7 +104,6 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     return data_out
 
 
-
 def _read_from_model(  # noqa: PLR0913
     model: HpModel,
     start_time: datetime,
@@ -101,7 +113,6 @@ def _read_from_model(  # noqa: PLR0913
     *,
     download: bool,
 ) -> list[pd.DataFrame] | pd.DataFrame:
-
     # Read from historical models
     if isinstance(model, (Hp30GFZ, Hp60GFZ)):
         data_one_model = _read_historical_model(

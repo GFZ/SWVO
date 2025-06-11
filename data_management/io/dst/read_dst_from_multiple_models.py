@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,8 @@ from data_management.io.utils import any_nans, construct_updated_data_frame
 
 DSTModel = DSTOMNI | DSTWDC
 
+logging.captureWarnings(True)
+
 
 def read_dst_from_multiple_models(
     start_time: datetime,
@@ -18,6 +21,7 @@ def read_dst_from_multiple_models(
     model_order: list[DSTModel] | None = None,
     historical_data_cutoff_time: datetime | None = None,
     *,
+    synthetic_now_time: datetime | None = None,  # deprecated
     download: bool = False,
 ) -> pd.DataFrame:
     """
@@ -47,6 +51,15 @@ def read_dst_from_multiple_models(
     :class:`pandas.DataFrame`
         A data frame containing data for the requested period.
     """
+    if synthetic_now_time is not None:
+        warnings.warn(
+            "`synthetic_now_time` is deprecated and will be removed in a future version. "
+            "Use `historical_data_cutoff_time` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if historical_data_cutoff_time is None:
+            historical_data_cutoff_time = synthetic_now_time
 
     if historical_data_cutoff_time is None:
         historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
@@ -64,11 +77,11 @@ def read_dst_from_multiple_models(
         index_range = pd.date_range(
             start=historical_data_cutoff_time, end=end_time, freq="h"
         )
-        data_one_model = data_one_model.reindex(
-            data_one_model.index.union(index_range)
-        )
+        data_one_model = data_one_model.reindex(data_one_model.index.union(index_range))
 
-        data_one_model.loc[data_one_model.index > historical_data_cutoff_time, "dst"] = np.nan
+        data_one_model.loc[
+            data_one_model.index > historical_data_cutoff_time, "dst"
+        ] = np.nan
         data_one_model = data_one_model.fillna({"file_name": np.nan})
         logging.info(
             f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}"

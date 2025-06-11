@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Literal
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -12,6 +13,8 @@ from data_management.io.utils import any_nans, construct_updated_data_frame
 
 SWModel = DSCOVR | SWACE | SWOMNI | SWSWIFTEnsemble
 
+logging.captureWarnings(True)
+
 
 def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     start_time: datetime,
@@ -20,6 +23,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     reduce_ensemble: str | None = None,
     historical_data_cutoff_time: datetime | None = None,
     *,
+    synthetic_now_time: datetime | None = None,  # deprecated
     download: bool = False,
 ) -> pd.DataFrame | list[pd.DataFrame]:
     """
@@ -47,13 +51,24 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     Union[:class:`pandas.DataFrame`, list[:class:`pandas.DataFrame`]]
         A data frame or a list of data frames containing data for the requested period.
     """
+    if synthetic_now_time is not None:
+        warnings.warn(
+            "`synthetic_now_time` is deprecated and will be removed in a future version. "
+            "Use `historical_data_cutoff_time` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if historical_data_cutoff_time is None:
+            historical_data_cutoff_time = synthetic_now_time
 
     if historical_data_cutoff_time is None:
         historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
 
     if model_order is None:
         model_order = [SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble()]
-        logging.warning("No model order specified, using default order: OMNI, ACE, SWIFT ensemble")
+        logging.warning(
+            "No model order specified, using default order: OMNI, ACE, SWIFT ensemble"
+        )
 
     data_out = [pd.DataFrame()]
 
@@ -121,7 +136,9 @@ def _read_from_model(  # noqa: PLR0913
 
     # Forecasting models are called with synthetic now time
     if isinstance(model, SWSWIFTEnsemble):
-        data_one_model = _read_latest_ensemble_files(model, historical_data_cutoff_time, end_time)
+        data_one_model = _read_latest_ensemble_files(
+            model, historical_data_cutoff_time, end_time
+        )
 
         num_ens_members = len(data_one_model)
 
@@ -139,7 +156,6 @@ def _read_historical_model(
     *,
     download: bool,
 ) -> tuple[pd.DataFrame, str]:
-    
     """Reads SW data from historical models (DSCOVR, SWACE or SWOMNI) within the specified time range.
 
     Parameters
@@ -180,8 +196,12 @@ def _read_historical_model(
 
     data_one_model = model.read(start_time, end_time, download=download)
     # set nan for 'future' values
-    data_one_model.loc[historical_data_cutoff_time+timedelta(minutes=1):end_time] = np.nan
-    logging.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
+    data_one_model.loc[
+        historical_data_cutoff_time + timedelta(minutes=1) : end_time
+    ] = np.nan
+    logging.info(
+        f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}"
+    )
 
     return data_one_model
 
@@ -223,7 +243,9 @@ def _read_latest_ensemble_files(
             target_time -= timedelta(days=1)
             continue
 
-        data_one_model = _interpolate_to_common_indices(target_time, end_time, historical_data_cutoff_time, data_one_model)
+        data_one_model = _interpolate_to_common_indices(
+            target_time, end_time, historical_data_cutoff_time, data_one_model
+        )
         break
 
     logging.info(f"Reading SWIFT ensemble from {target_time} to {end_time}")
@@ -232,7 +254,10 @@ def _read_latest_ensemble_files(
 
 
 def _interpolate_to_common_indices(
-    target_time: datetime, end_time: datetime, historical_data_cutoff_time: datetime, data: list[pd.DataFrame]
+    target_time: datetime,
+    end_time: datetime,
+    historical_data_cutoff_time: datetime,
+    data: list[pd.DataFrame],
 ) -> list[pd.DataFrame]:
     """
     Interpolate the data to a common index with a 1-minute frequency.
@@ -257,8 +282,21 @@ def _interpolate_to_common_indices(
     for ie, _ in enumerate(data):
         df_common_index = pd.DataFrame(
             index=pd.date_range(
-                datetime(target_time.year, target_time.month, target_time.day, tzinfo=timezone.utc),
-                datetime(end_time.year, end_time.month, end_time.day, 23, 59, 59, tzinfo=timezone.utc),
+                datetime(
+                    target_time.year,
+                    target_time.month,
+                    target_time.day,
+                    tzinfo=timezone.utc,
+                ),
+                datetime(
+                    end_time.year,
+                    end_time.month,
+                    end_time.day,
+                    23,
+                    59,
+                    59,
+                    tzinfo=timezone.utc,
+                ),
                 freq=timedelta(minutes=1),
                 tz="UTC",
             ),
@@ -270,17 +308,22 @@ def _interpolate_to_common_indices(
                 # this is the filename column
                 df_common_index[colname] = col.iloc[0]
             else:
-                df_common_index[colname] = np.interp(df_common_index.index, data[ie].index, col)
+                df_common_index[colname] = np.interp(
+                    df_common_index.index, data[ie].index, col
+                )
 
         data[ie] = df_common_index
         data[ie] = data[ie].truncate(
-            before=historical_data_cutoff_time - timedelta(minutes=0.999999), after=end_time + timedelta(minutes=0.999999)
+            before=historical_data_cutoff_time - timedelta(minutes=0.999999),
+            after=end_time + timedelta(minutes=0.999999),
         )
 
     return data
 
 
-def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"]) -> pd.DataFrame:
+def _reduce_ensembles(
+    data_ensembles: list[pd.DataFrame], method: Literal["mean"]
+) -> pd.DataFrame:
     """Reduce a list of data frames representing ensemble data to a single data frame using the provided method."""
     msg = "This reduction method has not been implemented yet!"
     raise NotImplementedError(msg)
