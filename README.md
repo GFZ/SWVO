@@ -1,5 +1,4 @@
-# data_management
-
+# Data Management @ GFZ
 ## Installation
 To install the package, run the following command:
 
