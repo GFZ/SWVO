@@ -252,7 +252,7 @@ def _read_latest_ensemble_files(
         target_time = target_time.replace(minute=0, second=0)
         try:
             with warnings.catch_warnings():
-                warnings.simplefilter("error")
+                warnings.filterwarnings("error", message="No ensemble files found")
                 data_one_model = model.read(target_time, end_time)
                 break
         except UserWarning as e:

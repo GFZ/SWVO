@@ -109,7 +109,7 @@ class KpEnsemble:
         elif len(file_list_old_name) > 0:
             warnings.warn(
                 "The use of FORECAST_PAGER_SWIFT_swift_* files is deprecated. However since we still have these files from the PAGER project with this prefix, this will be supported",
-                DeprecationWarning,)
+                DeprecationWarning, stacklevel=2)
             file_list = file_list_old_name
 
         if len(file_list) == 0:
