@@ -1,14 +1,17 @@
 import os
 import sys
 
+
 sys.path.insert(0, os.path.abspath(".."))
+
+import data_management
 
 project = "data_management"
 copyright = "2024, GFZ"
 author = "Bernhard Haas, Sahil Jhawar"
 
-release = "0.0"
-version = ".".join(release.split(".")[:2])
+version = data_management.__version__
+release = version
 
 master_doc = "index"
 extensions = [
