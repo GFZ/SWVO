@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 accessible-pygments==0.0.5
 alabaster==1.0.0
 argcomplete==3.6.2

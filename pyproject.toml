@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 [build-system]
 requires = ["setuptools>=45", "setuptools-scm"]
 build-backend = "setuptools.build_meta"

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 from data_management.io.kp.ensemble import KpEnsemble
 from data_management.io.kp.niemegk import KpNiemegk
 from data_management.io.kp.omni import KpOMNI

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib

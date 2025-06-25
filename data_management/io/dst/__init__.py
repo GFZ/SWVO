@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 from data_management.io.dst.wdc import DSTWDC
 from data_management.io.dst.omni import DSTOMNI
 

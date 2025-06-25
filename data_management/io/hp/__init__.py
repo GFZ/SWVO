@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 from data_management.io.hp.ensemble import Hp30Ensemble, Hp60Ensemble, HpEnsemble
 from data_management.io.hp.gfz import Hp30GFZ, Hp60GFZ, HpGFZ
 
