@@ -120,6 +120,13 @@ class RBMDataSet:
         self._file_cadence = self._satellite.file_cadence
         self._date_of_files = self._create_date_list()
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self._satellite}, {self._instrument}, {self._mfm})"
+    
+    def __str__(self):
+        return self.__repr__()
+
+
     def __dir__(self):
         return super().__dir__() + [var.var_name for var in VariableEnum]
 
