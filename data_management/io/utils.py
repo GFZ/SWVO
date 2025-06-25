@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import pandas as pd
 from scipy.signal import savgol_filter
 from datetime import datetime, timedelta, timezone

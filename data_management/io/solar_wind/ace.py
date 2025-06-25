@@ -1,3 +1,11 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Module for handling ACE Solar Wind data.
+"""
+
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -11,16 +19,10 @@ import numpy as np
 import pandas as pd
 import wget
 from data_management.io.utils import sw_mag_propagation
-from data_management.io.decorators import (
-    add_time_docs,
-    add_attributes_to_class_docstring,
-    add_methods_to_class_docstring,
-)
+
 logging.captureWarnings(True)
 
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class SWACE:
     """This is a class for the ACE Solar Wind data.
 
@@ -28,6 +30,11 @@ class SWACE:
     ----------
     data_dir : str | Path, optional
         Data directory for the ACE Solar Wind data. If not provided, it will be read from the environment variable
+
+    Methods
+    -------
+    download_and_process
+    read
 
     Raises
     ------
@@ -145,7 +152,6 @@ class SWACE:
                 f"Error while downloading file: {self.URL + file_name}!"
             )
 
-    @add_time_docs("read")
     def read(
         self,
         start_time: datetime,
@@ -158,6 +164,10 @@ class SWACE:
 
         Parameters
         ----------
+        start_time : datetime
+            Start time of the data to read.
+        end_time : datetime
+            End time of the data to read.
         download : bool, optional
             Download data on the go, defaults to False.
         propagation : bool, optional
@@ -165,7 +175,7 @@ class SWACE:
 
         Returns
         -------
-        pd.DataFrame
+        :class:`pandas.DataFrame`
             OMNI High Resolution data.
 
         Raises
@@ -227,7 +237,6 @@ class SWACE:
 
         return data_out
 
-    @add_time_docs(None)
     def _get_processed_file_list(
         self, start_time: datetime, end_time: datetime
     ) -> Tuple[List, List]:

@@ -1,0 +1,91 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
+[build-system]
+requires = ["setuptools>=45", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "data_management"
+authors = [
+    {name = "Dr. Ruggero Vasile, Bernhard Haas", email = "bernhard.haas@gfz.de"}
+]
+description = "A data management repository for FLAG and PAGER project"
+readme = "README.md"
+requires-python = ">=3.10, <3.13"
+license = {text = "GPLv3"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Operating System :: POSIX',
+    'Operating System :: Unix',
+    'Operating System :: MacOS',
+]
+dynamic = ["dependencies", "version"]
+
+
+[tool.setuptools.dynamic]
+version = {attr = "data_management.__version__"}
+dependencies = {file = ["requirements.txt"]}
+
+[project.urls]
+# Homepage = ""
+# Documentation = ""
+# Download = ""
+# Tracker = ""
+
+[tool.setuptools.packages.find]
+include = ["data_management*"]
+
+
+
+[tool.coverage.run]
+source = ["data_management"]
+
+[tool.coverage.report]
+# Regexes for lines to exclude from consideration
+exclude_lines = [
+    # Have to re-enable the standard pragma
+    "pragma: no cover",
+    # Don't complain about missing debug-only code:
+    "def __repr__",
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "raise KeyError",
+    "except KeyError",
+    "raise ValueError",
+    "except JSONDecodeError:",
+    "raise requests.exceptions.RequestException",
+    # Don't complain if non-runnable code isn't run:
+    "if 0:",
+    "if False:",
+    'if __name__ == "__main__":',
+    "err =",
+    "logger.error",
+    "raise"
+    ]
+ignore_errors = true
+
+[tool.isort]
+profile = "black"
+
+[tool.pytest.ini_options]
+addopts = "--verbose -r s"
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "session"
+
+[tool.bumpver]
+current_version = "0.0.1"
+version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
+commit_message = "bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = true
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = ['current_version = "{version}"']
+"data_management/__init__.py" = ['__version__ = "{version}"']

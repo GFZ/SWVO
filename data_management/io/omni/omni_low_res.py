@@ -1,3 +1,11 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Module for handling OMNI low resolution data.
+"""
+
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -10,12 +18,10 @@ import numpy as np
 import pandas as pd
 import wget
 
-from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
 
 logging.captureWarnings(True)
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
+
 class OMNILowRes:
     """This is a class for the OMNI Low Resolution data.
 
@@ -24,11 +30,17 @@ class OMNILowRes:
     data_dir : str | Path, optional
         Data directory for the OMNI Low Resolution data. If not provided, it will be read from the environment variable
 
+    Methods
+    -------
+    download_and_process
+    read
+
     Raises
     ------
     ValueError
         Returns `ValueError` if necessary environment variable is not set.
     """
+
     ENV_VAR_NAME = "OMNI_LOW_RES_STREAM_DIR"
 
     URL = "https://spdf.gsfc.nasa.gov/pub/data/omni/low_res_omni/"
@@ -95,7 +107,9 @@ class OMNILowRes:
     def __init__(self, data_dir: str | Path = None):
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
+                raise ValueError(
+                    f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
+                )
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
@@ -104,12 +118,17 @@ class OMNILowRes:
 
         logging.info(f"OMNI Low Res  data directory: {self.data_dir}")
 
-    @add_time_docs("download")
-    def download_and_process(self, start_time: datetime, end_time: datetime, reprocess_files: bool = False) -> None:
+    def download_and_process(
+        self, start_time: datetime, end_time: datetime, reprocess_files: bool = False
+    ) -> None:
         """Download and process OMNI Low Resolution data files.
 
         Parameters
         ----------
+        start_time : datetime
+            Start time for the data to be downloaded and processed.
+        end_time : datetime
+            End time for the data to be downloaded and processed.
         reprocess_files : bool, optional
             Downloads and processes the files again, defaults to False, by default False
 
@@ -122,7 +141,9 @@ class OMNILowRes:
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
         try:
-            file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
+            file_paths, time_intervals = self._get_processed_file_list(
+                start_time, end_time
+            )
 
             for file_path, time_interval in zip(file_paths, time_intervals):
                 filename = "omni2_" + str(time_interval[0].year) + ".dat"
@@ -145,8 +166,9 @@ class OMNILowRes:
         finally:
             rmtree(temporary_dir, ignore_errors=True)
 
-    @add_time_docs(None)
-    def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
+    def _get_processed_file_list(
+        self, start_time: datetime, end_time: datetime
+    ) -> Tuple[List, List]:
         """Get list of file paths and their corresponding time intervals.
 
         Returns
@@ -162,7 +184,9 @@ class OMNILowRes:
         end_time = datetime(end_time.year, 12, 31, 23, 59, 59)
 
         while current_time < end_time:
-            file_path = self.data_dir / f"OMNI_LOW_RES_{current_time.strftime('%Y')}.csv"
+            file_path = (
+                self.data_dir / f"OMNI_LOW_RES_{current_time.strftime('%Y')}.csv"
+            )
             file_paths.append(file_path)
 
             interval_start = current_time
@@ -189,11 +213,13 @@ class OMNILowRes:
 
         data = pd.read_csv(file_path, sep=r"\s+", names=self.HEADER)
         data["timestamp"] = data["year"].map(str).apply(lambda x: x + "-01-01 ")
-        data["timestamp"] = data["year"].map(str).apply(lambda x: x + "-01-01 ") + data["hour"].map(str).apply(
-            lambda x: x.zfill(2)
-        )
+        data["timestamp"] = data["year"].map(str).apply(lambda x: x + "-01-01 ") + data[
+            "hour"
+        ].map(str).apply(lambda x: x.zfill(2))
         data["timestamp"] = pd.to_datetime(data["timestamp"])
-        data["timestamp"] = data["timestamp"] + data["day"].apply(lambda x: timedelta(days=int(x) - 1))
+        data["timestamp"] = data["timestamp"] + data["day"].apply(
+            lambda x: timedelta(days=int(x) - 1)
+        )
         data.set_index("timestamp", inplace=True)
         mask = data["dst"] >= 99998
         data.loc[mask, "dst"] = np.nan
@@ -207,24 +233,33 @@ class OMNILowRes:
         df["f107"] = data["f107"]
 
         # change rounded numbers to be equal to 1/3 or 2/3 to be consistent with other Kp products
-        df.loc[round(df["kp"] % 1, 2) == 0.7, "kp"] = round(df.loc[round(df["kp"] % 1, 2) == 0.7, "kp"]) - 1 / 3
-        df.loc[round(df["kp"] % 1, 2) == 0.3, "kp"] = round(df.loc[round(df["kp"] % 1, 2) == 0.3, "kp"]) + 1 / 3
+        df.loc[round(df["kp"] % 1, 2) == 0.7, "kp"] = (
+            round(df.loc[round(df["kp"] % 1, 2) == 0.7, "kp"]) - 1 / 3
+        )
+        df.loc[round(df["kp"] % 1, 2) == 0.3, "kp"] = (
+            round(df.loc[round(df["kp"] % 1, 2) == 0.3, "kp"]) + 1 / 3
+        )
 
         return df
-    
-    @add_time_docs("read")
-    def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
+
+    def read(
+        self, start_time: datetime, end_time: datetime, download: bool = False
+    ) -> pd.DataFrame:
         """
         Read OMNI Low Resolution data for the given time range.
 
         Parameters
         ----------
+        start_time : datetime
+            Start time for the data to be read.
+        end_time : datetime
+            End time for the data to be read.
         download : bool, optional
             Download data on the go, defaults to False.
 
         Returns
         -------
-        pd.DataFrame
+        :class:`pandas.DataFrame`
             OMNI Low Resolution data.
         """
         START_YEAR = 1963
@@ -267,7 +302,7 @@ class OMNILowRes:
 
             df_one_file = self._read_single_file(file_path)
             data_out = df_one_file.combine_first(data_out)
-            
+
         return data_out
 
     def _read_single_file(self, file_path: Path) -> pd.DataFrame:

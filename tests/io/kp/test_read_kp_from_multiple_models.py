@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import pytest
 from datetime import datetime, timezone, timedelta
 import pandas as pd
@@ -50,7 +54,7 @@ class TestReadKpFromMultipleModels:
             start_time=sample_times["past_start"],
             end_time=sample_times["past_end"],
             model_order=[KpOMNI(), KpNiemegk()],
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
 
         assert isinstance(data, pd.DataFrame)
@@ -67,7 +71,7 @@ class TestReadKpFromMultipleModels:
             start_time=sample_times["future_start"],
             end_time=sample_times["future_end"],
             model_order=[KpEnsemble(), KpSWPC()],
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
 
         assert all(isinstance(d, pd.DataFrame) for d in data)
@@ -88,7 +92,7 @@ class TestReadKpFromMultipleModels:
             end_time=sample_times["future_end"],
             model_order=[KpEnsemble()],
             reduce_ensemble=None,
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
 
         assert isinstance(data, list)
@@ -104,7 +108,7 @@ class TestReadKpFromMultipleModels:
             start_time=sample_times["past_start"],
             end_time=sample_times["future_end"],
             model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
 
         for d in data:
@@ -118,7 +122,7 @@ class TestReadKpFromMultipleModels:
             start_time=sample_times["past_start"],
             end_time=sample_times["future_start"],
             model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
-            synthetic_now_time=sample_times["test_time_now"] - timedelta(days=2),
+            historical_data_cutoff_time=sample_times["test_time_now"] - timedelta(days=2),
         )
 
         assert all(d.index.is_monotonic_increasing for d in data)
@@ -137,7 +141,7 @@ class TestReadKpFromMultipleModels:
             start_time=start,
             end_time=end,
             model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
         for d in data:
             assert d.index.min() >= start
@@ -160,7 +164,7 @@ class TestReadKpFromMultipleModels:
             read_kp_from_multiple_models(
                 start_time=sample_times["test_time_now"] - timedelta(days=6),
                 end_time=sample_times["test_time_now"] + timedelta(days=4),
-                synthetic_now_time=sample_times["test_time_now"],
+                historical_data_cutoff_time=sample_times["test_time_now"],
             )
 
 
@@ -169,7 +173,7 @@ class TestReadKpFromMultipleModels:
             start_time=sample_times["past_start"],
             end_time=sample_times["future_end"],
             model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
 
         def check_kp_range(df):
@@ -185,7 +189,7 @@ class TestReadKpFromMultipleModels:
             start_time=sample_times["past_start"],
             end_time=sample_times["future_end"],
             model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()],
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
 
         assert not all([df.loc["2024-11-24 21:00:00+00:00"].model == "omni" for df in data])
@@ -198,10 +202,19 @@ class TestReadKpFromMultipleModels:
             "start_time": sample_times["past_start"],
             "end_time": sample_times["past_end"],
             "model_order": [KpOMNI()],
-            "synthetic_now_time": sample_times["test_time_now"],
+            "historical_data_cutoff_time": sample_times["test_time_now"],
         }
 
         data1 = read_kp_from_multiple_models(**params)
         data2 = read_kp_from_multiple_models(**params)
 
         pd.testing.assert_frame_equal(data1, data2)
+
+
+    def test_synthetic_now_time_deprecation_with_message(self, sample_times):
+        with pytest.warns(DeprecationWarning, match="synthetic_now_time.*deprecated"):
+            read_kp_from_multiple_models(
+                start_time=sample_times["past_start"],
+                end_time=sample_times["future_end"],
+                synthetic_now_time=sample_times["test_time_now"],
+            )

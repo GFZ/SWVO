@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -26,6 +30,18 @@ RBMDataSetHash = tuple[
 
 
 class RBMDataSetManager:
+    """
+    RBMDataSetManager class for managing RBMDataSet instances.
+
+    Notes
+    -----
+    Use the `load` class method to create and retrieve datasets. Direct instantiation is not allowed.
+
+    Raises
+    ------
+    RuntimeError
+        If the constructor is called directly instead of using the `load` method.
+    """
     _instance = None
     data_set_dict: dict[RBMDataSetHash, RBMDataSet]
 
@@ -79,6 +95,35 @@ class RBMDataSetManager:
         verbose: bool = True,
         preferred_extension: str = "pickle",
     ) -> RBMDataSet | list[RBMDataSet]:
+        """Loads an RBMDataSet or a list of RBMDataSets based on the provided parameters.
+
+        Parameters
+        ----------
+        start_time : datetime
+            Start time of the data set.
+        end_time : datetime
+            End time of the data set.
+        folder_path : Path
+            Path to the folder where the data set is stored.
+        satellite : :class:`SatelliteLike` | Iterable[:class:`SatelliteLike`]
+            Satellite identifier(s) as enum or string. If a single satellite is provided, it can be a string or an enum.
+        instrument : :class:`InstrumentEnum`
+            Instrument enumeration, e.g., :class:`InstrumentEnum.HOPE`.
+        mfm : MfmEnum
+            Magnetic field model enum, e.g., :class:`MfmEnum.T89`.
+        folder_type : :class:`FolderTypeEnum`, optional
+            Type of folder where the data is stored, by default :class:`FolderTypeEnum.DataServer`.
+        verbose : bool, optional
+            Whether to print verbose output, by default True.
+        preferred_extension : str, optional
+            Preferred file extension for the data set to be loaded, by default "pickle".
+
+        Returns
+        -------
+        Union[:class:`RBMDataSet`, list[:class:`RBMDataSet`]]
+            An instance of RBMDataSet or a list of RBMDataSet instances, depending on the input parameters.
+            Variables are lazily loaded from the file system when accessed.
+        """
         if cls._instance is None:
             print("Initiating new RBMDataSetManager!")
             cls._instance = cls.__new__(cls)

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 from __future__ import annotations
 
 import logging
@@ -5,18 +9,12 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Tuple
-from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
-
-
 
 import numpy as np
 import pandas as pd
 import wget
 
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class HpGFZ:
     """This is a base class for HpGFZ data.
 
@@ -26,6 +24,11 @@ class HpGFZ:
         Hp index. Possible options are: hp30, hp60.
     data_dir : str | Path, optional
         Data directory for the Hp data. If not provided, it will be read from the environment variable
+
+    Methods
+    -------
+    download_and_process
+    read
 
     Raises
     ------
@@ -60,8 +63,6 @@ class HpGFZ:
 
         (self.data_dir / str(self.index)).mkdir(exist_ok=True)
 
-
-    @add_time_docs("download")
     def download_and_process(
         self,
         start_time: datetime,
@@ -73,13 +74,17 @@ class HpGFZ:
 
         Parameters
         ----------
+        start_time : datetime
+            Start time of the data to be downloaded.
+        end_time : datetime
+            End time of the data to be downloaded.
         reprocess_files : bool, optional
             Downloads and processes the files again, defaults to False, by default False
 
         Returns
         -------
         None
-        """   
+        """
         temporary_dir = Path("./temp_hp_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
@@ -126,7 +131,6 @@ class HpGFZ:
         finally:
             rmtree(temporary_dir)
 
-    @add_time_docs("read")
     def read(
         self, start_time: datetime, end_time: datetime, *, download: bool = False
     ) -> pd.DataFrame:
@@ -134,14 +138,18 @@ class HpGFZ:
 
         Parameters
         ----------
+        start_time : datetime
+            Start time of the data to read. Must be timezone-aware.
+        end_time : datetime
+            End time of the data to read. Must be timezone-aware.
         download : bool, optional
             Download data on the go, defaults to False.
 
         Returns
         -------
-        pd.DataFrame
+        :class:`pandas.DataFrame`
             HpGFZ data for the given time range.
-        """        
+        """
         if not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
         if not end_time.tzinfo:
@@ -200,7 +208,6 @@ class HpGFZ:
 
         return data_out  # noqa: RET504
 
-    @add_time_docs(None)
     def _get_processed_file_list(
         self, start_time: datetime, end_time: datetime
     ) -> tuple[list, list]:
@@ -322,31 +329,29 @@ class HpGFZ:
         return hp_df  # noqa: RET504
 
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class Hp30GFZ(HpGFZ):
     """A class to handle Hp30 data from GFZ.
-    
+
     Parameters
     ----------
     data_dir : str | Path, optional
         Data directory for the Hp30 data. If not provided, it will be read from the environment variable
 
     """
+
     def __init__(self, data_dir: str | Path = None):
         super().__init__("hp30", data_dir)
 
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class Hp60GFZ(HpGFZ):
     """A class to handle Hp30 data from GFZ.
-    
+
     Parameters
     ----------
     data_dir : str | Path, optional
         Data directory for the Hp30 data. If not provided, it will be read from the environment variable
 
     """
+
     def __init__(self, data_dir: str | Path = None):
         super().__init__("hp60", data_dir)

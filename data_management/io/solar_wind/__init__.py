@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 from data_management.io.solar_wind.ace import SWACE
 from data_management.io.solar_wind.omni import SWOMNI
 from data_management.io.solar_wind.swift import SWSWIFTEnsemble

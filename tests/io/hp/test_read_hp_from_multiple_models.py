@@ -1,8 +1,13 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import pytest
 from datetime import datetime, timezone, timedelta
 import pandas as pd
 import numpy as np
 import os
+from data_management.io import hp
 from data_management.io.hp import (
     Hp30Ensemble,
     Hp30GFZ,
@@ -53,7 +58,7 @@ class TestHpFromMultipleModels:
             end_time=sample_times["past_end"],
             hp_index=hp_index,
             model_order=[models[0]()],
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
 
         assert isinstance(data, pd.DataFrame)
@@ -68,7 +73,7 @@ class TestHpFromMultipleModels:
             end_time=sample_times["future_end"],
             hp_index=hp_index,
             model_order=[models[1]()],
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
 
         assert all(isinstance(d, pd.DataFrame) for d in data)
@@ -83,7 +88,7 @@ class TestHpFromMultipleModels:
             hp_index=hp_index,
             model_order=[models[1]()],
             reduce_ensemble="mean",
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
 
         assert isinstance(data, pd.DataFrame)
@@ -98,7 +103,7 @@ class TestHpFromMultipleModels:
             hp_index=hp_index,
             model_order=[models[1]()],
             reduce_ensemble=None,
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
 
         assert isinstance(data, list)
@@ -113,7 +118,7 @@ class TestHpFromMultipleModels:
             end_time=sample_times["future_end"],
             hp_index=hp_index,
             model_order=[models[0](), models[1]()],
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
 
         for d in data:
@@ -134,7 +139,7 @@ class TestHpFromMultipleModels:
             end_time=sample_times["future_end"],
             hp_index=hp_index,
             model_order=[models[0](), models[1]()],
-            synthetic_now_time=sample_times["test_time_now"],
+            historical_data_cutoff_time=sample_times["test_time_now"],
         )
         assert all(
             [df.loc["2024-11-25 00:00:00+00:00"].model == "ensemble" for df in data]
@@ -147,13 +152,23 @@ class TestHpFromMultipleModels:
             "end_time": sample_times["past_end"],
             "hp_index": hp_index,
             "model_order": [models[0]()],
-            "synthetic_now_time": sample_times["test_time_now"],
+            "historical_data_cutoff_time": sample_times["test_time_now"],
         }
 
         data1 = read_hp_from_multiple_models(**params)
         data2 = read_hp_from_multiple_models(**params)
 
         pd.testing.assert_frame_equal(data1, data2)
+
+    def test_synthetic_now_time_deprecation_with_message(self, sample_times, hp_index, models):
+        with pytest.warns(DeprecationWarning, match="synthetic_now_time.*deprecated"):
+            read_hp_from_multiple_models(
+                start_time=sample_times["past_start"],
+                end_time=sample_times["future_end"],
+                synthetic_now_time=sample_times["test_time_now"],
+                hp_index=hp_index,
+                model_order=[models[0]()],
+            )
 
 
 def test_invalid_hp_index():

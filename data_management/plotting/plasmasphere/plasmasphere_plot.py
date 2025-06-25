@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import os
 
 import glob
@@ -56,7 +60,7 @@ class PlasmaspherePlot(PlotOutput):
     @staticmethod
     def _draw_earth_night_side(axes):
         axes.fill_between(np.linspace(-np.pi / 2, np.pi / 2, 100),
-                          0, 1, alpha=1, color='k')
+                          0, 1, alpha=1, color='white')
         return axes
 
     @staticmethod
@@ -74,6 +78,7 @@ class PlasmaspherePlot(PlotOutput):
         axes.set_yticklabels(
             labels=ticks_loc
         )
+        axes.tick_params(axis="y", colors="black")
         axes.grid(c='grey', lw=0.5, ls='-', visible=True)
         return axes
 

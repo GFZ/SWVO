@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Function to read Kp from multiple models."""
 
 from __future__ import annotations
@@ -15,14 +19,17 @@ from data_management.io.utils import any_nans, construct_updated_data_frame
 
 KpModel = KpEnsemble | KpNiemegk | KpOMNI | KpSWPC
 
+logging.captureWarnings(True)
+
 
 def read_kp_from_multiple_models(  # noqa: PLR0913
     start_time: datetime,
     end_time: datetime,
     model_order: list[KpModel] | None = None,
     reduce_ensemble: Literal["mean", "median"] | None = None,
-    synthetic_now_time: datetime | None = None,
+    historical_data_cutoff_time: datetime | None = None,
     *,
+    synthetic_now_time: datetime | None = None,  # deprecated
     download: bool = False,
 ) -> pd.DataFrame | list[pd.DataFrame]:
     """Read Kp data from multiple models.
@@ -42,7 +49,7 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
         The order in which data will be read from the models. Defaults to [OMNI, Niemegk, Ensemble, SWPC].
     reduce_ensemble : {"mean", None}, optional
         The method to reduce ensembles to a single time series. Defaults to None.
-    synthetic_now_time : datetime or None, optional
+    historical_data_cutoff_time : datetime or None, optional
         Represents "now". After this time, no data will be taken from historical models
         (OMNI, Niemegk). Defaults to None.
     download : bool, optional
@@ -50,12 +57,22 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
 
     Returns
     -------
-    pd.DataFrame or list of pd.DataFrame
+    Union[:class:`pandas.DataFrame`, list[:class:`pandas.DataFrame`]]
         A data frame or a list of data frames containing data for the requested period.
 
     """
-    if synthetic_now_time is None:
-        synthetic_now_time = min(datetime.now(timezone.utc), end_time)
+    if synthetic_now_time is not None:
+        warnings.warn(
+            "`synthetic_now_time` is deprecated and will be removed in a future version. "
+            "Use `historical_data_cutoff_time` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if historical_data_cutoff_time is None:
+            historical_data_cutoff_time = synthetic_now_time
+
+    if historical_data_cutoff_time is None:
+        historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
 
     if model_order is None:
         model_order = [KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()]
@@ -70,7 +87,7 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
             model,
             start_time,
             end_time,
-            synthetic_now_time,
+            historical_data_cutoff_time,
             reduce_ensemble,
             download=download,
         )
@@ -88,7 +105,7 @@ def _read_from_model(  # noqa: PLR0913
     model: KpModel,
     start_time: datetime,
     end_time: datetime,
-    synthetic_now_time: datetime,
+    historical_data_cutoff_time: datetime,
     reduce_ensemble: str,
     *,
     download: bool,
@@ -103,7 +120,7 @@ def _read_from_model(  # noqa: PLR0913
         The start time of the data range.
     end_time : datetime
         The end time of the data range.
-    synthetic_now_time : datetime
+    historical_data_cutoff_time : datetime
         Represents "now". Used for defining boundaries for historical or forecast data.
     reduce_ensemble : str
         The method to reduce ensemble data (e.g., "mean"). If None, ensemble members are not reduced.
@@ -122,18 +139,18 @@ def _read_from_model(  # noqa: PLR0913
             model,
             start_time,
             end_time,
-            synthetic_now_time,
+            historical_data_cutoff_time,
             download=download,
         )
 
     # Forecasting models are called with synthetic now time
     if isinstance(model, KpSWPC):
         logging.info(
-            f"Reading swpc from {synthetic_now_time.replace(hour=0, minute=0, second=0)} to {end_time}\noriginal synthetic_now_time: {synthetic_now_time}"
+            f"Reading swpc from {historical_data_cutoff_time.replace(hour=0, minute=0, second=0)} to {end_time}\noriginal historical_data_cutoff_time: {historical_data_cutoff_time}"
         )
         data_one_model = [
             model.read(
-                synthetic_now_time.replace(hour=0, minute=0, second=0),
+                historical_data_cutoff_time.replace(hour=0, minute=0, second=0),
                 end_time,
                 download=download,
             )
@@ -141,7 +158,7 @@ def _read_from_model(  # noqa: PLR0913
 
     if isinstance(model, KpEnsemble):
         data_one_model = _read_latest_ensemble_files(
-            model, synthetic_now_time, end_time
+            model, historical_data_cutoff_time, end_time
         )
 
         num_ens_members = len(data_one_model)
@@ -156,7 +173,7 @@ def _read_historical_model(
     model: KpOMNI | KpNiemegk,
     start_time: datetime,
     end_time: datetime,
-    synthetic_now_time: datetime,
+    historical_data_cutoff_time: datetime,
     *,
     download: bool,
 ) -> pd.DataFrame:
@@ -170,7 +187,7 @@ def _read_historical_model(
         The start time of the data range.
     end_time : datetime
         The end time of the data range.
-    synthetic_now_time : datetime
+    historical_data_cutoff_time : datetime
         Represents "now". Data after this time is set to NaN.
     download : bool, optional
         Whether to download new data or not.
@@ -178,7 +195,7 @@ def _read_historical_model(
     Returns
     -------
     pd.DataFrame
-        A data frame containing the model data with future values (after synthetic_now_time) set to NaN.
+        A data frame containing the model data with future values (after historical_data_cutoff_time) set to NaN.
 
     Raises
     ------
@@ -194,11 +211,11 @@ def _read_historical_model(
 
     data_one_model = model.read(start_time, end_time, download=download)
     # set nan for 'future' values
-    data_one_model.loc[synthetic_now_time + timedelta(hours=3) : end_time, "kp"] = (
-        np.nan
-    )
+    data_one_model.loc[
+        historical_data_cutoff_time + timedelta(hours=3) : end_time, "kp"
+    ] = np.nan
     logging.info(
-        f"Setting NaNs in {model.LABEL} from {synthetic_now_time + timedelta(hours=3)} to {end_time}"
+        f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time + timedelta(hours=3)} to {end_time}"
     )
 
     return data_one_model
@@ -206,7 +223,7 @@ def _read_historical_model(
 
 def _read_latest_ensemble_files(
     model: KpEnsemble,
-    synthetic_now_time: datetime,
+    historical_data_cutoff_time: datetime,
     end_time: datetime,
 ) -> list[pd.DataFrame]:
     """
@@ -222,7 +239,7 @@ def _read_latest_ensemble_files(
     ----------
     model : KpEnsemble
         The ensemble model from which to read the data.
-    synthetic_now_time : datetime
+    historical_data_cutoff_time : datetime
         Represents "now". The function starts searching for files from this time.
     end_time : datetime
         The end time of the data range.
@@ -232,28 +249,30 @@ def _read_latest_ensemble_files(
     list[pd.DataFrame]
         A list of data frames containing ensemble data for the specified range.
     """
-    target_time = synthetic_now_time
+    target_time = historical_data_cutoff_time
     data_one_model = pd.DataFrame(data={"kp": []})
 
-    while target_time > (synthetic_now_time - timedelta(days=3)):
+    while target_time > (historical_data_cutoff_time - timedelta(days=3)):
         target_time = target_time.replace(minute=0, second=0)
         try:
             with warnings.catch_warnings():
-                warnings.simplefilter("error")
+                warnings.filterwarnings("error", message="No ensemble files found")
                 data_one_model = model.read(target_time, end_time)
                 break
         except UserWarning as e:
             if "No ensemble files found" in str(e):
                 target_time -= timedelta(hours=1)
                 continue
-        
+
     logging.info(f"Read PAGER Kp ensemble from {target_time} to {end_time}")
 
     # Ensure the last index of every DataFrame is the next higher multiple of 3 hours than target_time
     adjusted_data = []
     for df in data_one_model:
         if not df.empty:
-            if df.index[-1] < end_time and (df.index[-1] - end_time) < timedelta(hours=3):
+            if df.index[-1] < end_time and (df.index[-1] - end_time) < timedelta(
+                hours=3
+            ):
                 df.loc[df.index[-1] + timedelta(hours=3)] = df.loc[df.index[-1]]
         adjusted_data.append(df)
     return adjusted_data

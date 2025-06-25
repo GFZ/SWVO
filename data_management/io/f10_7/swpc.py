@@ -1,3 +1,11 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Module for handling F10.7 data from SWPC.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -12,17 +20,10 @@ import warnings
 import pandas as pd
 import numpy as np
 import wget
-from data_management.io.decorators import (
-    add_time_docs,
-    add_attributes_to_class_docstring,
-    add_methods_to_class_docstring,
-)
 
 logging.captureWarnings(True)
 
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class F107SWPC:
     """This is a class for the SWPC F107 data.
 
@@ -30,6 +31,11 @@ class F107SWPC:
     ----------
     data_dir : str | Path, optional
         Data directory for the OMNI Low Resolution data. If not provided, it will be read from the environment variable
+
+    Methods
+    -------
+    download_and_process
+    read
 
     Raises
     ------
@@ -55,7 +61,6 @@ class F107SWPC:
 
         logging.info(f"SWPC F10.7 data directory: {self.data_dir}")
 
-    @add_time_docs(None)
     def _get_processed_file_list(
         self, start_time: datetime, end_time: datetime
     ) -> tuple[list[Path], list[tuple[datetime, datetime]]]:
@@ -158,7 +163,6 @@ class F107SWPC:
 
         return data  # noqa: RET504
 
-    @add_time_docs("read")
     def read(
         self, start_time: datetime, end_time: datetime, *, download: bool = False
     ) -> pd.DataFrame:
@@ -166,18 +170,22 @@ class F107SWPC:
 
         Parameters
         ----------
+        start_time : datetime
+            Start time of the data to read. Must be timezone-aware.
+        end_time : datetime
+            End time of the data to read. Must be timezone-aware.
         download : bool, optional
             Download data on the go, defaults to False.
 
         Returns
         -------
-        pd.DataFrame
+        :class:`pandas.DataFrame`
             F10.7 data.
 
         Raises
         ------
         ValueError
-            Raises ValueError if start_time is after end_time."
+            Raises ValueError if `start_time` is `after end_time`.
         """
 
         if start_time >= end_time:

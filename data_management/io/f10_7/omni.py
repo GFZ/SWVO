@@ -1,3 +1,11 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Module for handling F10.7 data from OMNI low resolution files.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -6,22 +14,13 @@ import numpy as np
 import pandas as pd
 
 from data_management.io.omni import OMNILowRes
-from data_management.io.decorators import (
-    add_time_docs,
-    add_attributes_to_class_docstring,
-    add_methods_to_class_docstring,
-)
 
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class F107OMNI(OMNILowRes):
     """
     Class for reading F10.7 data from OMNI low resolution files.
-    Inherits the `download_and_process`, other private methods and attributes from OMNILowRes.
+    Inherits the :func:`download_and_process`, other private methods and attributes from :class:`OMNILowRes`.
     """
-
-    
 
     def __init__(self, data_dir: str | None = None):
         """
@@ -35,7 +34,6 @@ class F107OMNI(OMNILowRes):
         super().__init__(data_dir=data_dir)
 
     # data is downloaded along with OMNI data, check file name in parent class
-    @add_time_docs("read")
     def read(
         self, start_time: datetime, end_time: datetime, download: bool = False
     ) -> pd.DataFrame:
@@ -44,12 +42,16 @@ class F107OMNI(OMNILowRes):
 
         Parameters
         ----------
+        start_time : datetime
+            Start time of the data to read. Must be timezone-aware.
+        end_time : datetime
+            End time of the data to read. Must be timezone-aware.
         download : bool, optional
             Download data on the go, defaults to False.
 
         Returns
         -------
-        pd.DataFrame
+        :class:`pandas.DataFrame`
             F10.7 from OMNI Low Resolution data.
         """
 

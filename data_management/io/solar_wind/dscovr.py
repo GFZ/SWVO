@@ -1,3 +1,11 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Module for handling DSCOVR Solar Wind data.
+"""
+
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -9,13 +17,10 @@ import numpy as np
 import pandas as pd
 import wget
 from data_management.io.utils import sw_mag_propagation
-from data_management.io.decorators import add_time_docs, add_attributes_to_class_docstring, add_methods_to_class_docstring
+
 logging.captureWarnings(True)
 
 
-
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class DSCOVR:
     """This is a class for the DSCOVR Solar Wind data.
 
@@ -23,6 +28,11 @@ class DSCOVR:
     ----------
     data_dir : str | Path, optional
         Data directory for the DSCOVR Solar Wind data. If not provided, it will be read from the environment variable
+
+    Methods
+    -------
+    download_and_process
+    read
 
     Raises
     ------
@@ -136,7 +146,6 @@ class DSCOVR:
                 f"Error while downloading file: {self.URL + file_name}!"
             )
 
-    @add_time_docs("read")
     def read(
         self,
         start_time: datetime,
@@ -149,6 +158,13 @@ class DSCOVR:
 
         Parameters
         ----------
+        start_time : datetime
+            Start time of the data to read. Must be timezone-aware.
+        end_time : datetime
+            End time of the data to read. Must be timezone-aware.
+            If not provided, it defaults to 3 days after the start time.
+            If `propagation` is True, it defaults to 2 days after the start time.
+            If `propagation` is False, it defaults to 3 days after the start time.
         download : bool, optional
             Download data on the go, defaults to False.
         propagation : bool, optional
@@ -156,9 +172,9 @@ class DSCOVR:
 
         Returns
         -------
-        pd.DataFrame
-            OMNI High Resolution data.
-
+        :class:`pandas.DataFrame`
+            DataFrame containing DSCOVR Solar Wind data for the requested period.
+            
         Raises
         ------
         AssertionError
@@ -217,7 +233,7 @@ class DSCOVR:
 
         return data_out
 
-    @add_time_docs(None)
+
     def _get_processed_file_list(
         self, start_time: datetime, end_time: datetime
     ) -> Tuple[List, List]:

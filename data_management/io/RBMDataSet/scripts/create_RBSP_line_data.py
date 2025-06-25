@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 from __future__ import annotations
 
 from copy import deepcopy
@@ -6,7 +10,6 @@ from pathlib import Path
 from typing import Iterable, Literal
 
 import numpy as np
-from numpy.typing import NDArray
 
 from data_management.io.RBMDataSet import (
     InstrumentEnum,
@@ -33,7 +36,45 @@ def create_RBSP_line_data(
     *,
     adjust_targets: bool = True,
     verbose: bool = True,
-):
+) -> tuple[list[RBMDataSet], list[InstrumentEnum]]:
+    """
+    Create RBSP line data for given time, energy, and alpha local targets.
+
+    Parameters
+    ----------
+    start_time : datetime
+        Start time of the data to be loaded.
+    end_time : datetime
+        End time of the data to be loaded.
+    data_server_path : Path
+        Path to the data server where the RBSP data is stored.
+    target_en : float or Iterable[float]
+        Target energy in MeV or list of target energies in MeV.
+    target_al : float or Iterable[float]
+        Target alpha local in degrees or list of target alpha locals in degrees.
+    target_type : TargetType or Literal["TargetPairs", "TargetMeshGrid"]
+        Type of target data to create. Can be either TargetPairs or TargetMeshGrid.
+    energy_offset_threshold : float, optional
+        Threshold for the energy offset in relative units (default is 0.1).
+    instruments : list[InstrumentEnum] or None, optional
+        List of instruments to use for the data. If None, defaults to HOPE, MAGEIS, and REPT.
+    satellites : list[SatelliteLike] or SatelliteLike or None, optional
+        List of satellites to use for the data. If None, defaults to RBSPA and RBSPB.
+    mfm : MfmEnum, optional
+        Magnetic field model to use for the data. Default is MfmEnum.T89.
+    adjust_targets : bool, optional
+        If True, the targets will be adjusted to the closest available energy and alpha local values.
+        If False, the targets will be interpolated from the available data. Default is True.
+    verbose : bool, optional
+        If True, print verbose output during processing. Default is True.
+
+    Returns
+    -------
+    tuple[list[RBMDataSet], list[InstrumentEnum]]
+        A tuple containing a list of RBMDataSet objects with the line data and a list of instruments used.
+
+    """
+
     # Instruments represents also the priority of the instrument for overlapping energies. The first instrument will be prefered.
 
     instruments = instruments or [

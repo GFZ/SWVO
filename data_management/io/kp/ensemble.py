@@ -1,3 +1,11 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Module for handling SWIFT Kp ensemble data.
+"""
+
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -6,17 +14,10 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from data_management.io.decorators import (
-    add_time_docs,
-    add_attributes_to_class_docstring,
-    add_methods_to_class_docstring,
-)
 
 logging.captureWarnings(True)
 
 
-@add_attributes_to_class_docstring
-@add_methods_to_class_docstring
 class KpEnsemble:
     """This is a class for Kp ensemble data.
 
@@ -24,6 +25,10 @@ class KpEnsemble:
     ----------
     data_dir : str | Path, optional
         Data directory for the Hp data. If not provided, it will be read from the environment variable
+
+    Methods
+    -------
+    read
 
     Raises
     ------
@@ -54,13 +59,19 @@ class KpEnsemble:
                 f"Data directory {self.data_dir} does not exist! Impossible to retrive data!"
             )
 
-    @add_time_docs("read")
     def read(self, start_time: datetime, end_time: datetime) -> list:
         """Read Kp ensemble data for the requested period.
+        
+        Parameters
+        ----------
+        start_time : datetime
+            Start time of the period for which to read the data.
+        end_time : datetime
+            End time of the period for which to read the data.
 
         Returns
         -------
-        list
+        list[:class:`pandas.DataFrame`]
             A list of data frames containing ensemble data for the requested period.
 
         Raises
@@ -102,7 +113,7 @@ class KpEnsemble:
         elif len(file_list_old_name) > 0:
             warnings.warn(
                 "The use of FORECAST_PAGER_SWIFT_swift_* files is deprecated. However since we still have these files from the PAGER project with this prefix, this will be supported",
-                DeprecationWarning,)
+                DeprecationWarning, stacklevel=2)
             file_list = file_list_old_name
 
         if len(file_list) == 0:

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
 from __future__ import annotations
 
 import datetime as dt
@@ -19,10 +23,23 @@ from data_management.io.RBMDataSet import (
     VariableEnum,
 )
 
-Variable = TypeVar("Variable") #this is a placeholder for the actual Variable class from elpaso and not the one in RBMDataSet
+Variable = TypeVar(
+    "Variable"
+)  # this is a placeholder for the actual Variable class from elpaso and not the one in RBMDataSet
+
 
 class RBMDataSetElPaso:
     """RBMDataSetElPaso class for loading ElPaso data to RBMDataSet.
+
+    Parameters
+    ----------
+    satellite : :class:`SatelliteLike`
+        Satellite identifier as enum or string.
+    instrument : :class:`InstrumentEnum`
+        Instrument enumeration.
+    mfm : :class:`MfmEnum`
+        Magnetic field model enum.
+
 
     Attributes
     ----------
@@ -110,18 +127,6 @@ class RBMDataSetElPaso:
         instrument: InstrumentEnum,
         mfm: MfmEnum,
     ) -> None:
-        """Initialize the RBMDataSetElPaso class with satellite, instrument, and MFM configuration.
-
-        Parameters
-        ----------
-        satellite : SatelliteLike
-            Satellite identifier as enum or string.
-        instrument : InstrumentEnum
-            Instrument enumeration.
-        mfm : MfmEnum
-            Magnetic field model enum.
-
-        """
         if isinstance(satellite, str):
             if satellite.lower() == "goesprimary":
                 satellite_enum = SatelliteEnum["GOESPrimary"]
@@ -135,7 +140,9 @@ class RBMDataSetElPaso:
         if isinstance(instrument, str):
             instrument = InstrumentEnum[instrument.upper()]
         satellite_obj = replace(
-            satellite_enum.value, folder_type=FolderTypeEnum.NoFolder, file_cadence=FileCadenceEnum.NoCadence
+            satellite_enum.value,
+            folder_type=FolderTypeEnum.NoFolder,
+            file_cadence=FileCadenceEnum.NoCadence,
         )
 
         self._satellite = satellite_obj
@@ -180,7 +187,10 @@ class RBMDataSetElPaso:
                 target_attr = self._variable_mapping[value.standard_name]
 
                 if value.standard_name == "Epoch_posixtime" and target_attr == "time":
-                    datetimes = [dt.datetime.fromtimestamp(ts, tz=timezone.utc) for ts in value.data]
+                    datetimes = [
+                        dt.datetime.fromtimestamp(ts, tz=timezone.utc)
+                        for ts in value.data
+                    ]
                     setattr(self, "datetime", datetimes)
                     setattr(self, "time", [python2matlab(i) for i in datetimes])
                 else:
@@ -212,7 +222,9 @@ class RBMDataSetElPaso:
         NDArray[np.float64]
             The InvV value calculated from InvMu and InvK.
         """
-        inv_K_repeated = np.repeat(self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1)
+        inv_K_repeated = np.repeat(
+            self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1
+        )
         InvV = self.InvMu * (inv_K_repeated + 0.5) ** 2
         return InvV
 
@@ -222,7 +234,9 @@ class RBMDataSetElPaso:
                 f"Attribute '{name}' is mapped but has not been set. "
                 "Make sure data is loaded or that this attribute is properly assigned."
             )
-        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+        raise AttributeError(
+            f"'{self.__class__.__name__}' object has no attribute '{name}'"
+        )
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.satellite}, {self.instrument}, {self.mfm})"
