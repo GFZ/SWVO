@@ -251,7 +251,7 @@ def test_load_variable_real_file():
     dataset = RBMDataSet(
         start_time=start_time,
         end_time=end_time,
-        folder_path=Path("/home/jhawar/flag1/FLAG_DEV/code/external_data/EL-PASO/"),
+        folder_path=Path("path/to/real/files"), # this does not matter for the test
         satellite=SatelliteEnum.GOESSecondary,
         instrument=InstrumentEnum.MAGED,
         mfm=MfmEnum.T89,
