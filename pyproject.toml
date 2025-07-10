@@ -13,7 +13,7 @@ authors = [
 ]
 description = "A data management repository for FLAG and PAGER project"
 readme = "README.md"
-requires-python = ">=3.10, <3.13"
+requires-python = ">=3.10"
 license = {text = "GPLv3"}
 classifiers = [
     "Programming Language :: Python :: 3",
