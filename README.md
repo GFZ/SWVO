@@ -53,3 +53,13 @@ This package provides tools to read, process, and analyze several key solar and 
     - Combined: `read_solar_wind_from_multiple_models`
 
 Each index can be accessed via these dedicated reader classes, which handle downloading and read methods. See the code in `data_management/io` or API documentation for details on each index's implementation.
+
+uv installation
+
+`conda deactivate` (make sure that no conda environment is active, even base)
+```bash
+source .venv/bin/activate
+python -m ensurepip --upgrade
+uv pip install --upgrade pip
+uv pip install -e .
+```
