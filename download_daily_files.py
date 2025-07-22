@@ -21,12 +21,14 @@ from data_management.io.solar_wind import SWACE, DSCOVR
 from data_management.io.f10_7 import F107SWPC, F107OMNI
 
 
-if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-logs', action="store", default=None, type=str,
+def get_parser():
+    parser = argparse.ArgumentParser(description="Download and process daily external data files.")
+    parser.add_argument('--logs', action="store", default=None, type=str,
                         help="Absolute path to the log folder")
-    args = parser.parse_args()
+    return parser
+
+def main(args):
 
     time_now = datetime.now(timezone.utc)
 
@@ -121,3 +123,8 @@ if __name__ == "__main__":
         logging.error(traceback.format_exc())
 
     logging.info("Finished downloading and processing!")
+
+if __name__ == "__main__":
+    parser = get_parser()
+    args = parser.parse_args()
+    main(args)
