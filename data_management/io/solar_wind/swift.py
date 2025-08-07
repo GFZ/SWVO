@@ -14,6 +14,7 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Optional
 import warnings
 import numpy as np
 import pandas as pd
@@ -66,7 +67,7 @@ class SWSWIFTEnsemble:
             )
 
     def read(
-        self, start_time: datetime, end_time: datetime, propagation: bool = False
+        self, start_time: Optional[datetime] = None, end_time: Optional[datetime] = None, propagation: bool = False, truncate: bool = True
     ) -> list:
         # It does not make sense to read SWIFT ensemble files from different dates
 
@@ -84,6 +85,8 @@ class SWSWIFTEnsemble:
             If `propagation` is False, it defaults to 3 days after the start time.
         propagation : bool, optional
             Propagate the data from L1 to near-Earth, defaults to False.
+        truncate : bool, optional
+            If True, truncate the data to the requested period, defaults to True.
 
         Returns
         -------
@@ -133,10 +136,11 @@ class SWSWIFTEnsemble:
             try:
                 file = list((ensemble_folder / "SWIFT").glob("gsm_*"))[0]
                 data_gsm = self._read_single_file(file)
-                data_gsm = data_gsm.truncate(
-                    before=start_time - timedelta(minutes=10),
-                    after=end_time + timedelta(minutes=10),
-                )
+                if truncate:
+                    data_gsm = data_gsm.truncate(
+                        before=start_time - timedelta(minutes=10),
+                        after=end_time + timedelta(minutes=10),
+                    )
 
                 if propagation:
                     data_gsm = sw_mag_propagation(data_gsm)

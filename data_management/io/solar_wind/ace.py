@@ -176,7 +176,7 @@ class SWACE:
         Returns
         -------
         :class:`pandas.DataFrame`
-            OMNI High Resolution data.
+            ACE data
 
         Raises
         ------
@@ -217,6 +217,8 @@ class SWACE:
                 file_date = datetime.strptime(
                     file_path.stem.split("_")[-1], "%Y%m%d"
                 ).replace(tzinfo=timezone.utc)
+                hour_now = datetime.now(timezone.utc).hour
+                file_date = file_date.replace(hour=hour_now, minute=0, second=0, microsecond=0)
                 self.download_and_process(file_date)
 
             if not file_path.exists():
