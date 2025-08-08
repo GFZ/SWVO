@@ -197,7 +197,7 @@ def sw_mag_propagation(sw_data: pd.DataFrame) -> pd.DataFrame:
     """
 
     sw_data["t"] = sw_data.index
-    sw_data["t"] = np.vectorize(datenum)(sw_data["t"])
+    sw_data["t"] = sw_data["t"].astype("int64") / 1e9
     sw_data = sw_data.dropna()
 
     distance = 1.5e6
@@ -206,14 +206,14 @@ def sw_mag_propagation(sw_data: pd.DataFrame) -> pd.DataFrame:
     shifted_time_smooth = gaussian_filter1d(
         np.array(shifted_time.values, dtype=np.float64), sigma=5
     )
-    new_time_smooth = sw_data["t"] + shifted_time_smooth / 86400
+    new_time_smooth = sw_data["t"] + shifted_time_smooth
 
     stdate = sw_data["t"].min()
     endate = new_time_smooth.max()
 
     full_time_range = pd.date_range(
-        datestr(sw_data["t"].min()),
-        datestr(new_time_smooth.max()),
+        pd.to_datetime(sw_data["t"].min(), unit="s", utc=True).floor("min"),
+        pd.to_datetime(new_time_smooth.max(), unit="s", utc=True).floor("min"),
         freq="1min",
         tz="UTC",
     )
@@ -221,18 +221,16 @@ def sw_mag_propagation(sw_data: pd.DataFrame) -> pd.DataFrame:
     valid = (new_time_smooth >= stdate) & (new_time_smooth <= endate)
     sw_data = sw_data[valid]
     new_time_smooth = new_time_smooth[valid]
-
-    new_time_smooth = (new_time_smooth * 1440).astype(int)
     valid = np.diff(new_time_smooth, prepend=new_time_smooth.iloc[0]) > 0
     sw_data = sw_data[valid]
-    new_time_smooth = new_time_smooth[valid] / 1440
+    new_time_smooth = new_time_smooth[valid]
 
     sw_data["t"] = new_time_smooth
     sw_data = sw_data.dropna()
-    sw_data["t"] = pd.to_datetime(np.vectorize(datestr)(sw_data["t"]), utc=True)
+    sw_data["t"] = pd.to_datetime(sw_data["t"], unit="s", utc=True)
 
     sw_data.index = sw_data["t"]
-
+    sw_data.index = sw_data.index.round("min")
     sw_data = sw_data[~sw_data.index.duplicated(keep="first")]
     sw_data = sw_data.reindex(full_time_range)
     sw_data = sw_data.drop(columns=["t"])
