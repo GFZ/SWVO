@@ -2,26 +2,27 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pandas as pd
-from scipy.signal import savgol_filter
-from datetime import datetime, timedelta, timezone
-import numpy as np
-from scipy.ndimage import gaussian_filter1d
-from functools import wraps
-import inspect
 import logging
+from datetime import datetime, timedelta, timezone
+
+import numpy as np
+import pandas as pd
+from scipy.ndimage import gaussian_filter1d
 
 
 def any_nans(data: list[pd.DataFrame] | pd.DataFrame) -> bool:
-    """
-    Calculate if a list of data frames contains any nans.
+    """Calculate if a list of data frames contains any nans.
 
-    :param data: The list of data frame to process
-    :type data: list[pd.DataFrame]
-    :return: Bool if any data frame of the list contains any nan values
-    :rtype: bool
-    """
+    Parameters
+    ----------
+    data : list[pd.DataFrame] | pd.DataFrame
+        Data frame or list of data frames to process
 
+    Returns
+    -------
+    bool
+        Bool if any data frame of the list contains any nan values
+    """
     if isinstance(data, list):
         for df in data:
             _ = nan_percentage(df)
@@ -33,16 +34,19 @@ def any_nans(data: list[pd.DataFrame] | pd.DataFrame) -> bool:
 
 
 def nan_percentage(data: pd.DataFrame) -> float:
-    """
-    Calculate the percentage of NaN values in the data column of data frame and log it.
+    """Calculate the percentage of NaN values in the data column of data frame and log it.
 
-    :param
-    data: The data frame to process
-    :type data: pd.DataFrame
-    :return: Nan percentage in the data frame
-    :rtype: float
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The data frame to process
+
+    Returns
+    -------
+    float
+        Nan percentage in the data frame
     """
-    float_columns = data.select_dtypes(include=['float64', 'float32']).columns
+    float_columns = data.select_dtypes(include=["float64", "float32"]).columns
     nan_percentage = (data[float_columns].isna().sum().sum() / (data.shape[0])) * 100
     logging.info(f"Percentage of NaNs in data frame: {nan_percentage:.2f}%")
 
@@ -58,6 +62,19 @@ def construct_updated_data_frame(
     Construct an updated data frame providing the previous data frame and the data frame of the current model call.
 
     Also adds the model label to the data frame.
+    Parameters
+    ----------
+    data : list[pd.DataFrame] | pd.DataFrame
+        The data frame or list of data frames to update.
+    data_one_model : list[pd.DataFrame] | pd.DataFrame
+        The data frame or list of data frames from the current model call.
+    model_label : str
+        The label of the model to add to the data frame.
+
+    Returns
+    -------
+    list[pd.DataFrame]
+        The updated data frame or list of data frames with the model label added.
     """
     if isinstance(data_one_model, list) and data_one_model == []:  # nothing to update
         return data
@@ -83,27 +100,54 @@ def construct_updated_data_frame(
     return data
 
 
-def datenum(date_input: datetime | int, month: int = None, year: int = None, hour: int = 0, minute: int = 0, seconds: int = 0) -> float:
-    """
-    Convert a date to a MATLAB serial date number.
+def datenum(
+    date_input: datetime | int,
+    month: int = None,
+    year: int = None,
+    hour: int = 0,
+    minute: int = 0,
+    seconds: int = 0,
+) -> float:
+    """Convert a date to a MATLAB serial date number.
 
-    Parameters:
-    date_input (datetime | int): A datetime object or an integer representing the day of the month.
-    month (int, optional): The month of the date. Required if date_input is an integer.
-    year (int, optional): The year of the date. Required if date_input is an integer.
+    Parameters
+    ----------
+    date_input : datetime | int
+        A datetime object or an integer representing the day of the month.
+    month : int, optional
+        The month of the date. Required if date_input is an integer.
+    year : int, optional
+        The year of the date. Required if date_input is an integer.
+    hour : int, optional
+        The hour of the date, by default 0
+    minute : int, optional
+        The minute of the date, by default 0
+    seconds : int, optional
+        The seconds of the date, by default 0
 
-    Returns:
-    float: The MATLAB serial date number.
+    Returns
+    -------
+    float
+        The MATLAB serial date number.
 
-    Raises:
-    ValueError: If the input is invalid, i.e., if date_input is an integer and month or year is not provided.
+    Raises
+    ------
+    ValueError
+        If the input is invalid, i.e., if date_input is an integer and month or year is not provided.
     """
     MATLAB_EPOCH = datetime.toordinal(datetime(1970, 1, 1, tzinfo=timezone.utc)) + 366
 
     if isinstance(date_input, datetime):
         dt = date_input.replace(tzinfo=timezone.utc)
     elif month is not None and year is not None:
-        dt = datetime(year=year, month=month, day=date_input, hour=hour, minute=minute, second=seconds).replace(tzinfo=timezone.utc)
+        dt = datetime(
+            year=year,
+            month=month,
+            day=date_input,
+            hour=hour,
+            minute=minute,
+            second=seconds,
+        ).replace(tzinfo=timezone.utc)
     else:
         raise ValueError(
             "Invalid input. Provide either a datetime object or year, month, and day."
@@ -116,11 +160,15 @@ def datestr(datenum: float) -> str:
     """
     Convert MATLAB datenum to a formatted date string.
 
-    Parameters:
-    datenum (float): The MATLAB datenum to convert.
+    Parameters
+    ----------
+    datenum : float
+        The MATLAB datenum to convert.
 
-    Returns:
-    str: The formatted date string in the format "YYYYMMDDHHMM00".
+    Returns
+    -------
+    str
+        The formatted date string in the format "YYYYMMDDHHMM00".
     """
 
     MATLAB_EPOCH = datetime.toordinal(datetime(1970, 1, 1, tzinfo=timezone.utc)) + 366
@@ -136,6 +184,16 @@ def datestr(datenum: float) -> str:
 def sw_mag_propagation(sw_data: pd.DataFrame) -> pd.DataFrame:
     """
     Propagate the solar wind magnetic field to the bow shock and magnetopause.
+
+    Parameters
+    ----------
+    sw_data : pd.DataFrame
+        Data frame containing solar wind data with a 'speed' column.
+
+    Returns
+    -------
+    pd.DataFrame
+        Data frame with propagated solar wind data, indexed by time.
     """
 
     sw_data["t"] = sw_data.index
