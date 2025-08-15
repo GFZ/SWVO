@@ -274,21 +274,34 @@ class OMNIHighRes:
         file_paths = []
         time_intervals = []
 
-        current_time = datetime(start_time.year, 1, 1, 0, 0, 0)
-        end_time = datetime(end_time.year, 12, 31, 23, 59, 59)
+        start_year = start_time.year
+        end_year = end_time.year
+        
+        # Check if end_time is within cadence_min of the next year boundary
+        # This ensures we include the next year's file if needed for  Kp data
+        next_year_start = datetime(end_year + 1, 1, 1, 0, 0, 0, tzinfo=end_time.tzinfo)
+        time_diff_to_next_year = (next_year_start - end_time).total_seconds() / 3600
+        
+        # If end_time is within `cadence_min` of next year, include the next year
+        cadence_hours = cadence_min / 60
+        if time_diff_to_next_year <= cadence_hours:
+            end_year += 1
 
-        while current_time < end_time:
+        for year in range(start_year, end_year + 1):
             file_path = (
                 self.data_dir
-                / f"OMNI_HIGH_RES_{cadence_min}min_{current_time.strftime('%Y')}.csv"
+                / f"OMNI_HIGH_RES_{cadence_min}min_{year}.csv"
             )
             file_paths.append(file_path)
-
-            interval_start = current_time
-            interval_end = datetime(current_time.year, 12, 31, 23, 59, 59)
-
+            if year == start_year:
+                interval_start = datetime(year, 1, 1, 0, 0, 0)
+            else:
+                interval_start = datetime(year, 1, 1, 0, 0, 0)
+            if year == end_year:
+                interval_end = datetime(year, 12, 31, 23, 59, 59)
+            else:
+                interval_end = datetime(year, 12, 31, 23, 59, 59)
             time_intervals.append((interval_start, interval_end))
-            current_time = datetime(current_time.year + 1, 1, 1, 0, 0, 0)
 
         return file_paths, time_intervals
 
