@@ -112,5 +112,14 @@ class TestdstOMNI:
         assert len(df) > 0
         assert "dst" in df.columns
 
+    def test_year_transition(self, dstomni):
+        start_time = datetime(2012, 12, 28, 0, 0, 0, tzinfo=timezone.utc)
+        end_time = datetime(2012, 12, 31, 23, 59, 0, 0, tzinfo=timezone.utc)
+
+        result_df = dstomni.read(start_time, end_time, download=False)
+
+        assert result_df.index.min() == pd.Timestamp("2012-12-28 00:00:00+00:00")
+        assert result_df.index.max() == pd.Timestamp("2013-01-01 00:00:00+00:00")
+
     def test_remove_processed_file(self):
         os.remove(Path(TEST_DIR) / "data/OMNI_LOW_RES_2020.csv")
