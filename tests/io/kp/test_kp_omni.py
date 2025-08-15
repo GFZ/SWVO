@@ -16,19 +16,15 @@ TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
 
 
-
 class TestKpOMNI:
     @pytest.fixture
     def kp_omni(self):
         os.environ["OMNI_LOW_RES_STREAM_DIR"] = str(DATA_DIR)
         yield KpOMNI()
 
-
     @pytest.fixture
     def mock_kp_omni_data(self):
-        test_dates = pd.date_range(
-            start=datetime(2020, 1, 1), end=datetime(2020, 12, 31), freq="h"
-        )
+        test_dates = pd.date_range(start=datetime(2020, 1, 1), end=datetime(2020, 12, 31), freq="h")
         test_data = pd.DataFrame(
             {
                 "t": test_dates,
@@ -40,15 +36,12 @@ class TestKpOMNI:
         test_data.index = test_dates.tz_localize("UTC")
         return test_data
 
-
     def test_initialization_with_env_var(self, kp_omni):
         assert kp_omni.data_dir.exists()
-
 
     def test_initialization_with_data_dir(self):
         kp_omni = KpOMNI(data_dir=DATA_DIR)
         assert kp_omni.data_dir == DATA_DIR
-
 
     def test_initialization_without_env_var(self):
         if "OMNI_LOW_RES_STREAM_DIR" in os.environ:
@@ -56,15 +49,12 @@ class TestKpOMNI:
         with pytest.raises(ValueError):
             KpOMNI()
 
-
     def test_download_and_process(self, kp_omni, mocker):
         mocker.patch("wget.download")
         mocker.patch.object(
             kp_omni,
             "_process_single_file",
-            return_value=kp_omni._process_single_file(
-                Path(TEST_DIR) / "data/omni2_2020.dat"
-            ),
+            return_value=kp_omni._process_single_file(Path(TEST_DIR) / "data/omni2_2020.dat"),
         )
 
         start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
@@ -74,18 +64,16 @@ class TestKpOMNI:
 
         assert (TEST_DIR / Path("data/omni2_2020.dat")).exists()
 
-
     def test_read_without_download(self, kp_omni, mocker):
         start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2021, 12, 31, tzinfo=timezone.utc)
         df = kp_omni.read(start_time, end_time, download=False)
 
-        #returns NaN dataframe
+        # returns NaN dataframe
         assert not df.empty
         assert "kp" in df.columns
         assert all(df["kp"].isna())
         assert all(df["file_name"].isnull())
-
 
     def test_read_with_download(self, kp_omni, mock_kp_omni_data, mocker):
 
@@ -102,9 +90,8 @@ class TestKpOMNI:
         assert not df.empty
         assert "kp" in df.columns
         assert all(df["kp"] == 150.0)
-        assert all(idx.hour % 3== 0 for idx in df.index)
+        assert all(idx.hour % 3 == 0 for idx in df.index)
         assert all(idx.tzinfo is not None for idx in df.index)
-
 
     def test_process_single_file(self, kp_omni):
         file = Path(TEST_DIR) / "data/omni2_2020.dat"
@@ -112,7 +99,6 @@ class TestKpOMNI:
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0
         assert "kp" in df.columns
-
 
     def test_read_single_file(self, kp_omni):
 
@@ -122,15 +108,12 @@ class TestKpOMNI:
         assert len(df) > 0
         assert "kp" in df.columns
 
-
     def test_start_year_behind(self, kp_omni, mocker, mock_kp_omni_data):
         start_time = datetime(1920, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
-        
+
         mocker.patch("pathlib.Path.exists", return_value=True)
-        mocker.patch.object(
-            kp_omni, "_get_processed_file_list", return_value=([Path("dummy.csv")], [])
-        )
+        mocker.patch.object(kp_omni, "_get_processed_file_list", return_value=([Path("dummy.csv")], []))
         mocker.patch.object(kp_omni, "_read_single_file", return_value=mock_kp_omni_data)
 
         df = pd.DataFrame(
@@ -153,9 +136,14 @@ class TestKpOMNI:
 
         assert result_df.empty, "Expected resulting DataFrame to be empty"
 
+    def test_year_transition(self, kp_omni):
+        start_time = datetime(2012, 12, 28, 0, 0, 0, tzinfo=timezone.utc)
+        end_time = datetime(2012, 12, 31, 23, 59, 59, 0, tzinfo=timezone.utc)
 
+        result_df = kp_omni.read(start_time, end_time, download=False)
 
-
+        assert result_df.index.min() == pd.Timestamp("2012-12-28 00:00:00+00:00")
+        assert result_df.index.max() == pd.Timestamp("2013-01-01 00:00:00+00:00")
 
     def test_remove_processed_file(self):
 
