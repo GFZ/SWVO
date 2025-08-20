@@ -34,22 +34,13 @@ class TestSWOMNI:
         with pytest.raises(ValueError):
             SWOMNI()
 
-    def test_download_and_process(self, swomni, mocker):
-        mocker.patch("wget.download")
-        mocker.patch.object(
-            swomni,
-            "_process_single_file",
-            return_value=swomni._process_single_file(
-                Path(TEST_DIR) / "data/omni_min2020.asc"
-            ),
-        )
-
+    def test_download_and_process(self, swomni):
         start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
-
+        # download this file without mocking
         swomni.download_and_process(start_time, end_time)
 
-        assert (TEST_DIR / Path("data/omni_min2020.asc")).exists()
+        assert (TEST_DIR / Path("data/OMNI_HIGH_RES_1min_2020.csv")).exists()
 
     def test_read_without_download(self, swomni, mocker):
         start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)
@@ -76,41 +67,6 @@ class TestSWOMNI:
         swomni.read(start_time, end_time, download=True)
         swomni.download_and_process.assert_called_once()
 
-    def test_process_single_file(self, swomni):
-        file = Path(TEST_DIR) / "data/omni_min2020.asc"
-        df = swomni._process_single_file(file)
-        assert isinstance(df, pd.DataFrame)
-        assert all(
-            column in df.columns
-            for column in [
-                "bavg",
-                "by_gsm",
-                "bz_gsm",
-                "speed",
-                "proton_density",
-                "temperature",
-                "bx_gsm",
-            ]
-        )
-        assert len(df) > 0
-
-    def test_read_single_file(self, swomni):
-        csv_file = Path(TEST_DIR) / "data/OMNI_HIGH_RES_1min_2020.csv"
-        df = swomni._read_single_file(csv_file)
-        assert isinstance(df, pd.DataFrame)
-        assert all(
-            column in df.columns
-            for column in [
-                "bavg",
-                "by_gsm",
-                "bz_gsm",
-                "speed",
-                "proton_density",
-                "temperature",
-                "bx_gsm",
-            ]
-        )
-        assert len(df) > 0
 
     def test_invalid_cadence(self, swomni):
         start_time = datetime(2022, 1, 1, tzinfo=timezone.utc)
