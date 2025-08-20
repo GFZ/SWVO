@@ -260,7 +260,7 @@ class SWSWIFTEnsemble:
         )
 
     def _nan_dataframe(self, start_time, end_time):
-        t = pd.date_range(start_time, end_time, freq="5min", utc=True)
+        t = pd.date_range(start_time, end_time, freq="5min", tz=timezone.utc)
         data_out = pd.DataFrame(
             {
                 "proton_density": [np.nan] * len(t),
