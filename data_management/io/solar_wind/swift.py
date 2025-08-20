@@ -92,11 +92,6 @@ class SWSWIFTEnsemble:
         -------
         list[:class:`pandas.DataFrame`]
             A list of data frames containing ensemble data for the requested period.
-
-        Raises
-        ------
-        FileNotFoundError
-            Raises `FileNotFoundError` if no ensemble files are found for the requested date.
         """
 
         if start_time and not start_time.tzinfo:
