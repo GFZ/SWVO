@@ -36,7 +36,7 @@ jobs:
 
       - name: Deploy to GitLab Pages Repo
         run: |
-          git clone https://${GL_USERNAME}:${GL_TOKEN}@git.gfz-potsdam.de/jhawar/github_docs.git repo
+          git clone https://${GL_USERNAME}:${GL_TOKEN}@git.gfz-potsdam.de/jhawar/swvo.git repo
           cd repo
           git config user.name "GitHub Actions (via ${GITHUB_ACTOR})"
           git config user.email "actions@github.com"
