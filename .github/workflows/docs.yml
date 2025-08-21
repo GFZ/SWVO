@@ -34,17 +34,17 @@ jobs:
       - name: Deploy to GitLab Pages Repo
         run: |
 
-      # - name: Deploy to GitLab Pages Repo
-      #   run: |
-      #     git clone https://${GL_USERNAME}:${GL_TOKEN}@git.gfz-potsdam.de/jhawar/github_docs.git repo
-      #     cd repo
-      #     git config user.name "GitHub Actions (via ${GITHUB_ACTOR})"
-      #     git config user.email "actions@github.com"
-      #     cp -r ../docs/_build/html ./docs
-      #     git add docs
-      #     git commit -m "Update docs from GitHub Actions" || echo "No changes to commit"
-      #     git push origin main
-      #   env:
-      #     GL_USERNAME: ${{ secrets.GL_USERNAME }}
-      #     GL_TOKEN: ${{ secrets.GL_TOKEN }}
-      #     GITHUB_ACTOR: ${{ github.actor }}
+      - name: Deploy to GitLab Pages Repo
+        run: |
+          git clone https://${GL_USERNAME}:${GL_TOKEN}@git.gfz-potsdam.de/jhawar/github_docs.git repo
+          cd repo
+          git config user.name "GitHub Actions (via ${GITHUB_ACTOR})"
+          git config user.email "actions@github.com"
+          cp -r ../docs/_build/html ./docs
+          git add docs
+          git commit -m "Update docs from GitHub Actions" || echo "No changes to commit"
+          git push origin main
+        env:
+          GL_USERNAME: ${{ secrets.GL_USERNAME }}
+          GL_TOKEN: ${{ secrets.GL_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
