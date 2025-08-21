@@ -1,4 +1,4 @@
-# Data Management @ GFZ
+# SWVO @ GFZ
 ## Installation
 To install the package, run the following command:
 
