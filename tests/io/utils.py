@@ -5,7 +5,7 @@
 import pytest
 import pandas as pd
 import logging
-from data_management.io.utils import any_nans, nan_percentage
+from swvo.io.utils import any_nans, nan_percentage
 
 
 def test_any_nans_single_dataframe_with_nans():

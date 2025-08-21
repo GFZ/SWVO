@@ -14,7 +14,7 @@ import warnings
 import pandas as pd
 import pytest
 
-from data_management.io.dst.wdc import DSTWDC
+from swvo.io.dst.wdc import DSTWDC
 
 TEST_DATA_DIR = Path("test_data")
 MOCK_DATA_PATH = TEST_DATA_DIR / "mock_dst"

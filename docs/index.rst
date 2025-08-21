@@ -1,5 +1,5 @@
 
-Welcome to data_management documentation!
+Welcome to swvo documentation!
 =========================================
 
 .. include:: ../README.md
@@ -15,4 +15,4 @@ API
    :caption: API:
    :recursive:
 
-   data_management
+   swvo

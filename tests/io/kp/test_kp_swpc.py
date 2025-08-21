@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 import numpy as np
 
-from data_management.io.kp import KpSWPC
+from swvo.io.kp import KpSWPC
 
 TEST_DIR = Path("test_data")
 DATA_DIR = TEST_DIR / "mock_kp_swpc"

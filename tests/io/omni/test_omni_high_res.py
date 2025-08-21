@@ -6,7 +6,7 @@ import os
 import pytest
 from pathlib import Path
 from datetime import datetime, timezone
-from data_management.io.omni.omni_high_res import OMNIHighRes
+from swvo.io.omni.omni_high_res import OMNIHighRes
 import pandas as pd
 import numpy as np
 

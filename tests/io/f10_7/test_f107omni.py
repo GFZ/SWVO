@@ -6,7 +6,7 @@ import os
 import pytest
 from pathlib import Path
 from datetime import datetime, timezone
-from data_management.io.f10_7 import F107OMNI
+from swvo.io.f10_7 import F107OMNI
 import pandas as pd
 import warnings
 from unittest.mock import patch

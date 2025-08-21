@@ -8,13 +8,13 @@ import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
-import data_management
+import swvo
 
-project = "data_management"
+project = "swvo"
 copyright = "2024, GFZ"
 author = "Bernhard Haas, Sahil Jhawar"
 
-version = data_management.__version__
+version = swvo.__version__
 release = version
 
 master_doc = "index"

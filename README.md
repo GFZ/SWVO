@@ -58,4 +58,4 @@ This package provides tools to read, process, and analyze several key solar and 
     - SWIFT: `SWSWIFTEnsemble`
     - Combined: `read_solar_wind_from_multiple_models`
 
-Each index can be accessed via these dedicated reader classes, which handle downloading and read methods. See the code in `data_management/io` or API documentation for details on each index's implementation.
+Each index can be accessed via these dedicated reader classes, which handle downloading and read methods. See the code in `swvo/io` or API documentation for details on each index's implementation.

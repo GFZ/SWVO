@@ -14,7 +14,7 @@ import warnings
 import pandas as pd
 import pytest
 
-from data_management.io.f10_7.swpc import F107SWPC
+from swvo.io.f10_7.swpc import F107SWPC
 
 TEST_DATA_DIR = Path("test_data")
 MOCK_DATA_PATH = TEST_DATA_DIR / "mock_f107"

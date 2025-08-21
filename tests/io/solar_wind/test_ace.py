@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 import numpy as np
 
-from data_management.io.solar_wind import SWACE
+from swvo.io.solar_wind import SWACE
 
 TEST_DIR = Path("test_data")
 DATA_DIR = TEST_DIR / "mock_ace"

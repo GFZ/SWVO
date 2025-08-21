@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 import numpy as np
 
-from data_management.io.kp import KpNiemegk
+from swvo.io.kp import KpNiemegk
 
 TEST_DIR = Path("test_data")
 DATA_DIR = TEST_DIR / "mock_kp_niemegk"

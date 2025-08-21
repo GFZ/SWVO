@@ -13,12 +13,12 @@ from pathlib import Path
 import traceback
 from urllib.error import HTTPError
 
-from data_management.io.dst import DSTWDC
-from data_management.io.kp import KpNiemegk, KpSWPC
-from data_management.io.hp import Hp30GFZ, Hp60GFZ
-from data_management.io.omni import OMNILowRes, OMNIHighRes
-from data_management.io.solar_wind import SWACE, DSCOVR
-from data_management.io.f10_7 import F107SWPC, F107OMNI
+from swvo.io.dst import DSTWDC
+from swvo.io.kp import KpNiemegk, KpSWPC
+from swvo.io.hp import Hp30GFZ, Hp60GFZ
+from swvo.io.omni import OMNILowRes, OMNIHighRes
+from swvo.io.solar_wind import SWACE, DSCOVR
+from swvo.io.f10_7 import F107SWPC, F107OMNI
 
 
 

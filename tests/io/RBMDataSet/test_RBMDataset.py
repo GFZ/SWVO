@@ -8,9 +8,9 @@ import numpy as np
 from pathlib import Path
 from unittest import mock
 from datetime import timezone
-from data_management.io.RBMDataSet import RBMDataSet
+from swvo.io.RBMDataSet import RBMDataSet
 
-from data_management.io.RBMDataSet import (
+from swvo.io.RBMDataSet import (
     FileCadenceEnum,
     InstrumentEnum,
     MfmEnum,
@@ -21,7 +21,7 @@ from data_management.io.RBMDataSet import (
 
 @pytest.fixture
 def mock_module_string():
-    return "data_management.io.RBMDataSet.RBMDataSet.RBMDataSet"
+    return "swvo.io.RBMDataSet.RBMDataSet.RBMDataSet"
 
 
 @pytest.fixture
@@ -29,8 +29,8 @@ def mock_dataset():
     start_time = dt.datetime(2023, 1, 1, tzinfo=timezone.utc)
     end_time = dt.datetime(2023, 1, 31, tzinfo=timezone.utc)
 
-    with mock.patch("data_management.io.RBMDataSet.utils.get_file_path_any_format") as mock_get_path:
-        with mock.patch("data_management.io.RBMDataSet.utils.load_file_any_format") as mock_load_file:
+    with mock.patch("swvo.io.RBMDataSet.utils.get_file_path_any_format") as mock_get_path:
+        with mock.patch("swvo.io.RBMDataSet.utils.load_file_any_format") as mock_load_file:
             mock_get_path.return_value = Path("/mock/path/file.pickle")
             mock_load_file.return_value = {
                 "time": np.array([dt.datetime(2023, 1, 15).timestamp()]),

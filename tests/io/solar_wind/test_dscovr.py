@@ -13,7 +13,7 @@ import pytest
 import numpy as np
 import wget
 
-from data_management.io.solar_wind import DSCOVR
+from swvo.io.solar_wind import DSCOVR
 
 TEST_DIR = Path("test_data")
 DATA_DIR = TEST_DIR / "mock_dscovr"

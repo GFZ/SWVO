@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from data_management.io.solar_wind import SWSWIFTEnsemble
+from swvo.io.solar_wind import SWSWIFTEnsemble
 
 TEST_DATA_DIR = Path("test_data")
 MOCK_DATA_PATH = TEST_DATA_DIR / "mock_swift"

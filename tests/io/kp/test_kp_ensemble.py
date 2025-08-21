@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 import numpy as np
-from data_management.io.kp import KpEnsemble
+from swvo.io.kp import KpEnsemble
 
 TEST_DIR = Path("test_data")
 DATA_DIR = TEST_DIR / "mock_kp_ensemble"

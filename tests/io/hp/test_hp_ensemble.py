@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from data_management.io.hp.ensemble import Hp30Ensemble, Hp60Ensemble, HpEnsemble
+from swvo.io.hp.ensemble import Hp30Ensemble, Hp60Ensemble, HpEnsemble
 
 TEST_DIR = Path("test_data")
 DATA_DIR = TEST_DIR / "mock_hp_ensemble"

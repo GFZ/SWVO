@@ -8,7 +8,7 @@ import pytest
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import get_args
-from data_management.io.RBMDataSet import (
+from swvo.io.RBMDataSet import (
     RBMDataSetElPaso,
     InstrumentEnum,
     MfmEnum,
@@ -16,7 +16,7 @@ from data_management.io.RBMDataSet import (
     VariableEnum,
     SatelliteLiteral,
 )
-from data_management.io.RBMDataSet.utils import python2matlab
+from swvo.io.RBMDataSet.utils import python2matlab
 
 
 class MockVariable:

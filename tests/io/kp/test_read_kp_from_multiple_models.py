@@ -7,7 +7,7 @@ from datetime import datetime, timezone, timedelta
 import pandas as pd
 import numpy as np
 import os
-from data_management.io.kp import (
+from swvo.io.kp import (
     KpEnsemble,
     KpNiemegk,
     KpOMNI,

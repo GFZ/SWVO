@@ -9,7 +9,7 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-from data_management.io.RBMDataSet import utils
+from swvo.io.RBMDataSet import utils
 import scipy
 
 

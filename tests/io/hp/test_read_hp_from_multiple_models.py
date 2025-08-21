@@ -7,8 +7,8 @@ from datetime import datetime, timezone, timedelta
 import pandas as pd
 import numpy as np
 import os
-from data_management.io import hp
-from data_management.io.hp import (
+from swvo.io import hp
+from swvo.io.hp import (
     Hp30Ensemble,
     Hp30GFZ,
     Hp60Ensemble,

@@ -7,7 +7,7 @@ from datetime import datetime, timezone, timedelta
 import pandas as pd
 import numpy as np
 import os
-from data_management.io.dst import DSTOMNI, DSTWDC, read_dst_from_multiple_models
+from swvo.io.dst import DSTOMNI, DSTWDC, read_dst_from_multiple_models
 from pathlib import Path
 
 from unittest.mock import patch

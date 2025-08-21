@@ -7,7 +7,7 @@ from datetime import datetime, timezone, timedelta
 import pandas as pd
 import numpy as np
 import os
-from data_management.io.f10_7 import F107OMNI, F107SWPC, read_f107_from_multiple_models
+from swvo.io.f10_7 import F107OMNI, F107SWPC, read_f107_from_multiple_models
 from pathlib import Path
 
 from unittest.mock import patch

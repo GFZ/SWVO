@@ -6,7 +6,7 @@ import os
 import pytest
 from pathlib import Path
 from datetime import datetime, timezone
-from data_management.io.solar_wind import SWOMNI
+from swvo.io.solar_wind import SWOMNI
 import pandas as pd
 
 from unittest.mock import patch

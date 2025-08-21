@@ -11,7 +11,7 @@ from unittest.mock import mock_open, patch
 import pandas as pd
 import pytest
 
-from data_management.io.hp.gfz import Hp30GFZ, Hp60GFZ, HpGFZ
+from swvo.io.hp.gfz import Hp30GFZ, Hp60GFZ, HpGFZ
 
 
 class TestHpGFZ:
