@@ -1,5 +1,8 @@
 # SWVO @ GFZ
 
+[![Build Sphinx HTML](https://github.com/GFZ/SWVO/actions/workflows/docs.yml/badge.svg?branch=PAGER-prod)](https://github.com/GFZ/SWVO/actions/workflows/docs.yml)
+[![SWVO Tests](https://github.com/GFZ/SWVO/actions/workflows/tests.yml/badge.svg)](https://github.com/GFZ/SWVO/actions/workflows/tests.yml)
+
 ## Introduction
 This package provides a set of tools for managing solar data in Python. It includes functionalities for reading, writing, and processing data from various sources.
 
