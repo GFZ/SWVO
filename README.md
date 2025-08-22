@@ -1,7 +1,11 @@
 # SWVO @ GFZ
 
+[![PyPI version](https://badge.fury.io/py/swvo.svg)](https://badge.fury.io/py/swvo)
 [![Build Sphinx HTML](https://github.com/GFZ/SWVO/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/GFZ/SWVO/actions/workflows/docs.yml)
 [![SWVO Tests](https://github.com/GFZ/SWVO/actions/workflows/tests.yml/badge.svg)](https://github.com/GFZ/SWVO/actions/workflows/tests.yml)
+[![Python version](https://img.shields.io/pypi/pyversions/swvo.svg)](https://badge.fury.io/py/swvo)
+[![Coverage Status](https://coveralls.io/repos/github/GFZ/SWVO/badge.svg?branch=PAGER-prod)](https://coveralls.io/github/GFZ/SWVO?branch=PAGER-prod)
+
 
 ## Introduction
 This package provides a set of tools for managing solar data in Python. It includes functionalities for reading, writing, and processing data from various sources.
