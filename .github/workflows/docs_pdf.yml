@@ -37,17 +37,18 @@ jobs:
 
       - name: Push PDF to docs branch
         run: |
+          cp docs/_build/latex/swvo.pdf /tmp/swvo.pdf
           git fetch origin
-          git checkout -B docs
+          git checkout --orphan docs
+          git reset --hard
+          git clean -fdx
           git config user.name "GitHub Actions (by ${GITHUB_ACTOR})"
           git config user.email "actions@github.com"
-          git rm -rf . || true
-          rm -rf ./*
-          cp docs/_build/latex/swvo.pdf ./swvo.pdf
-          SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
+          mv /tmp/swvo.pdf ./swvo.pdf
           git add swvo.pdf
+          SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
           git commit -m "Update PDF docs from GitHub Actions (commit ${SHORT_SHA} by ${GITHUB_ACTOR})" || echo "No changes to commit"
-          git push origin docs
+          git push origin docs --force
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_SHA: ${{ github.sha }}
