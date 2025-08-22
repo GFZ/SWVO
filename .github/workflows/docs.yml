@@ -38,13 +38,15 @@ jobs:
         run: |
           git clone https://${GL_USERNAME}:${GL_TOKEN}@git.gfz-potsdam.de/jhawar/swvo.git repo
           cd repo
-          git config user.name "GitHub Actions (via ${GITHUB_ACTOR})"
+          git config user.name "GitHub Actions (by ${GITHUB_ACTOR})"
           git config user.email "actions@github.com"
           cp -r ../docs/_build/html ./docs
+          SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
           git add docs
-          git commit -m "Update docs from GitHub Actions" || echo "No changes to commit"
+          git commit -m "Update docs from GitHub Actions (commit ${SHORT_SHA} by ${GITHUB_ACTOR})" || echo "No changes to commit"
           git push origin main
         env:
           GL_USERNAME: ${{ secrets.GL_USERNAME }}
           GL_TOKEN: ${{ secrets.GL_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_SHA: ${{ github.sha }}
