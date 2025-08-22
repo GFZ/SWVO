@@ -9,9 +9,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "swvo"
 authors = [
-    {name = "Dr. Ruggero Vasile, Bernhard Haas", email = "bernhard.haas@gfz.de"}
+    {name = "Bernhard Haas", email = "bernhard.haas@gfz.de"},
+    {name = "Sahil Jhawar", email = "jhawar@gfz.de"},
 ]
-description = "A data management repository for FLAG and PAGER project"
+description = "Tools for downloading and reading space-weather data and geomagnetic indices."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "GPLv3"}
@@ -20,6 +21,7 @@ classifiers = [
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
     'Operating System :: POSIX',
     'Operating System :: Unix',
     'Operating System :: MacOS',
@@ -32,10 +34,10 @@ version = {attr = "swvo.__version__"}
 dependencies = {file = ["requirements.txt"]}
 
 [project.urls]
-# Homepage = ""
-# Documentation = ""
-# Download = ""
-# Tracker = ""
+Homepage = "https://github.com/GFZ/SWVO"
+Documentation = "https://spsw.git-pages.gfz-potsdam.de/swvo"
+Download = "https://pypi.org/project/swvo/#files"
+Tracker = "https://github.com/GFZ/SWVO/issues"
 
 [tool.setuptools.packages.find]
 include = ["swvo*"]
