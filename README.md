@@ -1,16 +1,4 @@
 # SWVO @ GFZ
-## Installation
-To install the package, run the following command:
-
-
-`conda deactivate` (make sure that no conda environment is active, even base)
-`uv venv` assuming you have `uv` installed, if not then remove `uv` prefix from pip commands below and run them in the terminal directly.
-```bash
-source .venv/bin/activate
-python -m ensurepip --upgrade
-uv pip install --upgrade pip
-uv pip install -e .
-```
 
 ## Introduction
 This package provides a set of tools for managing solar data in Python. It includes functionalities for reading, writing, and processing data from various sources.
@@ -59,3 +47,15 @@ This package provides tools to read, process, and analyze several key solar and 
     - Combined: `read_solar_wind_from_multiple_models`
 
 Each index can be accessed via these dedicated reader classes, which handle downloading and read methods. See the code in `swvo/io` or API documentation for details on each index's implementation.
+
+
+## Installation
+To install the package, run the following command:
+
+`uv venv` assuming you have `uv` installed, if not then remove `uv` prefix from pip commands below and run them in the terminal directly.
+```bash
+source .venv/bin/activate
+python -m ensurepip --upgrade
+uv pip install --upgrade pip
+uv pip install -e .
+```
