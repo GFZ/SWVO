@@ -60,6 +60,7 @@ autodoc_default_options = {
     "exclude-members": "__weakref__, __dict__, __module__",
 }
 
+SWVO_CHANGELOG_TOKEN = os.getenv("SWVO_CHANGELOG_TOKEN")
 plot_html_show_source_link = False
 plot_html_show_formats = False
 plot_working_directory = os.path.abspath("..")

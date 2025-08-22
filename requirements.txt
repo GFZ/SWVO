@@ -96,3 +96,4 @@ urllib3
 userpath
 wcwidth
 wget
+sphinx-github-changelog

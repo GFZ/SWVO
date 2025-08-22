@@ -16,3 +16,10 @@ API
    :recursive:
 
    swvo
+
+Changelog
+--------
+.. toctree::
+   :maxdepth: 1
+
+   changelog

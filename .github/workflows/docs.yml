@@ -21,6 +21,8 @@ jobs:
           pip install -r requirements.txt
 
       - name: Build Sphinx HTML
+        env:
+          SWVO_CHANGELOG_TOKEN: ${{ secrets.SWVO_CHANGELOG_TOKEN }}
         run: |
           cd docs
           make html
