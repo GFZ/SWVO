@@ -31,10 +31,7 @@ jobs:
           name: html-docs
           path: docs/_build/html/
 
-      - name: Deploy to GitLab Pages Repo
-        run: |
-
-      - name: Deploy to GitLab Pages Repo
+      - name: Push to GitLab Pages Repo
         run: |
           git clone https://${GL_USERNAME}:${GL_TOKEN}@git.gfz-potsdam.de/spsw/swvo.git repo
           cd repo
