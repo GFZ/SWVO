@@ -55,10 +55,17 @@ Each index can be accessed via these dedicated reader classes, which handle down
 ## Installation
 To install the package, run the following command:
 
-`uv venv` assuming you have `uv` installed, if not then remove `uv` prefix from pip commands below and run them in the terminal directly.
+`uv venv`
 ```bash
 source .venv/bin/activate
 python -m ensurepip --upgrade
 uv pip install --upgrade pip
 uv pip install -e .
 ```
+
+or it can be installed directly from PyPI:
+```bash
+uv pip install swvo
+```
+
+All the above `uv` commands assume you have `uv` installed, if not then remove `uv` prefix from the commands and run them directly.
