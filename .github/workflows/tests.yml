@@ -33,11 +33,11 @@ jobs:
           pip install coveralls coverage
 
       - name: Run tests
-        run: python -m coverage run -m pytest . tests/io/
+        run: python -m coverage run --source swvo -m pytest tests/io
 
-      # - name: Run Coveralls
-      #   if: ${{ success() }}
-      #   run: |
-      #     coveralls --service=github
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run Coveralls
+        if: ${{ success() }}
+        run: |
+          coveralls --service=github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
