@@ -3,12 +3,11 @@ name: SWVO Tests
 on:
   push:
     branches:
-      - PAGER-prod
-      - tests
+      - main
+
   pull_request:
     branches:
-      - PAGER-prod
-      - tests
+      - main
   workflow_dispatch:
 
 jobs:

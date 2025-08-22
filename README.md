@@ -1,6 +1,6 @@
 # SWVO @ GFZ
 
-[![Build Sphinx HTML](https://github.com/GFZ/SWVO/actions/workflows/docs.yml/badge.svg?branch=PAGER-prod)](https://github.com/GFZ/SWVO/actions/workflows/docs.yml)
+[![Build Sphinx HTML](https://github.com/GFZ/SWVO/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/GFZ/SWVO/actions/workflows/docs.yml)
 [![SWVO Tests](https://github.com/GFZ/SWVO/actions/workflows/tests.yml/badge.svg)](https://github.com/GFZ/SWVO/actions/workflows/tests.yml)
 
 ## Introduction

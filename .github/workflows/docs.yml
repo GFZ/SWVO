@@ -2,7 +2,7 @@ name: Build Sphinx HTML
 
 on:
   push:
-    branches: ["PAGER-prod"]
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
