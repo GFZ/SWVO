@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y latexmk texlive-latex-extra texlive-fonts-recommended texlive-latex-recommended
+          sudo apt-get install -y latexmk texlive-latex-extra texlive-fonts-recommended texlive-latex-recommended imagemagick
           pip install -r requirements.txt
 
       - name: Build Sphinx PDF
