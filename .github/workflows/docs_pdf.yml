@@ -37,7 +37,7 @@ jobs:
 
       - name: Push PDF to docs branch
         run: |
-          git fetch
+          git fetch origin
           git checkout -B docs
           git config user.name "GitHub Actions (by ${GITHUB_ACTOR})"
           git config user.email "actions@github.com"
@@ -46,7 +46,7 @@ jobs:
           SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
           git add swvo.pdf
           git commit -m "Update PDF docs from GitHub Actions (commit ${SHORT_SHA} by ${GITHUB_ACTOR})" || echo "No changes to commit"
-          git push docs
+          git push origin docs
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_SHA: ${{ github.sha }}
