@@ -41,7 +41,8 @@ jobs:
           git checkout -B docs
           git config user.name "GitHub Actions (by ${GITHUB_ACTOR})"
           git config user.email "actions@github.com"
-          rm -f *.pdf
+          git rm -rf . || true
+          rm -rf ./*
           cp docs/_build/latex/swvo.pdf ./swvo.pdf
           SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
           git add swvo.pdf
