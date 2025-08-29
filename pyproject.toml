@@ -9,13 +9,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "swvo"
 authors = [
-    {name = "Bernhard Haas", email = "bernhard.haas@gfz.de"},
-    {name = "Sahil Jhawar", email = "jhawar@gfz.de"},
+    {name = "Bernhard Haas, Sahil Jhawar, Stefano Bianco, Ruggero Vasile", email = "sec15@gfz.de"},
 ]
 description = "Tools for downloading and reading space-weather data and geomagnetic indices."
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "GPLv3"}
+license = "Apache-2.0"
+license-files = ["LICENSES/Apache-2.0.txt"]
 classifiers = [
     "Programming Language :: Python :: 3",
     'Programming Language :: Python :: 3.11',
@@ -24,6 +24,7 @@ classifiers = [
     'Operating System :: POSIX',
     'Operating System :: Unix',
     'Operating System :: MacOS',
+    'License :: OSI Approved :: Apache Software License'
 ]
 dynamic = ["dependencies", "version"]
 
