@@ -186,19 +186,11 @@ def _read_historical_model(
         If the provided model is not an instance of DSCOVR, SWACE or SWOMNI.
 
     """
-    if isinstance(model, SWOMNI):
-        model_label = "omni"
-    elif isinstance(model, SWACE):
-        model_label = "ace"
-    elif isinstance(model, DSCOVR):
-        model_label = "dscovr"
-    else:
-        msg = "Encountered invalide model type in read historical model!"
-        raise TypeError(msg)
-
     logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
-
-    data_one_model = model.read(start_time, end_time, download=download)
+    if isinstance(model, SWOMNI):
+        data_one_model = model.read(start_time, end_time, download=download)
+    else:
+        data_one_model = model.read(start_time, end_time, download=download, propagation=True)
     # set nan for 'future' values
     data_one_model.loc[
         historical_data_cutoff_time + timedelta(minutes=1) : end_time
