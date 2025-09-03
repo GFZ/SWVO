@@ -6,9 +6,11 @@ import os
 import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+import numpy as np
 import pandas as pd
 import pytest
-import numpy as np
+
 from swvo.io.kp import KpEnsemble
 
 TEST_DIR = Path("test_data")
@@ -52,15 +54,11 @@ class TestKpEnsemble:
             KpEnsemble(data_dir="nonexistent_directory")
 
     def test_read_with_ensemble_data(self, kp_ensemble_instance):
-        current_time = datetime.now(timezone.utc).replace(
-            minute=0, second=0, microsecond=0
-        )
+        current_time = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
         str_date = current_time.strftime("%Y%m%dT%H0000")
 
         for i in range(3):
-            test_dates = pd.date_range(
-                start=current_time, end=current_time + timedelta(days=3), freq="3h"
-            )
+            test_dates = pd.date_range(start=current_time, end=current_time + timedelta(days=3), freq="3h")
 
             df = pd.DataFrame(
                 {
@@ -69,7 +67,7 @@ class TestKpEnsemble:
                 }
             )
 
-            filename = f"FORECAST_Kp_{str_date}_ensemble_{i+1}.csv"
+            filename = f"FORECAST_Kp_{str_date}_ensemble_{i + 1}.csv"
             file_path = kp_ensemble_instance.data_dir / filename
             df.to_csv(file_path, index=False, header=False)
 
@@ -84,22 +82,14 @@ class TestKpEnsemble:
             assert isinstance(df.index, pd.DatetimeIndex)
             assert not df.empty
 
-            assert df.index[0] >= current_time.replace(tzinfo=timezone.utc) - timedelta(
-                hours=3
-            )
-            assert df.index[-1] <= current_time.replace(
-                tzinfo=timezone.utc
-            ) + timedelta(days=1) + timedelta(hours=3)
+            assert df.index[0] >= current_time.replace(tzinfo=timezone.utc) - timedelta(hours=3)
+            assert df.index[-1] <= current_time.replace(tzinfo=timezone.utc) + timedelta(days=1) + timedelta(hours=3)
 
     def test_read_with_default_times(self, kp_ensemble_instance):
-        current_time = datetime.now(timezone.utc).replace(
-            minute=0, second=0, microsecond=0
-        )
+        current_time = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
         str_date = current_time.strftime("%Y%m%dT%H0000")
 
-        test_dates = pd.date_range(
-            start=current_time, end=current_time + timedelta(days=3), freq="3h"
-        )
+        test_dates = pd.date_range(start=current_time, end=current_time + timedelta(days=3), freq="3h")
         df = pd.DataFrame(
             {
                 "t": test_dates.strftime("%Y-%m-%d %H:%M:%S"),

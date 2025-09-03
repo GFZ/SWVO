@@ -30,16 +30,12 @@ class TestHpEnsemble:
         if TEST_DIR.exists():
             shutil.rmtree(TEST_DIR, ignore_errors=True)
 
-
     @pytest.fixture
     def hp30ensemble_instance(self):
         (DATA_DIR / "hp30").mkdir(exist_ok=True)
         return Hp30Ensemble(data_dir=DATA_DIR / "hp30")
 
-
-    @pytest.mark.parametrize(
-        "instance_type,index_name", [("hp30", "hp30"), ("hp60", "hp60")]
-    )
+    @pytest.mark.parametrize("instance_type,index_name", [("hp30", "hp30"), ("hp60", "hp60")])
     def test_initialization(self, instance_type, index_name):
         ensemble_dir = DATA_DIR / instance_type
         ensemble_dir.mkdir(exist_ok=True)
@@ -64,18 +60,14 @@ class TestHpEnsemble:
         with pytest.raises(ValueError, match="Encountered invalid index:.*"):
             HpEnsemble("hp45", data_dir=DATA_DIR)
 
-    @pytest.mark.parametrize(
-        "instance_type,index_name", [("hp30", "hp30"), ("hp60", "hp60")]
-    )
+    @pytest.mark.parametrize("instance_type,index_name", [("hp30", "hp30"), ("hp60", "hp60")])
     def test_read_with_ensemble_data(self, instance_type, index_name):
         ensemble_dir = DATA_DIR / instance_type
         ensemble_dir.mkdir(exist_ok=True)
         instance_class = Hp30Ensemble if instance_type == "hp30" else Hp60Ensemble
         instance = instance_class(data_dir=ensemble_dir)
 
-        current_time = datetime.now(timezone.utc).replace(
-            minute=0, second=0, microsecond=0
-        )
+        current_time = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
         str_date = current_time.strftime("%Y%m%dT%H%M%S")
 
         for i in range(3):
@@ -91,7 +83,7 @@ class TestHpEnsemble:
                 }
             )
 
-            filename = f"FORECAST_{index_name.title()}_{str_date}_ensemble_{i+1}.csv"
+            filename = f"FORECAST_{index_name.title()}_{str_date}_ensemble_{i + 1}.csv"
             file_path = instance.data_dir / filename
             df.to_csv(file_path, index=False, header=False)
 
@@ -108,9 +100,7 @@ class TestHpEnsemble:
             assert df.index[0] >= current_time.replace(tzinfo=timezone.utc) - timedelta(
                 minutes=float(instance.index_number) - 0.01,
             )
-            assert df.index[-1] <= current_time.replace(
-                tzinfo=timezone.utc
-            ) + timedelta(days=1) + timedelta(
+            assert df.index[-1] <= current_time.replace(tzinfo=timezone.utc) + timedelta(days=1) + timedelta(
                 minutes=float(instance.index_number) + 0.01,
             )
 

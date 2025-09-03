@@ -8,9 +8,9 @@ Module for handling SWIFT Kp ensemble data.
 
 import logging
 import os
+import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-import warnings
 from typing import Optional, Union
 
 import numpy as np
@@ -45,9 +45,7 @@ class KpEnsemble:
     def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(
-                    f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
-                )
+                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
@@ -56,13 +54,11 @@ class KpEnsemble:
         logging.info(f"Kp Ensemble data directory: {self.data_dir}")
 
         if not self.data_dir.exists():
-            raise FileNotFoundError(
-                f"Data directory {self.data_dir} does not exist! Impossible to retrive data!"
-            )
+            raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrive data!")
 
     def read(self, start_time: datetime, end_time: datetime) -> list:
         """Read Kp ensemble data for the requested period.
-        
+
         Parameters
         ----------
         start_time : datetime
@@ -100,7 +96,6 @@ class KpEnsemble:
             key=lambda x: int(x.stem.split("_")[-1]),
         )
 
-
         file_list_new_name = sorted(
             self.data_dir.glob(f"FORECAST_Kp_{str_date}_ensemble_*.csv"),
             key=lambda x: int(x.stem.split("_")[-1]),
@@ -114,7 +109,9 @@ class KpEnsemble:
         elif len(file_list_old_name) > 0:
             warnings.warn(
                 "The use of FORECAST_PAGER_SWIFT_swift_* files is deprecated. However since we still have these files from the PAGER project with this prefix, this will be supported",
-                DeprecationWarning, stacklevel=2)
+                DeprecationWarning,
+                stacklevel=2,
+            )
             file_list = file_list_old_name
 
         if len(file_list) == 0:

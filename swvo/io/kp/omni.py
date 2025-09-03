@@ -9,8 +9,8 @@ Module holding the reader for reading Kp data from OMNI files.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Union
 from pathlib import Path
+from typing import Optional, Union
 
 import pandas as pd
 
@@ -34,9 +34,7 @@ class KpOMNI(OMNILowRes):
         """
         super().__init__(data_dir=data_dir)
 
-    def read(
-        self, start_time: datetime, end_time: datetime, *, download: bool = False
-    ) -> pd.DataFrame:
+    def read(self, start_time: datetime, end_time: datetime, *, download: bool = False) -> pd.DataFrame:
         """
         Extract Kp data from OMNI Low Resolution files.
 

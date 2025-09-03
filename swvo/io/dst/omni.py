@@ -8,10 +8,10 @@ Module for handling OMNI Dst data.
 
 from __future__ import annotations
 
-from pathlib import Path
-import warnings
 import logging
+import warnings
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Optional, Union
 
 import numpy as np
@@ -40,9 +40,7 @@ class DSTOMNI(OMNILowRes):
         super().__init__(data_dir=data_dir)
 
     # data is downloaded along with OMNI data, check file name in parent class
-    def read(
-        self, start_time: datetime, end_time: datetime, download: bool = False
-    ) -> pd.DataFrame:
+    def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
         """
         Read OMNI DST data for the given time range.
 
@@ -68,7 +66,6 @@ class DSTOMNI(OMNILowRes):
         assert start_time < end_time
 
         file_paths, _ = self._get_processed_file_list(start_time, end_time)
-        
 
         t = pd.date_range(
             datetime(start_time.year, start_time.month, start_time.day),
@@ -90,14 +87,14 @@ class DSTOMNI(OMNILowRes):
 
             df_one_file = self._read_single_file(file_path)
             data_out = df_one_file.combine_first(data_out)
-    
+
         data_out = data_out.truncate(
             before=start_time - timedelta(hours=0.9999),
             after=end_time + timedelta(hours=0.9999),
         )
         if all(data_out["dst"].isna()):
             return data_out
-            
+
         data_out.drop(columns=["timestamp", "t"], inplace=True)
 
         return data_out

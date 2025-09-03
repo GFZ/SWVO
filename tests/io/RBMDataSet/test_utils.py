@@ -3,14 +3,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pickle
-import numpy as np
-import tempfile
-import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from pathlib import Path
 
-from swvo.io.RBMDataSet import utils
+import numpy as np
+import pytest
 import scipy
+
+from swvo.io.RBMDataSet import utils
 
 
 def test_join_var():
@@ -41,6 +41,7 @@ def test_get_file_path_any_format_no_match(tmp_path: Path):
     result = utils.get_file_path_any_format(tmp_path, "nonexistent", "pickle")
     assert result is None
 
+
 def test_get_file_path_any_format_no_file(tmp_path: Path):
     result = utils.get_file_path_any_format(tmp_path, "nonexistent", "pickle")
     assert result is None
@@ -64,6 +65,7 @@ def test_load_file_any_format_mat(tmp_path: Path):
 
     loaded = utils.load_file_any_format(file)
     np.testing.assert_array_equal(loaded["a"], content["a"])
+
 
 def test_load_file_any_format_invalid_extension(tmp_path: Path):
     file = tmp_path / "file.unknown"

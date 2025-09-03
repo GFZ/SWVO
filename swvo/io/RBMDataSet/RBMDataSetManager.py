@@ -42,6 +42,7 @@ class RBMDataSetManager:
     RuntimeError
         If the constructor is called directly instead of using the `load` method.
     """
+
     _instance = None
     data_set_dict: dict[RBMDataSetHash, RBMDataSet]
 

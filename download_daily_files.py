@@ -4,32 +4,27 @@
 
 # flake8: ignore=E722
 
-import os
-import logging
 import argparse
-
+import logging
+import traceback
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-import traceback
-from urllib.error import HTTPError
 
 from swvo.io.dst import DSTWDC
-from swvo.io.kp import KpNiemegk, KpSWPC
+from swvo.io.f10_7 import F107SWPC
 from swvo.io.hp import Hp30GFZ, Hp60GFZ
-from swvo.io.omni import OMNILowRes, OMNIHighRes
-from swvo.io.solar_wind import SWACE, DSCOVR
-from swvo.io.f10_7 import F107SWPC, F107OMNI
-
+from swvo.io.kp import KpNiemegk, KpSWPC
+from swvo.io.omni import OMNIHighRes, OMNILowRes
+from swvo.io.solar_wind import DSCOVR, SWACE
 
 
 def get_parser():
     parser = argparse.ArgumentParser(description="Download and process daily external data files.")
-    parser.add_argument('--logs', action="store", default=None, type=str,
-                        help="Absolute path to the log folder")
+    parser.add_argument("--logs", action="store", default=None, type=str, help="Absolute path to the log folder")
     return parser
 
-def main(args):
 
+def main(args):
     time_now = datetime.now(timezone.utc)
 
     log_dir = Path(args.logs) / f"{time_now.year}" / f"{time_now.month}"
@@ -37,7 +32,7 @@ def main(args):
     log_dir.mkdir(parents=True, exist_ok=True)
 
     logging.basicConfig(
-        filename=str(log_dir / f'daily_downloads_log_{time_now.strftime("%Y%m%d_T%H0000")}.log'),
+        filename=str(log_dir / f"daily_downloads_log_{time_now.strftime('%Y%m%d_T%H0000')}.log"),
         filemode="w",
         format="%(asctime)s,%(msecs)d - %(levelname)s - %(message)s",
         datefmt="%H:%M:%S",
@@ -45,7 +40,7 @@ def main(args):
     )
 
     date_yesterday_start = time_now.replace(hour=0, minute=0, second=1) - timedelta(days=1)
-    date_yesterday_end = date_yesterday_start.replace(hour=23, minute=59, second=59)
+    # date_yesterday_end = date_yesterday_start.replace(hour=23, minute=59, second=59)
 
     logging.info(f"Target time from {date_yesterday_start} to {time_now}")
 
@@ -57,7 +52,6 @@ def main(args):
     except Exception:
         logging.error("Encountered error while downloading Niemegk Kp. Traceback:")
         logging.error(traceback.format_exc())
-
 
     logging.info("Kp SWPC...")
     try:
@@ -123,6 +117,7 @@ def main(args):
         logging.error(traceback.format_exc())
 
     logging.info("Finished downloading and processing!")
+
 
 if __name__ == "__main__":
     parser = get_parser()

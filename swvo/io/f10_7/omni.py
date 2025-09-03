@@ -9,6 +9,7 @@ Module for handling F10.7 data from OMNI low resolution files.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Optional, Union
 
 import numpy as np
@@ -35,9 +36,7 @@ class F107OMNI(OMNILowRes):
         super().__init__(data_dir=data_dir)
 
     # data is downloaded along with OMNI data, check file name in parent class
-    def read(
-        self, start_time: datetime, end_time: datetime, download: bool = False
-    ) -> pd.DataFrame:
+    def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
         """
         Extract F10.7 data from OMNI Low Resolution files.
 

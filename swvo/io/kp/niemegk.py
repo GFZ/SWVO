@@ -8,16 +8,15 @@ Module for handling Niemegk Kp data.
 
 import logging
 import os
+import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Tuple, Optional, Union
-import warnings
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import wget
-
 
 logging.captureWarnings(True)
 
@@ -52,9 +51,7 @@ class KpNiemegk:
     def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(
-                    f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
-                )
+                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
@@ -63,9 +60,7 @@ class KpNiemegk:
 
         logging.info(f"Kp Niemegk  data directory: {self.data_dir}")
 
-    def download_and_process(
-        self, start_time: datetime, end_time: datetime, reprocess_files: bool = False
-    ) -> None:
+    def download_and_process(self, start_time: datetime, end_time: datetime, reprocess_files: bool = False) -> None:
         """Download and process Niemegk Kp data file.
 
         Parameters
@@ -83,9 +78,7 @@ class KpNiemegk:
             Raise `FileNotFoundError` if the file is not downloaded successfully.
         """
         if start_time < datetime.now(timezone.utc) - timedelta(days=30):
-            logging.info(
-                "We can only download and process a Kp Niemegk file from the last 30 days!"
-            )
+            logging.info("We can only download and process a Kp Niemegk file from the last 30 days!")
             return
 
         temporary_dir = Path("./temp_kp_niemegk_wget")
@@ -98,16 +91,12 @@ class KpNiemegk:
 
             # check if download was successfull
             if os.stat(str(temporary_dir / self.NAME)).st_size == 0:
-                raise FileNotFoundError(
-                    f"Error while downloading file: {self.URL + self.NAME}!"
-                )
+                raise FileNotFoundError(f"Error while downloading file: {self.URL + self.NAME}!")
 
             logging.debug("Processing file ...")
             processed_df = self._process_single_file(temporary_dir)
 
-            file_paths, time_intervals = self._get_processed_file_list(
-                start_time, end_time
-            )
+            file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
 
             for file_path, time_interval in zip(file_paths, time_intervals):
                 if file_path.exists():
@@ -117,8 +106,7 @@ class KpNiemegk:
                         continue
 
                 data_single_file = processed_df[
-                    (processed_df.index >= time_interval[0])
-                    & (processed_df.index <= time_interval[1])
+                    (processed_df.index >= time_interval[0]) & (processed_df.index <= time_interval[1])
                 ]
 
                 if len(data_single_file.index) == 0:
@@ -131,9 +119,7 @@ class KpNiemegk:
         finally:
             rmtree(temporary_dir)
 
-    def read(
-        self, start_time: datetime, end_time: datetime, download: bool = False
-    ) -> pd.DataFrame:
+    def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
         """Read Niemegk Kp data for the specified time range.
 
         Parameters
@@ -191,9 +177,7 @@ class KpNiemegk:
 
         return data_out
 
-    def _get_processed_file_list(
-        self, start_time: datetime, end_time: datetime
-    ) -> Tuple[List, List]:
+    def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
         """Get list of file paths and their corresponding time intervals.
 
         Returns
@@ -213,20 +197,15 @@ class KpNiemegk:
             0,
             tzinfo=timezone.utc,
         )
-        end_time = datetime(
-            end_time.year, end_time.month, end_time.day, 0, 0, 0, tzinfo=timezone.utc
-        ) + timedelta(days=1)
+        end_time = datetime(end_time.year, end_time.month, end_time.day, 0, 0, 0, tzinfo=timezone.utc) + timedelta(
+            days=1
+        )
 
         while current_time <= end_time:
-            file_path = (
-                self.data_dir
-                / f"NIEMEGK_KP_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"
-            )
+            file_path = self.data_dir / f"NIEMEGK_KP_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"
             file_paths.append(file_path)
 
-            interval_start = current_time - timedelta(
-                days=self.DAYS_TO_SAVE_EACH_FILE - 1
-            )
+            interval_start = current_time - timedelta(days=self.DAYS_TO_SAVE_EACH_FILE - 1)
             interval_end = datetime(
                 current_time.year,
                 current_time.month,
@@ -295,9 +274,7 @@ class KpNiemegk:
             "D",
         ]
 
-        data = pd.read_csv(
-            temporary_dir / self.NAME, names=header, sep=r"\s+", comment="#"
-        )
+        data = pd.read_csv(temporary_dir / self.NAME, names=header, sep=r"\s+", comment="#")
         data["t"] = pd.to_datetime(
             data[["#YYY", "MM", "DD", "hh.h"]].astype(str).agg("-".join, axis=1),
             format="%Y-%m-%d-%H.%f",

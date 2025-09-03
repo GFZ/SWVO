@@ -4,7 +4,6 @@
 
 import inspect
 from functools import wraps
-from datetime import datetime
 
 
 def add_time_docs(action=None):
@@ -41,11 +40,7 @@ def add_time_docs(action=None):
             param_start = original_doc.find("Parameters\n        ----------\n") + len(
                 "Parameters\n        ----------\n"
             )
-            param_end = (
-                original_doc.find("\n\nReturns")
-                if "\n\nReturns" in original_doc
-                else len(original_doc)
-            )
+            param_end = original_doc.find("\n\nReturns") if "\n\nReturns" in original_doc else len(original_doc)
             existing_params = original_doc[param_start:param_end].strip()
 
             new_params += "        "
@@ -91,11 +86,7 @@ def add_attributes_to_class_docstring(cls):
     attributes = {}
     for base in cls.__mro__:  # Method Resolution Order
         attributes.update(
-            {
-                attr: value
-                for attr, value in vars(base).items()
-                if not attr.startswith("__") and not callable(value)
-            }
+            {attr: value for attr, value in vars(base).items() if not attr.startswith("__") and not callable(value)}
         )
 
     if not attributes:

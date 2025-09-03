@@ -161,6 +161,7 @@ class MfmEnum(Enum):
     T89 = "n4_4_T89"
     T04s = "n4_4_T04s"
 
+
 class ElPasoMFMEnum(Enum):
     T89 = "T89"
     T04s = "T04s"

@@ -6,10 +6,10 @@
 
 import os
 import shutil
+import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
-import warnings
 
 import pandas as pd
 import pytest
@@ -82,9 +82,7 @@ class TestF107SWPC:
         start_time = datetime(2020, 1, 1)
         end_time = datetime(2022, 12, 31)
 
-        file_paths, time_intervals = f107_instance._get_processed_file_list(
-            start_time, end_time
-        )
+        file_paths, time_intervals = f107_instance._get_processed_file_list(start_time, end_time)
 
         assert len(file_paths) == 3
         assert all(str(path).startswith(str(MOCK_DATA_PATH)) for path in file_paths)
@@ -98,11 +96,11 @@ class TestF107SWPC:
 
         f107_instance.download_and_process()
 
-        date_now = datetime.now(timezone.utc)
+        _ = datetime.now(timezone.utc)
 
-        expected_files = list(MOCK_DATA_PATH.glob(f"SWPC_F107_*.csv"))
+        expected_files = list(MOCK_DATA_PATH.glob("SWPC_F107_*.csv"))
 
-        assert (1<=len(expected_files) & len(expected_files)<=2)
+        assert 1 <= len(expected_files) & len(expected_files) <= 2
 
         data = pd.read_csv(expected_files[0], parse_dates=["date"])
 
@@ -186,7 +184,6 @@ class TestF107SWPC:
         updated_data = pd.read_csv(file_path, parse_dates=["date"])
         assert len(updated_data) >= len(initial_data)
         assert "f107" in updated_data.columns
-
 
     def test_read_with_partial_data(self, f107_instance):
         sample_data = pd.DataFrame(

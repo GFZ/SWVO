@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
@@ -149,9 +149,7 @@ def datenum(
             second=seconds,
         ).replace(tzinfo=timezone.utc)
     else:
-        raise ValueError(
-            "Invalid input. Provide either a datetime object or year, month, and day."
-        )
+        raise ValueError("Invalid input. Provide either a datetime object or year, month, and day.")
 
     return dt.timestamp() / 86400 + MATLAB_EPOCH
 
@@ -203,9 +201,7 @@ def sw_mag_propagation(sw_data: pd.DataFrame) -> pd.DataFrame:
     distance = 1.5e6
     shifted_time = distance / sw_data["speed"]
 
-    shifted_time_smooth = gaussian_filter1d(
-        np.array(shifted_time.values, dtype=np.float64), sigma=5
-    )
+    shifted_time_smooth = gaussian_filter1d(np.array(shifted_time.values, dtype=np.float64), sigma=5)
     new_time_smooth = sw_data["t"] + shifted_time_smooth
 
     stdate = sw_data["t"].min()

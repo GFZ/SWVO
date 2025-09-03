@@ -10,17 +10,12 @@ from datetime import datetime
 from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-from icecream import ic
 from matplotlib import pyplot as plt
 from numpy.typing import NDArray
 from tqdm import tqdm
-
-from swvo.io.RBMDataSet.utils import pol2cart
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from swvo.io.RBMDataSet import RBMDataSet, RBMDataSetElPaso
@@ -55,16 +50,12 @@ def bin_and_interpolate_to_model_grid(
 
     mu_or_V_arr = self.InvMu if mu_or_V == "Mu" else self.InvV
     if grid_mu_V.shape[2] > 1:
-        psd_interp = _interpolate_in_V_K(
-            target_var_init, mu_or_V_arr, self.InvK, grid_mu_V, grid_K
-        )
+        psd_interp = _interpolate_in_V_K(target_var_init, mu_or_V_arr, self.InvK, grid_mu_V, grid_K)
     else:
         psd_interp = target_var_init
 
     # sanity check
-    if np.min(target_var_init) > np.min(psd_interp) or np.max(target_var_init) < np.max(
-        psd_interp
-    ):
+    if np.min(target_var_init) > np.min(psd_interp) or np.max(target_var_init) < np.max(psd_interp):
         msg = "Found inconsitency in V-K interpolation. Aborting..."
         raise (ValueError(msg))
 
@@ -72,22 +63,16 @@ def bin_and_interpolate_to_model_grid(
 
     R_or_Lstar_arr = self.R0 if grid_P else self.Lstar[:, -1]
 
-    psd_binned_in_space = _bin_in_space(
-        psd_interp, self.P, R_or_Lstar_arr, grid_R, grid_P
-    )
+    psd_binned_in_space = _bin_in_space(psd_interp, self.P, R_or_Lstar_arr, grid_R, grid_P)
     # sanity check
-    if np.min(target_var_init) > np.min(psd_binned_in_space) or np.max(
-        target_var_init
-    ) < np.max(psd_binned_in_space):
+    if np.min(target_var_init) > np.min(psd_binned_in_space) or np.max(target_var_init) < np.max(psd_binned_in_space):
         msg = "Found inconsitency in space binning. Aborting..."
         raise (ValueError(msg))
 
     # 3. Bin in time
     psd_binned_in_time = _bin_in_time(self.datetime, sim_time, psd_binned_in_space)
     # sanity check
-    if np.min(target_var_init) > np.min(psd_binned_in_time) or np.max(
-        target_var_init
-    ) < np.max(psd_binned_in_time):
+    if np.min(target_var_init) > np.min(psd_binned_in_time) or np.max(target_var_init) < np.max(psd_binned_in_time):
         msg = "Found inconsitency in time binning. Aborting..."
         raise (ValueError(msg))
 
@@ -128,9 +113,7 @@ def _get_time_bins(timestamps: list[float]) -> list[float]:
     return bins
 
 
-def _get_time_indices(
-    data_timestamps: list[float], time_bins: list[float]
-) -> NDArray[np.float32]:
+def _get_time_indices(data_timestamps: list[float], time_bins: list[float]) -> NDArray[np.float32]:
     time_indices = np.digitize(data_timestamps, time_bins)
     time_indices = time_indices - 1
     time_indices = np.where(time_indices == len(time_bins) - 1, -1, time_indices)
@@ -201,12 +184,8 @@ def _bin_in_space(
         grid_P_1d = None
         grid_R_1d = grid_R[0, :, 0, 0]
 
-        psd_binned = np.full(
-            (psd_in.shape[0], 1, grid_R.shape[1], psd_in.shape[1], psd_in.shape[2]), 0.0
-        )
-        number_of_observations = np.full(
-            (psd_in.shape[0], 1, grid_R.shape[1], psd_in.shape[1], psd_in.shape[2]), 0
-        )
+        psd_binned = np.full((psd_in.shape[0], 1, grid_R.shape[1], psd_in.shape[1], psd_in.shape[2]), 0.0)
+        number_of_observations = np.full((psd_in.shape[0], 1, grid_R.shape[1], psd_in.shape[1], psd_in.shape[2]), 0)
 
     for it in range(psd_in.shape[0]):
         if np.all(np.isnan(psd_in[it, :, :])):
@@ -229,19 +208,11 @@ def _bin_in_space(
             )
             p_idx = np.argmin(min_difference_p)
 
-            number_of_observations[it, p_idx, r_idx, :, :] += np.where(
-                np.isnan(psd_in[it, :, :]), 0, 1
-            )
-            psd_binned[it, p_idx, r_idx, :, :] += np.where(
-                np.isnan(psd_in[it, :, :]), 0, np.log10(psd_in[it, :, :])
-            )
+            number_of_observations[it, p_idx, r_idx, :, :] += np.where(np.isnan(psd_in[it, :, :]), 0, 1)
+            psd_binned[it, p_idx, r_idx, :, :] += np.where(np.isnan(psd_in[it, :, :]), 0, np.log10(psd_in[it, :, :]))
         else:
-            number_of_observations[it, 0, r_idx, :, :] += np.where(
-                np.isnan(psd_in[it, :, :]), 0, 1
-            )
-            psd_binned[it, 0, r_idx, :, :] += np.where(
-                np.isnan(psd_in[it, :, :]), 0, np.log10(psd_in[it, :, :])
-            )
+            number_of_observations[it, 0, r_idx, :, :] += np.where(np.isnan(psd_in[it, :, :]), 0, 1)
+            psd_binned[it, 0, r_idx, :, :] += np.where(np.isnan(psd_in[it, :, :]), 0, np.log10(psd_in[it, :, :]))
 
     psd_binned = np.where(psd_binned == 0, np.nan, psd_binned)
 
@@ -306,12 +277,7 @@ def _parallel_func_VK(
             # search for sourrounding 4 corners
             # take negative values, as K_data is in descending order
 
-            K_idx_left = (
-                np.searchsorted(
-                    K_sorted * K_data[it, :], K_sorted * K_val, side="right"
-                )
-                - 1
-            )
+            K_idx_left = np.searchsorted(K_sorted * K_data[it, :], K_sorted * K_val, side="right") - 1
             K_idx_right = K_idx_left + 1
 
             if K_idx_left == -1 or K_idx_right >= K_data.shape[1]:
@@ -319,16 +285,9 @@ def _parallel_func_VK(
                 continue
 
             V_finite = np.isfinite(V_data[it, :, K_idx_left])
-            V_sorted = (
-                1 if np.all(np.diff(V_data[it, V_finite, K_idx_left]) >= 0) else -1
-            )
+            V_sorted = 1 if np.all(np.diff(V_data[it, V_finite, K_idx_left]) >= 0) else -1
 
-            V_idx_left_left = (
-                np.searchsorted(
-                    V_sorted * V_data[it, :, K_idx_left], V_sorted * V_val, side="right"
-                )
-                - 1
-            )
+            V_idx_left_left = np.searchsorted(V_sorted * V_data[it, :, K_idx_left], V_sorted * V_val, side="right") - 1
             V_idx_left_right = V_idx_left_left + 1
 
             if V_idx_left_left == -1 or V_idx_left_right >= V_data.shape[1]:
@@ -418,26 +377,18 @@ def plot_debug_figures(
     R_or_Lstar_arr = data_set.R0 if grid_P else data_set.Lstar[:, -1]
 
     for it, sim_time_curr in enumerate(tqdm(sim_time)):
-        sat_time_idx = np.argwhere(
-            np.abs(np.asarray(data_set.datetime) - sim_time_curr) <= dt / 2
-        )
+        sat_time_idx = np.argwhere(np.abs(np.asarray(data_set.datetime) - sim_time_curr) <= dt / 2)
 
         R_idx = np.argwhere(np.abs(grid_R[0, :, 0, 0] - R_or_Lstar_arr[sat_time_idx]))
 
         K_idx = np.argmin(np.abs(grid_K[0, R_idx, 0, :] - debug_plot_settings.target_K))
-        V_idx = np.argmin(
-            np.abs(grid_V[0, R_idx, :, K_idx] - debug_plot_settings.target_V)
-        )
+        V_idx = np.argmin(np.abs(grid_V[0, R_idx, :, K_idx] - debug_plot_settings.target_V))
 
         K_idx = 45
         V_idx = 51
 
-        V_lim_min = np.log10(
-            0.9 * np.min([np.nanmin(data_set_V_or_Mu), np.min(grid_V)])
-        )
-        V_lim_max = np.log10(
-            1.1 * np.max([np.nanmax(data_set_V_or_Mu), np.max(grid_V)])
-        )
+        V_lim_min = np.log10(0.9 * np.min([np.nanmin(data_set_V_or_Mu), np.min(grid_V)]))
+        V_lim_max = np.log10(1.1 * np.max([np.nanmax(data_set_V_or_Mu), np.max(grid_V)]))
 
         K_lim_min = np.log10(0.9 * np.min([np.nanmin(data_set.InvK), np.min(grid_K)]))
         K_lim_max = np.log10(1.1 * np.max([np.nanmax(data_set.InvK), np.max(grid_K)]))
@@ -449,9 +400,7 @@ def plot_debug_figures(
         # plot satellite trajectory on PxR grid
         # [x_sat, y_sat] = pol2cart(self.P, self.R)
 
-        ax0.scatter(
-            data_set.P[sat_time_idx], R_or_Lstar_arr[sat_time_idx], c="k", marker="D"
-        )
+        ax0.scatter(data_set.P[sat_time_idx], R_or_Lstar_arr[sat_time_idx], c="k", marker="D")
         ax0.set_ylim(1, 6.6)
         ax0.set_title("Orbit")
         ax0.set_theta_offset(np.pi)
@@ -546,10 +495,7 @@ def plot_debug_figures(
 
             fig.colorbar(pc, ax=ax2)
 
-        fig.savefig(
-            Path(debug_plot_settings.folder_path)
-            / f"{debug_plot_settings.satellite_name}_{sim_time_curr}.png"
-        )
+        fig.savefig(Path(debug_plot_settings.folder_path) / f"{debug_plot_settings.satellite_name}_{sim_time_curr}.png")
 
         # ic(np.log10(psd_binned[it,:,:,V_idx,K_idx]))
 

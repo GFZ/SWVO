@@ -5,14 +5,14 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from datetime import datetime, timedelta, timezone
 from typing import Literal
-import warnings
 
 import numpy as np
 import pandas as pd
 
-from swvo.io.solar_wind import SWACE, SWOMNI, SWSWIFTEnsemble, DSCOVR
+from swvo.io.solar_wind import DSCOVR, SWACE, SWOMNI, SWSWIFTEnsemble
 from swvo.io.utils import any_nans, construct_updated_data_frame
 
 SWModel = DSCOVR | SWACE | SWOMNI | SWSWIFTEnsemble
@@ -70,9 +70,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
 
     if model_order is None:
         model_order = [SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble()]
-        logging.warning(
-            "No model order specified, using default order: OMNI, ACE, SWIFT ensemble"
-        )
+        logging.warning("No model order specified, using default order: OMNI, ACE, SWIFT ensemble")
 
     data_out = [pd.DataFrame()]
 
@@ -140,9 +138,7 @@ def _read_from_model(  # noqa: PLR0913
 
     # Forecasting models are called with synthetic now time
     if isinstance(model, SWSWIFTEnsemble):
-        data_one_model = _read_latest_ensemble_files(
-            model, historical_data_cutoff_time, end_time
-        )
+        data_one_model = _read_latest_ensemble_files(model, historical_data_cutoff_time, end_time)
 
         num_ens_members = len(data_one_model)
 
@@ -192,12 +188,8 @@ def _read_historical_model(
     else:
         data_one_model = model.read(start_time, end_time, download=download, propagation=True)
     # set nan for 'future' values
-    data_one_model.loc[
-        historical_data_cutoff_time + timedelta(minutes=1) : end_time
-    ] = np.nan
-    logging.info(
-        f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}"
-    )
+    data_one_model.loc[historical_data_cutoff_time + timedelta(minutes=1) : end_time] = np.nan
+    logging.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
 
     return data_one_model
 
@@ -304,9 +296,7 @@ def _interpolate_to_common_indices(
                 # this is the filename column
                 df_common_index[colname] = col.iloc[0]
             else:
-                df_common_index[colname] = np.interp(
-                    df_common_index.index, data[ie].index, col
-                )
+                df_common_index[colname] = np.interp(df_common_index.index, data[ie].index, col)
 
         data[ie] = df_common_index
         data[ie] = data[ie].truncate(
@@ -317,9 +307,7 @@ def _interpolate_to_common_indices(
     return data
 
 
-def _reduce_ensembles(
-    data_ensembles: list[pd.DataFrame], method: Literal["mean"]
-) -> pd.DataFrame:
+def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"]) -> pd.DataFrame:
     """Reduce a list of data frames representing ensemble data to a single data frame using the provided method."""
     msg = "This reduction method has not been implemented yet!"
     raise NotImplementedError(msg)

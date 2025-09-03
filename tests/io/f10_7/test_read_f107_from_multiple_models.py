@@ -2,15 +2,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
-from datetime import datetime, timezone, timedelta
-import pandas as pd
-import numpy as np
 import os
-from swvo.io.f10_7 import F107OMNI, F107SWPC, read_f107_from_multiple_models
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from unittest.mock import patch
+import numpy as np
+import pandas as pd
+import pytest
+
+from swvo.io.f10_7 import F107OMNI, F107SWPC, read_f107_from_multiple_models
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
@@ -29,9 +29,7 @@ for key, var in ENV_VAR_NAMES.items():
 class TestReadF107FromMultipleModels:
     @pytest.fixture
     def sample_times(self):
-        now = datetime(2024, 11, 25).replace(
-            tzinfo=timezone.utc, minute=0, second=0, microsecond=0
-        )
+        now = datetime(2024, 11, 25).replace(tzinfo=timezone.utc, minute=0, second=0, microsecond=0)
         return {
             "past_start": now - timedelta(days=5),
             "past_end": now - timedelta(days=2),
@@ -132,5 +130,5 @@ class TestReadF107FromMultipleModels:
             read_f107_from_multiple_models(
                 start_time=sample_times["past_start"],
                 end_time=sample_times["future_end"],
-                synthetic_now_time= sample_times["test_time_now"],
+                synthetic_now_time=sample_times["test_time_now"],
             )

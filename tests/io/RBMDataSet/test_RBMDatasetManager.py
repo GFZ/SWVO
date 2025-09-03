@@ -4,10 +4,10 @@
 
 import datetime as dt
 from pathlib import Path
+
 import pytest
 
-from swvo.io.RBMDataSet import RBMDataSetManager
-from swvo.io.RBMDataSet import SatelliteEnum, InstrumentEnum, MfmEnum
+from swvo.io.RBMDataSet import InstrumentEnum, MfmEnum, RBMDataSetManager, SatelliteEnum
 
 
 @pytest.fixture

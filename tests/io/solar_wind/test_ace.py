@@ -4,13 +4,13 @@
 
 import os
 import shutil
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
+import numpy as np
 import pandas as pd
 import pytest
-import numpy as np
 
 from swvo.io.solar_wind import SWACE
 
@@ -88,9 +88,7 @@ class TestSWACE:
         start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
 
-        file_paths, time_intervals = swace_instance._get_processed_file_list(
-            start_time, end_time
-        )
+        file_paths, time_intervals = swace_instance._get_processed_file_list(start_time, end_time)
 
         assert len(file_paths) == 366
         assert all(str(path).startswith(str(DATA_DIR)) for path in file_paths)
@@ -102,16 +100,12 @@ class TestSWACE:
         current_time = datetime.now(timezone.utc)
         swace_instance.download_and_process(current_time)
 
-        expected_file = (
-            DATA_DIR / f"ACE_SW_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"
-        )
+        expected_file = DATA_DIR / f"ACE_SW_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"
         assert expected_file.exists()
 
         data = pd.read_csv(expected_file)
         assert len(data) > 0
-        assert all(
-            field in data.columns for field in SWACE.MAG_FIELDS + SWACE.SWEPAM_FIELDS
-        )
+        assert all(field in data.columns for field in SWACE.MAG_FIELDS + SWACE.SWEPAM_FIELDS)
 
     def test_process_mag_file(self, swace_instance, sample_mag_data):
         test_file = DATA_DIR / SWACE.NAME_MAG
@@ -149,9 +143,7 @@ class TestSWACE:
 
         assert isinstance(data, pd.DataFrame)
         assert len(data) > 0
-        assert all(
-            col in data.columns for col in SWACE.MAG_FIELDS + SWACE.SWEPAM_FIELDS
-        )
+        assert all(col in data.columns for col in SWACE.MAG_FIELDS + SWACE.SWEPAM_FIELDS)
         assert data.isna().all().all()
 
     def test_read_invalid_time_range(self, swace_instance):
@@ -187,9 +179,7 @@ class TestSWACE:
 
         assert isinstance(data, pd.DataFrame)
         assert len(data) == 1440
-        assert all(
-            col in data.columns for col in SWACE.MAG_FIELDS + SWACE.SWEPAM_FIELDS
-        )
+        assert all(col in data.columns for col in SWACE.MAG_FIELDS + SWACE.SWEPAM_FIELDS)
 
     def test_cleanup_after_download(self, swace_instance, mock_download_response):
         with patch("wget.download", side_effect=mock_download_response):
@@ -234,8 +224,6 @@ class TestSWACE:
 
         assert isinstance(data, pd.DataFrame)
         assert len(data) == 5109
-        assert all(
-            col in data.columns for col in SWACE.MAG_FIELDS + SWACE.SWEPAM_FIELDS
-        )
+        assert all(col in data.columns for col in SWACE.MAG_FIELDS + SWACE.SWEPAM_FIELDS)
         assert any(data["file_name"] == "propagated from previous ACE NOWCAST file")
         assert data.index.is_monotonic_increasing

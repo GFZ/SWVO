@@ -3,13 +3,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
-import pytest
-from pathlib import Path
-from datetime import datetime, timezone
-from swvo.io.f10_7 import F107OMNI
-import pandas as pd
 import warnings
+from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import patch
+
+import pandas as pd
+import pytest
+
+from swvo.io.f10_7 import F107OMNI
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
@@ -23,9 +25,7 @@ class TestF107OMNI:
 
     @pytest.fixture
     def mock_f107omni_data(self):
-        test_dates = pd.date_range(
-            start=datetime(2020, 1, 1), end=datetime(2020, 12, 31), freq="h"
-        )
+        test_dates = pd.date_range(start=datetime(2020, 1, 1), end=datetime(2020, 12, 31), freq="h")
         test_data = pd.DataFrame(
             {
                 "t": test_dates,
@@ -55,9 +55,7 @@ class TestF107OMNI:
         mocker.patch.object(
             f107omni,
             "_process_single_file",
-            return_value=f107omni._process_single_file(
-                Path(TEST_DIR) / "data/omni2_2020.dat"
-            ),
+            return_value=f107omni._process_single_file(Path(TEST_DIR) / "data/omni2_2020.dat"),
         )
 
         start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
@@ -78,12 +76,9 @@ class TestF107OMNI:
             assert all(df["f107"].isna())
             assert all(df["file_name"].isnull())
 
-
     def test_read_with_download(self, f107omni, mock_f107omni_data, mocker):
         mocker.patch("pathlib.Path.exists", return_value=False)
-        mocker.patch.object(
-            f107omni, "_read_single_file", return_value=mock_f107omni_data
-        )
+        mocker.patch.object(f107omni, "_read_single_file", return_value=mock_f107omni_data)
         mocker.patch.object(f107omni, "download_and_process")
 
         start_time = datetime(2020, 1, 1)
@@ -118,12 +113,8 @@ class TestF107OMNI:
         end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
 
         mocker.patch("pathlib.Path.exists", return_value=True)
-        mocker.patch.object(
-            f107omni, "_get_processed_file_list", return_value=([Path("dummy.csv")], [])
-        )
-        mocker.patch.object(
-            f107omni, "_read_single_file", return_value=mock_f107omni_data
-        )
+        mocker.patch.object(f107omni, "_get_processed_file_list", return_value=([Path("dummy.csv")], []))
+        mocker.patch.object(f107omni, "_read_single_file", return_value=mock_f107omni_data)
 
         df = pd.DataFrame(
             {

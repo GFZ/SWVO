@@ -2,11 +2,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
-from datetime import datetime, timezone, timedelta
-import pandas as pd
-import numpy as np
 import os
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+import pandas as pd
+import pytest
+
 from swvo.io.kp import (
     KpEnsemble,
     KpNiemegk,
@@ -14,12 +16,10 @@ from swvo.io.kp import (
     KpSWPC,
     read_kp_from_multiple_models,
 )
-from pathlib import Path
-
-from unittest.mock import patch
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
+
 
 class TestReadKpFromMultipleModels:
     @pytest.fixture(scope="session", autouse=True)
@@ -34,12 +34,9 @@ class TestReadKpFromMultipleModels:
         for key, var in ENV_VAR_NAMES.items():
             os.environ[key] = ENV_VAR_NAMES[key]
 
-
     @pytest.fixture
     def sample_times(self):
-        now = datetime(2024, 11, 25).replace(
-            tzinfo=timezone.utc, minute=0, second=0, microsecond=0
-        )
+        now = datetime(2024, 11, 25).replace(tzinfo=timezone.utc, minute=0, second=0, microsecond=0)
         return {
             "past_start": now - timedelta(days=5),
             "past_end": now - timedelta(days=2),
@@ -47,7 +44,6 @@ class TestReadKpFromMultipleModels:
             "future_end": now + timedelta(days=3),
             "test_time_now": now,
         }
-
 
     def test_basic_historical_read(self, sample_times):
         data = read_kp_from_multiple_models(
@@ -65,7 +61,6 @@ class TestReadKpFromMultipleModels:
         assert not data["kp"].isna().all()
         assert not data["file_name"].isna().all()
 
-
     def test_basic_forecast_read(self, sample_times):
         data = read_kp_from_multiple_models(
             start_time=sample_times["future_start"],
@@ -80,11 +75,9 @@ class TestReadKpFromMultipleModels:
         assert all(not d["file_name"].isna().all() for d in data)
         assert all(all(d.model == "ensemble") for d in data)
 
-
     def test_ensemble_reduce_mean(self):
         with pytest.raises(ValueError):
             raise ValueError("This reduction method has not been implemented yet!")
-
 
     def test_full_ensemble(self, sample_times):
         data = read_kp_from_multiple_models(
@@ -102,7 +95,6 @@ class TestReadKpFromMultipleModels:
         assert all("model" in d.columns for d in data)
         assert all(not d["file_name"].isna().all() for d in data)
 
-
     def test_time_ordering_and_transition(self, sample_times):
         data = read_kp_from_multiple_models(
             start_time=sample_times["past_start"],
@@ -116,7 +108,6 @@ class TestReadKpFromMultipleModels:
             assert d.loc["2024-11-24 00:00:00+00:00"].model == "niemegk"
             assert d.loc["2024-11-25 03:00:00+00:00"].model == "ensemble"
 
-
     def test_forecast_in_past(self, sample_times):
         data = read_kp_from_multiple_models(
             start_time=sample_times["past_start"],
@@ -128,10 +119,9 @@ class TestReadKpFromMultipleModels:
         assert all(d.index.is_monotonic_increasing for d in data)
         assert all(d.loc["2024-11-22 18:00:00+00:00"].model == "omni" for d in data)
         assert all(d.loc["2024-11-23 00:00:00+00:00"].model == "niemegk" for d in data)
-        
-        #there should be ensemble in the forecast
-        assert all(d.loc["2024-11-23 03:00:00+00:00"].model == "ensemble" for d in data)
 
+        # there should be ensemble in the forecast
+        assert all(d.loc["2024-11-23 03:00:00+00:00"].model == "ensemble" for d in data)
 
     def test_time_boundaries(self, sample_times):
         start = sample_times["past_start"]
@@ -147,7 +137,6 @@ class TestReadKpFromMultipleModels:
             assert d.index.min() >= start
             assert d.index.max() <= end + timedelta(hours=3)
 
-
     def test_invalid_time_range(self, sample_times):
         with pytest.raises(AssertionError):
             read_kp_from_multiple_models(
@@ -156,17 +145,13 @@ class TestReadKpFromMultipleModels:
                 model_order=[KpOMNI()],
             )
 
-
     def test_date_more_than_3_days_in_future(self, sample_times):
-        with pytest.raises(
-            ValueError, match="We can only read 3 days at a time of Kp SWPC!"
-        ):
+        with pytest.raises(ValueError, match="We can only read 3 days at a time of Kp SWPC!"):
             read_kp_from_multiple_models(
                 start_time=sample_times["test_time_now"] - timedelta(days=6),
                 end_time=sample_times["test_time_now"] + timedelta(days=4),
                 historical_data_cutoff_time=sample_times["test_time_now"],
             )
-
 
     def test_kp_value_range(self, sample_times):
         data = read_kp_from_multiple_models(
@@ -183,7 +168,6 @@ class TestReadKpFromMultipleModels:
         for d in data:
             check_kp_range(d)
 
-
     def test_model_transition(self, sample_times):
         data = read_kp_from_multiple_models(
             start_time=sample_times["past_start"],
@@ -195,7 +179,6 @@ class TestReadKpFromMultipleModels:
         assert not all([df.loc["2024-11-24 21:00:00+00:00"].model == "omni" for df in data])
         assert all([df.loc["2024-11-25 00:00:00+00:00"].model == "niemegk" for df in data])
         assert all([df.loc["2024-11-25 03:00:00+00:00"].model == "ensemble" for df in data])
-
 
     def test_data_consistency(self, sample_times):
         params = {
@@ -209,7 +192,6 @@ class TestReadKpFromMultipleModels:
         data2 = read_kp_from_multiple_models(**params)
 
         pd.testing.assert_frame_equal(data1, data2)
-
 
     def test_synthetic_now_time_deprecation_with_message(self, sample_times):
         with pytest.warns(DeprecationWarning, match="synthetic_now_time.*deprecated"):

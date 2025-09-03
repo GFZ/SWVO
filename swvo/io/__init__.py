@@ -2,14 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import swvo.io.base_file_reader
+from swvo.io import base_file_reader as base_file_reader
 from swvo.io import (
-    dst,
-    f10_7,
-    hp,
-    kp,
-    omni,
-    plasmasphere,
-    RBMDataSet,
-    solar_wind,
+    dst as dst,
+    f10_7 as f10_7,
+    hp as hp,
+    kp as kp,
+    omni as omni,
+    plasmasphere as plasmasphere,
+    RBMDataSet as RBMDataSet,
+    solar_wind as solar_wind,
 )

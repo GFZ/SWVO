@@ -3,14 +3,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
-import pytest
-from pathlib import Path
 from datetime import datetime, timezone
-from swvo.io.omni.omni_high_res import OMNIHighRes
-import pandas as pd
-import numpy as np
-
+from pathlib import Path
 from unittest.mock import patch
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from swvo.io.omni.omni_high_res import OMNIHighRes
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
@@ -53,9 +54,7 @@ class TestOMNIHighRes:
 
     def test_read_with_download(self, omni_high_res, mocker):
         mocker.patch.object(omni_high_res, "download_and_process")
-        mocker.patch.object(
-            omni_high_res, "_read_single_file", return_value=pd.DataFrame()
-        )
+        mocker.patch.object(omni_high_res, "_read_single_file", return_value=pd.DataFrame())
         start_time = datetime(2022, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2022, 12, 31, tzinfo=timezone.utc)
         omni_high_res.read(start_time, end_time, download=True)
@@ -75,12 +74,8 @@ class TestOMNIHighRes:
         start_time = datetime(1920, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
 
-        mocker.patch.object(
-            omni_high_res, "_get_processed_file_list", return_value=([], [])
-        )
-        mocker.patch.object(
-            omni_high_res, "_read_single_file", return_value=pd.DataFrame()
-        )
+        mocker.patch.object(omni_high_res, "_get_processed_file_list", return_value=([], []))
+        mocker.patch.object(omni_high_res, "_read_single_file", return_value=pd.DataFrame())
 
         mocker.patch("pandas.concat", return_value=pd.DataFrame())
 
@@ -92,9 +87,7 @@ class TestOMNIHighRes:
                 "Start date chosen falls behind the existing data. Moving start date to first available mission files..."
             )
 
-            assert len(dfs) == 0, (
-                "Expected dfs list to be empty since no files are found."
-            )
+            assert len(dfs) == 0, "Expected dfs list to be empty since no files are found."
 
     def test_year_transition(self, omni_high_res):
         start_time = datetime(2012, 12, 31, 23, 59, 0, tzinfo=timezone.utc)
@@ -147,11 +140,9 @@ class TestOMNIHighRes:
         assert df.iloc[0]["temperature"] == 1000000
 
     def test_process_single_year_handles_missing_data_lines(self, omni_high_res):
-        data = [
-            "YYYY DOY HR MN bavg bx_gsm by_gsm bz_gsm speed proton_density temperature"
-        ]
+        data = ["YYYY DOY HR MN bavg bx_gsm by_gsm bz_gsm speed proton_density temperature"]
         with pytest.raises(ValueError):
-            df = omni_high_res._process_single_year(data)
+            _ = omni_high_res._process_single_year(data)
 
     def test_process_single_year_raises_on_missing_header(self, omni_high_res):
         data = ["2020 1 0 0 5.1 1.2 2.3 3.4 400 5.5 1000000"]

@@ -2,12 +2,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
-from datetime import datetime, timezone, timedelta
-import pandas as pd
-import numpy as np
 import os
-from swvo.io import hp
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+import pandas as pd
+import pytest
+
 from swvo.io.hp import (
     Hp30Ensemble,
     Hp30GFZ,
@@ -15,7 +16,6 @@ from swvo.io.hp import (
     Hp60GFZ,
     read_hp_from_multiple_models,
 )
-from pathlib import Path
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
@@ -35,9 +35,7 @@ def set_env_var():
 
 @pytest.fixture
 def sample_times():
-    now = datetime(2024, 11, 25).replace(
-        tzinfo=timezone.utc, minute=0, second=0, microsecond=0
-    )
+    now = datetime(2024, 11, 25).replace(tzinfo=timezone.utc, minute=0, second=0, microsecond=0)
     return {
         "past_start": now - timedelta(days=5),
         "past_end": now - timedelta(days=2),
@@ -141,9 +139,7 @@ class TestHpFromMultipleModels:
             model_order=[models[0](), models[1]()],
             historical_data_cutoff_time=sample_times["test_time_now"],
         )
-        assert all(
-            [df.loc["2024-11-25 00:00:00+00:00"].model == "ensemble" for df in data]
-        )
+        assert all([df.loc["2024-11-25 00:00:00+00:00"].model == "ensemble" for df in data])
         assert all([df.loc["2024-11-24 21:00:00+00:00"].model == "gfz" for df in data])
 
     def test_data_consistency(self, sample_times, hp_index, models):

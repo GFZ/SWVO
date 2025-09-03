@@ -5,11 +5,10 @@
 from __future__ import annotations
 
 import datetime as dt
-from datetime import timezone
 from dataclasses import replace
+from datetime import timezone
 from typing import Any, ClassVar, TypeVar
-from swvo.io.RBMDataSet.custom_enums import ElPasoMFMEnum
-from swvo.io.RBMDataSet.utils import matlab2python, python2matlab
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -22,6 +21,8 @@ from swvo.io.RBMDataSet import (
     SatelliteLike,
     VariableEnum,
 )
+from swvo.io.RBMDataSet.custom_enums import ElPasoMFMEnum
+from swvo.io.RBMDataSet.utils import python2matlab
 
 Variable = TypeVar(
     "Variable"
@@ -187,10 +188,7 @@ class RBMDataSetElPaso:
                 target_attr = self._variable_mapping[value.standard_name]
 
                 if value.standard_name == "Epoch_posixtime" and target_attr == "time":
-                    datetimes = [
-                        dt.datetime.fromtimestamp(ts, tz=timezone.utc)
-                        for ts in value.data
-                    ]
+                    datetimes = [dt.datetime.fromtimestamp(ts, tz=timezone.utc) for ts in value.data]
                     setattr(self, "datetime", datetimes)
                     setattr(self, "time", [python2matlab(i) for i in datetimes])
                 else:
@@ -222,9 +220,7 @@ class RBMDataSetElPaso:
         NDArray[np.float64]
             The InvV value calculated from InvMu and InvK.
         """
-        inv_K_repeated = np.repeat(
-            self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1
-        )
+        inv_K_repeated = np.repeat(self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1)
         InvV = self.InvMu * (inv_K_repeated + 0.5) ** 2
         return InvV
 
@@ -234,9 +230,7 @@ class RBMDataSetElPaso:
                 f"Attribute '{name}' is mapped but has not been set. "
                 "Make sure data is loaded or that this attribute is properly assigned."
             )
-        raise AttributeError(
-            f"'{self.__class__.__name__}' object has no attribute '{name}'"
-        )
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.satellite}, {self.instrument}, {self.mfm})"

@@ -11,14 +11,13 @@ from __future__ import annotations
 import logging
 import os
 import shutil
-from datetime import datetime, timezone, timedelta
+import warnings
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, Union
-import warnings
 
-
-import pandas as pd
 import numpy as np
+import pandas as pd
 import wget
 
 logging.captureWarnings(True)
@@ -114,14 +113,10 @@ class F107SWPC:
                     logging.debug(f"Updating {file_path}...")
 
                     existing_data = pd.read_csv(file_path, parse_dates=["date"])
-                    existing_data["date"] = pd.to_datetime(
-                        existing_data["date"]
-                    ).dt.tz_localize(None)
+                    existing_data["date"] = pd.to_datetime(existing_data["date"]).dt.tz_localize(None)
 
                     combined_data = pd.concat([existing_data, year_data])
-                    combined_data = combined_data.drop_duplicates(
-                        subset=["date"], keep="last"
-                    )
+                    combined_data = combined_data.drop_duplicates(subset=["date"], keep="last")
                     combined_data = combined_data.sort_values("date")
 
                     new_records = len(combined_data) - len(existing_data)
@@ -163,9 +158,7 @@ class F107SWPC:
 
         return data  # noqa: RET504
 
-    def read(
-        self, start_time: datetime, end_time: datetime, *, download: bool = False
-    ) -> pd.DataFrame:
+    def read(self, start_time: datetime, end_time: datetime, *, download: bool = False) -> pd.DataFrame:
         """Read F10.7 SWPC data for the given time range.
 
         Parameters

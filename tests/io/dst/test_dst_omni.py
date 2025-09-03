@@ -3,13 +3,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
-import pytest
-from pathlib import Path
-from datetime import datetime, timezone
-from swvo.io.dst import DSTOMNI
-import pandas as pd
 import warnings
-from unittest.mock import patch
+from datetime import datetime, timezone
+from pathlib import Path
+
+import pandas as pd
+import pytest
+
+from swvo.io.dst import DSTOMNI
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
@@ -23,9 +24,7 @@ class TestdstOMNI:
 
     @pytest.fixture
     def mock_dstomni_data(self):
-        test_dates = pd.date_range(
-            start=datetime(2020, 1, 1), end=datetime(2020, 12, 31, 23, 00, 00), freq="h"
-        )
+        test_dates = pd.date_range(start=datetime(2020, 1, 1), end=datetime(2020, 12, 31, 23, 00, 00), freq="h")
         test_data = pd.DataFrame(
             {
                 "t": test_dates,
@@ -55,9 +54,7 @@ class TestdstOMNI:
         mocker.patch.object(
             dstomni,
             "_process_single_file",
-            return_value=dstomni._process_single_file(
-                Path(TEST_DIR) / "data/omni2_2020.dat"
-            ),
+            return_value=dstomni._process_single_file(Path(TEST_DIR) / "data/omni2_2020.dat"),
         )
 
         start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
@@ -78,12 +75,9 @@ class TestdstOMNI:
             assert all(df["dst"].isna())
             assert all(df["file_name"].isnull())
 
-
     def test_read_with_download(self, dstomni, mock_dstomni_data, mocker):
         mocker.patch("pathlib.Path.exists", return_value=False)
-        mocker.patch.object(
-            dstomni, "_read_single_file", return_value=mock_dstomni_data
-        )
+        mocker.patch.object(dstomni, "_read_single_file", return_value=mock_dstomni_data)
         mocker.patch.object(dstomni, "download_and_process")
 
         start_time = datetime(2020, 1, 1)

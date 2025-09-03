@@ -3,14 +3,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
-import pytest
-from pathlib import Path
 from datetime import datetime, timezone
-from swvo.io.kp import KpOMNI
-import pandas as pd
-import numpy as np
-
+from pathlib import Path
 from unittest.mock import patch
+
+import pandas as pd
+import pytest
+
+from swvo.io.kp import KpOMNI
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
@@ -76,7 +76,6 @@ class TestKpOMNI:
         assert all(df["file_name"].isnull())
 
     def test_read_with_download(self, kp_omni, mock_kp_omni_data, mocker):
-
         mocker.patch("pathlib.Path.exists", return_value=False)
         mocker.patch.object(kp_omni, "_read_single_file", return_value=mock_kp_omni_data)
         mocker.patch.object(kp_omni, "download_and_process")
@@ -101,7 +100,6 @@ class TestKpOMNI:
         assert "kp" in df.columns
 
     def test_read_single_file(self, kp_omni):
-
         csv_file = Path(TEST_DIR) / "data/OMNI_LOW_RES_2020.csv"
         df = kp_omni._read_single_file(csv_file)
         assert isinstance(df, pd.DataFrame)
@@ -131,7 +129,8 @@ class TestKpOMNI:
             result_df = kp_omni.read(start_time, end_time)
 
             mock_warning.assert_any_call(
-                "Start date chosen falls behind the existing data. Moving start date to first" " available mission files..."
+                "Start date chosen falls behind the existing data. Moving start date to first"
+                " available mission files..."
             )
 
         assert result_df.empty, "Expected resulting DataFrame to be empty"
@@ -146,5 +145,4 @@ class TestKpOMNI:
         assert result_df.index.max() == pd.Timestamp("2013-01-01 00:00:00+00:00")
 
     def test_remove_processed_file(self):
-
         os.remove(Path(TEST_DIR) / "data/OMNI_LOW_RES_2020.csv")

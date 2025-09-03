@@ -9,16 +9,15 @@ Module for handling WDC Dst data.
 import logging
 import os
 import re
+import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Tuple, Optional, Union
-import warnings
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import wget
-
 
 logging.captureWarnings(True)
 
@@ -50,9 +49,7 @@ class DSTWDC:
     def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(
-                    f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
-                )
+                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
@@ -61,9 +58,7 @@ class DSTWDC:
 
         logging.info(f"WDC Dst data directory: {self.data_dir}")
 
-    def download_and_process(
-        self, start_time: datetime, end_time: datetime, reprocess_files: bool = False
-    ) -> None:
+    def download_and_process(self, start_time: datetime, end_time: datetime, reprocess_files: bool = False) -> None:
         """Download and process WDC Dst data files.
 
         Parameters
@@ -86,9 +81,7 @@ class DSTWDC:
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
         try:
-            file_paths, time_intervals = self._get_processed_file_list(
-                start_time, end_time
-            )
+            file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
 
             for file_path, time_interval in zip(file_paths, time_intervals):
                 filename = "index.html"
@@ -117,9 +110,7 @@ class DSTWDC:
         finally:
             rmtree(temporary_dir, ignore_errors=True)
 
-    def _get_processed_file_list(
-        self, start_time: datetime, end_time: datetime
-    ) -> Tuple[List, List]:
+    def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
         """Get list of file paths and their corresponding time intervals.
 
         Returns
@@ -148,9 +139,7 @@ class DSTWDC:
             if current_time.month == 12 and current_time.month == 12:
                 current_time = datetime(current_time.year + 1, 1, 1, 0, 0, 0)
             else:
-                current_time = datetime(
-                    current_time.year, current_time.month + 1, 1, 0, 0, 0
-                )
+                current_time = datetime(current_time.year, current_time.month + 1, 1, 0, 0, 0)
 
         return file_paths, time
 
@@ -192,16 +181,14 @@ class DSTWDC:
                     val = val[:4] if not val.startswith("9999") else None
                 try:
                     dst = float(val)
-                except:
+                except:  # noqa: E722
                     continue
                 dt = datetime(year, month, day, hour)
                 records.append({"timestamp": dt, "dst": dst})
 
         df = pd.DataFrame(records)
         df.reset_index(drop=True, inplace=True)
-        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True) + pd.Timedelta(
-            hours=1
-        )
+        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True) + pd.Timedelta(hours=1)
         df.index = df["timestamp"]
         df.drop(columns=["timestamp"], inplace=True)
 
@@ -209,9 +196,7 @@ class DSTWDC:
 
         return df
 
-    def read(
-        self, start_time: datetime, end_time: datetime, download: bool = False
-    ) -> pd.DataFrame:
+    def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
         """
         Read WDC Dst data for the given time range. it always returns the data until the last day of the month or incase of current month, until the current day.
 

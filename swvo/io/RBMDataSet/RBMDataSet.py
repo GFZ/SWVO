@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import datetime as dt
 import typing
-import warnings
 from datetime import timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -126,10 +125,9 @@ class RBMDataSet:
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self._satellite}, {self._instrument}, {self._mfm})"
-    
+
     def __str__(self):
         return self.__repr__()
-
 
     def __dir__(self):
         return super().__dir__() + [var.var_name for var in VariableEnum]

@@ -6,19 +6,20 @@
 Module for handling SWIFT solar wind ensemble data.
 """
 
-
-
 import datetime as dt
 import json
 import logging
 import os
+import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, Union
-import warnings
+
 import numpy as np
 import pandas as pd
+
 from swvo.io.utils import sw_mag_propagation
+
 logging.captureWarnings(True)
 
 
@@ -51,9 +52,7 @@ class SWSWIFTEnsemble:
     def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(
-                    f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
-                )
+                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
@@ -62,12 +61,14 @@ class SWSWIFTEnsemble:
         logging.info(f"SWIFT ensemble data directory: {self.data_dir}")
 
         if not self.data_dir.exists():
-            raise FileNotFoundError(
-                f"Data directory {self.data_dir} does not exist! Impossible to retrieve data!"
-            )
+            raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrieve data!")
 
     def read(
-        self, start_time: Optional[datetime] = None, end_time: Optional[datetime] = None, propagation: bool = False, truncate: bool = True
+        self,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        propagation: bool = False,
+        truncate: bool = True,
     ) -> list:
         # It does not make sense to read SWIFT ensemble files from different dates
 
@@ -100,9 +101,7 @@ class SWSWIFTEnsemble:
             end_time = end_time.replace(tzinfo=timezone.utc)
 
         if start_time is None:
-            start_time = datetime.now(timezone.utc).replace(
-                microsecond=0, minute=0, second=0
-            )
+            start_time = datetime.now(timezone.utc).replace(microsecond=0, minute=0, second=0)
 
         if end_time is None:
             end_time = start_time.replace(tzinfo=timezone.utc) + timedelta(days=3)
@@ -139,9 +138,7 @@ class SWSWIFTEnsemble:
 
                 if propagation:
                     data_gsm = sw_mag_propagation(data_gsm)
-                    data_gsm["file_name"] = data_gsm.apply(
-                        self._update_filename, axis=1
-                    )
+                    data_gsm["file_name"] = data_gsm.apply(self._update_filename, axis=1)
 
                 gsm_s.append(data_gsm)
             except IndexError:
@@ -251,11 +248,7 @@ class SWSWIFTEnsemble:
         file_date_str = Path(row["file_name"]).stem.split("_")[-1]
         file_date = pd.to_datetime(file_date_str, format="%Y-%m-%dt0000").date()
         index_date = row.name.date()
-        return (
-            "propagated from previous SWIFT FORECAST file"
-            if file_date != index_date
-            else row["file_name"]
-        )
+        return "propagated from previous SWIFT FORECAST file" if file_date != index_date else row["file_name"]
 
     def _nan_dataframe(self, start_time, end_time):
         t = pd.date_range(start_time, end_time, freq="5min", tz=timezone.utc)

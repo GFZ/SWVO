@@ -90,9 +90,7 @@ class HpGFZ:
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
         try:
-            file_paths, time_intervals = self._get_processed_file_list(
-                start_time, end_time
-            )
+            file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
 
             for file_path, time_interval in zip(file_paths, time_intervals):
                 filenames_download = [
@@ -106,9 +104,7 @@ class HpGFZ:
                     )
 
                 for filename_download in filenames_download:
-                    logging.debug(
-                        f"Downloading file {self.URL + filename_download} ..."
-                    )
+                    logging.debug(f"Downloading file {self.URL + filename_download} ...")
 
                     wget.download(self.URL + filename_download, str(temporary_dir))
 
@@ -120,21 +116,15 @@ class HpGFZ:
                         else:
                             continue
 
-                filenames_download = [
-                    x[5:] for x in filenames_download
-                ]  # strip of folder of filename
+                filenames_download = [x[5:] for x in filenames_download]  # strip of folder of filename
 
-                processed_df = self._process_single_file(
-                    temporary_dir, filenames_download
-                )
+                processed_df = self._process_single_file(temporary_dir, filenames_download)
                 processed_df.to_csv(file_path, index=True, header=False)
 
         finally:
             rmtree(temporary_dir)
 
-    def read(
-        self, start_time: datetime, end_time: datetime, *, download: bool = False
-    ) -> pd.DataFrame:
+    def read(self, start_time: datetime, end_time: datetime, *, download: bool = False) -> pd.DataFrame:
         """Read HpGFZ data for the given time range.
 
         Parameters
@@ -169,9 +159,7 @@ class HpGFZ:
 
         # initialize data frame with NaNs
         t = pd.date_range(
-            datetime(
-                start_time.year, start_time.month, start_time.day, tzinfo=timezone.utc
-            ),
+            datetime(start_time.year, start_time.month, start_time.day, tzinfo=timezone.utc),
             datetime(
                 end_time.year,
                 end_time.month,
@@ -209,9 +197,7 @@ class HpGFZ:
 
         return data_out  # noqa: RET504
 
-    def _get_processed_file_list(
-        self, start_time: datetime, end_time: datetime
-    ) -> tuple[list, list]:
+    def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> tuple[list, list]:
         """Get list of file paths and their corresponding time intervals.
 
         Returns
@@ -227,22 +213,14 @@ class HpGFZ:
         end_time = datetime(end_time.year, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
 
         while current_time < end_time:
-            file_path = (
-                self.data_dir
-                / self.index
-                / f"Hp{self.index_number}_GFZ_{current_time.strftime('%Y')}.csv"
-            )
+            file_path = self.data_dir / self.index / f"Hp{self.index_number}_GFZ_{current_time.strftime('%Y')}.csv"
             file_paths.append(file_path)
 
             interval_start = current_time
-            interval_end = datetime(
-                current_time.year, 12, 31, 23, 59, 59, tzinfo=timezone.utc
-            )
+            interval_end = datetime(current_time.year, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
 
             time_intervals.append((interval_start, interval_end))
-            current_time = datetime(
-                current_time.year + 1, 1, 1, 0, 0, 0, tzinfo=timezone.utc
-            )
+            current_time = datetime(current_time.year + 1, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
 
         return file_paths, time_intervals
 

@@ -2,5 +2,5 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from swvo.io.omni.omni_high_res import OMNIHighRes
-from swvo.io.omni.omni_low_res import OMNILowRes
+from swvo.io.omni.omni_high_res import OMNIHighRes as OMNIHighRes
+from swvo.io.omni.omni_low_res import OMNILowRes as OMNILowRes

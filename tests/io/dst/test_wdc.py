@@ -6,10 +6,10 @@
 
 import os
 import shutil
-from datetime import datetime, timezone
+import warnings
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
-import warnings
 
 import pandas as pd
 import pytest
@@ -75,9 +75,7 @@ DAY
         start_time = datetime(2020, 1, 1)
         end_time = datetime(2022, 12, 31)
 
-        file_paths, time_intervals = dst_instance._get_processed_file_list(
-            start_time, end_time
-        )
+        file_paths, time_intervals = dst_instance._get_processed_file_list(start_time, end_time)
 
         assert len(file_paths) == 36
         assert all(str(path).startswith(str(MOCK_DATA_PATH)) for path in file_paths)

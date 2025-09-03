@@ -8,17 +8,16 @@ Module for handling SWPC Kp data.
 
 import logging
 import os
+import re
+import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-import warnings
 from typing import Optional, Union
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import wget
-import re
-
 
 logging.captureWarnings(True)
 
@@ -54,9 +53,7 @@ class KpSWPC:
     def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(
-                    f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
-                )
+                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
@@ -65,9 +62,7 @@ class KpSWPC:
 
         logging.info(f"Kp SWPC  data directory: {self.data_dir}")
 
-    def download_and_process(
-        self, target_date: datetime, reprocess_files: bool = False
-    ):
+    def download_and_process(self, target_date: datetime, reprocess_files: bool = False):
         """
         Download and process SWPC Kp data file.
 
@@ -84,13 +79,9 @@ class KpSWPC:
             Raises `ValueError` if the target date is in the past.
         """
         if target_date.date() < datetime.now(timezone.utc).date():
-            raise ValueError(
-                "We can only download and progress a Kp SWPC file for the current day!"
-            )
+            raise ValueError("We can only download and progress a Kp SWPC file for the current day!")
 
-        file_path = (
-            self.data_dir / f"SWPC_KP_FORECAST_{target_date.strftime('%Y%m%d')}.csv"
-        )
+        file_path = self.data_dir / f"SWPC_KP_FORECAST_{target_date.strftime('%Y%m%d')}.csv"
 
         if file_path.exists():
             if reprocess_files:
@@ -116,9 +107,7 @@ class KpSWPC:
         finally:
             rmtree(temporary_dir)
 
-    def read(
-        self, start_time: datetime, end_time: datetime = None, download: bool = False
-    ) -> pd.DataFrame:
+    def read(self, start_time: datetime, end_time: datetime = None, download: bool = False) -> pd.DataFrame:
         """
         Read Kp data for the specified time range.
 
@@ -165,9 +154,7 @@ class KpSWPC:
         data_out["file_name"] = np.array([np.nan] * len(t))
 
         file_name_time = start_time
-        file_path = (
-            self.data_dir / f"SWPC_KP_FORECAST_{file_name_time.strftime('%Y%m%d')}.csv"
-        )
+        file_path = self.data_dir / f"SWPC_KP_FORECAST_{file_name_time.strftime('%Y%m%d')}.csv"
         if not file_path.exists() and download:
             self.download_and_process(start_time)
         if file_path.exists():
@@ -238,9 +225,7 @@ class KpSWPC:
                     break
 
             headers = lines[first_line].split()
-            headers = [
-                headers[i] + " " + headers[i + 1] for i in range(0, len(headers), 2)
-            ]
+            headers = [headers[i] + " " + headers[i + 1] for i in range(0, len(headers), 2)]
             for d in headers:
                 try:
                     if any("Dec" in month for month in headers) and "Jan" in d:
@@ -252,11 +237,7 @@ class KpSWPC:
                     raise
 
             for line in lines[first_line + 1 : first_line + 9]:
-                values = [
-                    float(val)
-                    for val in line.split()[1:]
-                    if re.match(r"^\d+\.\d+$", val)
-                ]
+                values = [float(val) for val in line.split()[1:] if re.match(r"^\d+\.\d+$", val)]
 
                 kp_data.append(values)
 
@@ -271,12 +252,8 @@ class KpSWPC:
         df = pd.DataFrame({"t_forecast": timestamp}, index=time_in)
         df["kp"] = kp
 
-        df.loc[round(df["kp"] % 1, 2) == 0.67, "kp"] = (
-            round(df.loc[round(df["kp"] % 1, 2) == 0.67, "kp"]) + 2 / 3
-        )
-        df.loc[round(df["kp"] % 1, 2) == 0.33, "kp"] = (
-            round(df.loc[round(df["kp"] % 1, 2) == 0.33, "kp"]) + 1 / 3
-        )
+        df.loc[round(df["kp"] % 1, 2) == 0.67, "kp"] = round(df.loc[round(df["kp"] % 1, 2) == 0.67, "kp"]) + 2 / 3
+        df.loc[round(df["kp"] % 1, 2) == 0.33, "kp"] = round(df.loc[round(df["kp"] % 1, 2) == 0.33, "kp"]) + 1 / 3
 
         df.index.rename("t", inplace=True)
 

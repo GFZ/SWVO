@@ -7,9 +7,9 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from datetime import datetime, timedelta, timezone
 from typing import Literal
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -76,9 +76,7 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
 
     if model_order is None:
         model_order = [KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()]
-        logging.warning(
-            "No model order specified, using default order: OMNI, Niemegk, Ensemble, SWPC"
-        )
+        logging.warning("No model order specified, using default order: OMNI, Niemegk, Ensemble, SWPC")
 
     data_out = [pd.DataFrame()]
 
@@ -157,9 +155,7 @@ def _read_from_model(  # noqa: PLR0913
         ]
 
     if isinstance(model, KpEnsemble):
-        data_one_model = _read_latest_ensemble_files(
-            model, historical_data_cutoff_time, end_time
-        )
+        data_one_model = _read_latest_ensemble_files(model, historical_data_cutoff_time, end_time)
 
         num_ens_members = len(data_one_model)
 
@@ -211,12 +207,8 @@ def _read_historical_model(
 
     data_one_model = model.read(start_time, end_time, download=download)
     # set nan for 'future' values
-    data_one_model.loc[
-        historical_data_cutoff_time + timedelta(hours=3) : end_time, "kp"
-    ] = np.nan
-    logging.info(
-        f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time + timedelta(hours=3)} to {end_time}"
-    )
+    data_one_model.loc[historical_data_cutoff_time + timedelta(hours=3) : end_time, "kp"] = np.nan
+    logging.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time + timedelta(hours=3)} to {end_time}")
 
     return data_one_model
 
@@ -270,17 +262,13 @@ def _read_latest_ensemble_files(
     adjusted_data = []
     for df in data_one_model:
         if not df.empty:
-            if df.index[-1] < end_time and (df.index[-1] - end_time) < timedelta(
-                hours=3
-            ):
+            if df.index[-1] < end_time and (df.index[-1] - end_time) < timedelta(hours=3):
                 df.loc[df.index[-1] + timedelta(hours=3)] = df.loc[df.index[-1]]
         adjusted_data.append(df)
     return adjusted_data
 
 
-def _reduce_ensembles(
-    data_ensembles: list[pd.DataFrame], method: Literal["mean", "median"]
-) -> pd.DataFrame:
+def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean", "median"]) -> pd.DataFrame:
     """
     Reduce a list of data frames representing ensemble data to a single data frame using the provided method.
 
@@ -307,30 +295,24 @@ def _reduce_ensembles(
 
         for it, _ in enumerate(data_ensembles[0].index):
             data_curr_time = [
-                data_one_ensemble.loc[data_one_ensemble.index[it], "kp"]
-                for data_one_ensemble in data_ensembles
+                data_one_ensemble.loc[data_one_ensemble.index[it], "kp"] for data_one_ensemble in data_ensembles
             ]
 
             kp_mean_ensembles.append(np.mean(data_curr_time))
 
-        data_reduced = pd.DataFrame(
-            index=data_ensembles[0].index, data={"kp": kp_mean_ensembles}
-        )
+        data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={"kp": kp_mean_ensembles})
 
     elif method == "median":
         kp_median_ensembles = []
 
         for it, _ in enumerate(data_ensembles[0].index):
             data_curr_time = [
-                data_one_ensemble.loc[data_one_ensemble.index[it], "kp"]
-                for data_one_ensemble in data_ensembles
+                data_one_ensemble.loc[data_one_ensemble.index[it], "kp"] for data_one_ensemble in data_ensembles
             ]
 
             kp_median_ensembles.append(np.median(data_curr_time))
 
-        data_reduced = pd.DataFrame(
-            index=data_ensembles[0].index, data={"kp": kp_median_ensembles}
-        )
+        data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={"kp": kp_median_ensembles})
 
     else:
         msg = f"This reduction method has not been implemented yet: {method}!"

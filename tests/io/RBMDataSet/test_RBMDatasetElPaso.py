@@ -2,19 +2,19 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pyexpat
+from datetime import datetime, timezone
+from typing import get_args
+
 import numpy as np
 import pytest
-from datetime import datetime, timezone
-from types import SimpleNamespace
-from typing import get_args
+
 from swvo.io.RBMDataSet import (
-    RBMDataSetElPaso,
     InstrumentEnum,
     MfmEnum,
+    RBMDataSetElPaso,
     SatelliteEnum,
-    VariableEnum,
     SatelliteLiteral,
+    VariableEnum,
 )
 from swvo.io.RBMDataSet.utils import python2matlab
 

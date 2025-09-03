@@ -7,15 +7,15 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from datetime import datetime, timedelta, timezone
 from typing import Literal
-import warnings
+
 import numpy as np
 import pandas as pd
 
 from swvo.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ
 from swvo.io.utils import any_nans, construct_updated_data_frame
-
 
 HpModel = Hp30Ensemble | Hp30GFZ | Hp60Ensemble | Hp60GFZ
 
@@ -129,16 +129,12 @@ def _read_from_model(  # noqa: PLR0913
         )
 
     if isinstance(model, (Hp30Ensemble, Hp60Ensemble)):
-        data_one_model = _read_latest_ensemble_files(
-            model, model.index, historical_data_cutoff_time, end_time
-        )
+        data_one_model = _read_latest_ensemble_files(model, model.index, historical_data_cutoff_time, end_time)
 
         num_ens_members = len(data_one_model)
 
         if num_ens_members > 0 and reduce_ensemble is not None:
-            data_one_model = _reduce_ensembles(
-                data_one_model, reduce_ensemble, model.index
-            )
+            data_one_model = _reduce_ensembles(data_one_model, reduce_ensemble, model.index)
 
     return data_one_model
 
@@ -192,9 +188,7 @@ def _read_historical_model(
 
     # set nan for 'future' values
     data_one_model.loc[historical_data_cutoff_time:end_time, hp_index] = np.nan
-    logging.info(
-        f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}"
-    )
+    logging.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
 
     return data_one_model
 
@@ -281,30 +275,24 @@ def _reduce_ensembles(
 
         for it, _ in enumerate(data_ensembles[0].index):
             data_curr_time = [
-                data_one_ensemble.loc[data_one_ensemble.index[it], hp_index]
-                for data_one_ensemble in data_ensembles
+                data_one_ensemble.loc[data_one_ensemble.index[it], hp_index] for data_one_ensemble in data_ensembles
             ]
 
             hp_mean_ensembles.append(np.mean(data_curr_time))
 
-        data_reduced = pd.DataFrame(
-            index=data_ensembles[0].index, data={hp_index: hp_mean_ensembles}
-        )
+        data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={hp_index: hp_mean_ensembles})
 
     elif method == "median":
         hp_median_ensembles = []
 
         for it, _ in enumerate(data_ensembles[0].index):
             data_curr_time = [
-                data_one_ensemble.loc[data_one_ensemble.index[it], hp_index]
-                for data_one_ensemble in data_ensembles
+                data_one_ensemble.loc[data_one_ensemble.index[it], hp_index] for data_one_ensemble in data_ensembles
             ]
 
             hp_median_ensembles.append(np.median(data_curr_time))
 
-        data_reduced = pd.DataFrame(
-            index=data_ensembles[0].index, data={hp_index: hp_median_ensembles}
-        )
+        data_reduced = pd.DataFrame(index=data_ensembles[0].index, data={hp_index: hp_median_ensembles})
 
     else:
         msg = f"This reduction method has not been implemented yet: {method}!"

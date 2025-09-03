@@ -5,8 +5,8 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
 import warnings
+from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
@@ -78,18 +78,12 @@ def read_dst_from_multiple_models(
         logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
         data_one_model = model.read(start_time, end_time, download=download)
 
-        index_range = pd.date_range(
-            start=historical_data_cutoff_time, end=end_time, freq="h"
-        )
+        index_range = pd.date_range(start=historical_data_cutoff_time, end=end_time, freq="h")
         data_one_model = data_one_model.reindex(data_one_model.index.union(index_range))
 
-        data_one_model.loc[
-            data_one_model.index > historical_data_cutoff_time, "dst"
-        ] = np.nan
+        data_one_model.loc[data_one_model.index > historical_data_cutoff_time, "dst"] = np.nan
         data_one_model = data_one_model.fillna({"file_name": np.nan})
-        logging.info(
-            f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}"
-        )
+        logging.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
 
         data_out = construct_updated_data_frame(data_out, data_one_model, model.LABEL)
 

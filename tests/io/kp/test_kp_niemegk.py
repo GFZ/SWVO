@@ -6,19 +6,20 @@ import os
 import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+import numpy as np
 import pandas as pd
 import pytest
-import numpy as np
 
 from swvo.io.kp import KpNiemegk
 
 TEST_DIR = Path("test_data")
 DATA_DIR = TEST_DIR / "mock_kp_niemegk"
 
+
 class TestKpNiemegk:
     @pytest.fixture(scope="session", autouse=True)
     def setup_and_cleanup(self):
-
         TEST_DIR.mkdir(exist_ok=True)
         DATA_DIR.mkdir(exist_ok=True)
 
@@ -27,22 +28,16 @@ class TestKpNiemegk:
         if TEST_DIR.exists():
             shutil.rmtree(TEST_DIR, ignore_errors=True)
 
-
     @pytest.fixture
     def kp_niemegk_instance(self):
-
         return KpNiemegk(data_dir=DATA_DIR)
 
-
     def test_initialization_with_data_dir(self):
-
         instance = KpNiemegk(data_dir=DATA_DIR)
         assert instance.data_dir == DATA_DIR
         assert instance.data_dir.exists()
 
-
     def test_initialization_without_env_var(self):
-
         if KpNiemegk.ENV_VAR_NAME in os.environ:
             del os.environ[KpNiemegk.ENV_VAR_NAME]
         with pytest.raises(
@@ -51,16 +46,12 @@ class TestKpNiemegk:
         ):
             KpNiemegk()
 
-
     def test_initialization_with_env_var(self):
-
         os.environ[KpNiemegk.ENV_VAR_NAME] = str(DATA_DIR)
         instance = KpNiemegk()
         assert instance.data_dir == DATA_DIR
 
-
     def test_get_processed_file_list(self):
-
         instance = KpNiemegk(data_dir=DATA_DIR)
         start_time = datetime(2024, 1, 1)
         end_time = datetime(2024, 1, 3)
@@ -76,14 +67,11 @@ class TestKpNiemegk:
         assert time_intervals[0][0] == datetime(2023, 12, 30, tzinfo=timezone.utc)
         assert time_intervals[0][1] == datetime(2024, 1, 1, 23, 59, 59, tzinfo=timezone.utc)
 
-
     def test_download_and_process_current_month(self, kp_niemegk_instance):
-
         current_time = datetime.now(timezone.utc)
         end_time = current_time + timedelta(days=2)
 
-        kp_niemegk_instance.download_and_process(
-            current_time, end_time, reprocess_files=True)
+        kp_niemegk_instance.download_and_process(current_time, end_time, reprocess_files=True)
 
         file_paths, _ = kp_niemegk_instance._get_processed_file_list(current_time, end_time)
 
@@ -98,9 +86,7 @@ class TestKpNiemegk:
                 assert valid_kps.min() >= 0
                 assert valid_kps.max() <= 9
 
-
     def test_download_past_month(self, kp_niemegk_instance):
-
         past_time = datetime.now(timezone.utc) - timedelta(days=32)
         end_time = past_time + timedelta(days=2)
 
@@ -111,9 +97,7 @@ class TestKpNiemegk:
         for file_path in file_paths:
             assert not file_path.exists()
 
-
     def test_read_with_download(self, kp_niemegk_instance):
-
         current_time = datetime.now()
         end_time = current_time + timedelta(days=1)
 
@@ -124,14 +108,10 @@ class TestKpNiemegk:
         assert "file_name" in data.columns
         assert isinstance(data.index, pd.DatetimeIndex)
 
-        assert data.index[0] >= current_time.replace(tzinfo=timezone.utc) - timedelta(
-            hours=3
-        )
+        assert data.index[0] >= current_time.replace(tzinfo=timezone.utc) - timedelta(hours=3)
         assert data.index[-1] <= end_time.replace(tzinfo=timezone.utc) + timedelta(hours=3)
 
-
     def test_read_without_download_no_file(self, kp_niemegk_instance):
-
         current_time = datetime.now()
         end_time = current_time + timedelta(days=1)
 
@@ -143,19 +123,15 @@ class TestKpNiemegk:
         assert isinstance(data, pd.DataFrame)
         assert data["kp"].isna().all()
 
-
     def test_process_single_file(self):
-
         instance = KpNiemegk(data_dir=DATA_DIR)
         temp_dir = Path("./temp_test")
         temp_dir.mkdir(exist_ok=True)
 
         try:
-
-            sample_data = '#\n' * 30
-            sample_data +="""2025 01 08 00.0 01.50 33976.00000 33976.06250  3.667   22 1
+            sample_data = "#\n" * 30
+            sample_data += """2025 01 08 00.0 01.50 33976.00000 33976.06250  3.667   22 1
             2025 01 08 03.0 04.50 33976.12500 33976.18750  2.333    9 1"""
-
 
             with open(temp_dir / "Kp_ap_nowcast.txt", "w") as f:
                 f.write(sample_data)
@@ -177,14 +153,11 @@ class TestKpNiemegk:
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-
     def test_reprocess_files_flag(self, kp_niemegk_instance):
-
         current_time = datetime.now(timezone.utc)
         end_time = current_time + timedelta(days=1)
 
-        kp_niemegk_instance.download_and_process(
-            current_time, end_time, reprocess_files=True)
+        kp_niemegk_instance.download_and_process(current_time, end_time, reprocess_files=True)
 
         file_paths, _ = kp_niemegk_instance._get_processed_file_list(current_time, end_time)
 
@@ -196,8 +169,7 @@ class TestKpNiemegk:
 
         assert initial_data is not None
 
-        kp_niemegk_instance.download_and_process(
-            current_time, end_time, reprocess_files=False)
+        kp_niemegk_instance.download_and_process(current_time, end_time, reprocess_files=False)
 
         unchanged_data = pd.read_csv(file_path, names=["t", "kp"])
         pd.testing.assert_frame_equal(initial_data, unchanged_data)

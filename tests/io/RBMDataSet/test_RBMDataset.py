@@ -2,18 +2,19 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
 import datetime as dt
-import numpy as np
+from datetime import timezone
 from pathlib import Path
 from unittest import mock
-from datetime import timezone
-from swvo.io.RBMDataSet import RBMDataSet
+
+import numpy as np
+import pytest
 
 from swvo.io.RBMDataSet import (
     FileCadenceEnum,
     InstrumentEnum,
     MfmEnum,
+    RBMDataSet,
     SatelliteEnum,
     VariableEnum,
 )
@@ -114,7 +115,7 @@ def test_satellite_string_input(mock_module_string):
 
 def test_getattr_with_valid_variable(mock_dataset):
     """Test __getattr__ with a valid variable."""
-    with mock.patch.object(mock_dataset, "_load_variable") as mock_load:
+    with mock.patch.object(mock_dataset, "_load_variable") as _:
         mock_dataset.Flux = np.array([1.0, 2.0, 3.0])
         result = mock_dataset.Flux
         assert isinstance(result, np.ndarray)
@@ -251,7 +252,7 @@ def test_load_variable_real_file():
     dataset = RBMDataSet(
         start_time=start_time,
         end_time=end_time,
-        folder_path=Path("path/to/real/files"), # this does not matter for the test
+        folder_path=Path("path/to/real/files"),  # this does not matter for the test
         satellite=SatelliteEnum.GOESSecondary,
         instrument=InstrumentEnum.MAGED,
         mfm=MfmEnum.T89,

@@ -19,23 +19,17 @@ from numpy.typing import NDArray
 from scipy.io import loadmat as sci_loadmat
 
 
-def join_var(
-    var1: NDArray[np.generic], var2: NDArray[np.generic]
-) -> NDArray[np.generic]:
+def join_var(var1: NDArray[np.generic], var2: NDArray[np.generic]) -> NDArray[np.generic]:
     """Join two variables along the first axis."""
     return np.concatenate((var1, var2), axis=0)
 
 
-def get_file_path_any_format(
-    folder_path: Path, file_stem: str, preferred_ext: str
-) -> Path | None:
+def get_file_path_any_format(folder_path: Path, file_stem: str, preferred_ext: str) -> Path | None:
     """Get the file path for a given file stem and preferred extension."""
     all_files = list(folder_path.glob(file_stem + ".*"))
 
     if len(all_files) == 0:
-        warnings.warn(
-            f"File not found: {folder_path / (file_stem + '.*')}", stacklevel=2
-        )
+        warnings.warn(f"File not found: {folder_path / (file_stem + '.*')}", stacklevel=2)
         return None
 
     if len(all_files) >= 1:
@@ -67,9 +61,7 @@ def load_file_any_format(file_path: Path) -> dict[str, Any]:
     match file_path.suffix:
         case ".mat":
             try:
-                file_content = typing.cast(
-                    dict[str, NDArray[np.generic] | str], loadmat(file_path)
-                )
+                file_content = typing.cast(dict[str, NDArray[np.generic] | str], loadmat(file_path))
             except TypeError:
                 file_content = typing.cast(
                     dict[str, NDArray[np.generic] | str],
@@ -78,9 +70,7 @@ def load_file_any_format(file_path: Path) -> dict[str, Any]:
 
         case ".pickle":
             with file_path.open("rb") as file:
-                file_content = typing.cast(
-                    dict[str, NDArray[np.generic] | str], pickle.load(file)
-                )
+                file_content = typing.cast(dict[str, NDArray[np.generic] | str], pickle.load(file))
 
         case _:
             msg = f"Loading file extension {file_path.suffix} is not supported yet!"
@@ -99,25 +89,18 @@ def round_seconds(obj: datetime) -> datetime:
 def python2matlab(datenum: datetime) -> float:
     """Convert Python datetime to MATLAB datenum."""
     mdn = datenum + timedelta(days=366)
-    frac = (
-        datenum
-        - datetime(
-            datenum.year, datenum.month, datenum.day, 0, 0, 0, tzinfo=timezone.utc
-        )
-    ).seconds / (24.0 * 60.0 * 60.0)
+    frac = (datenum - datetime(datenum.year, datenum.month, datenum.day, 0, 0, 0, tzinfo=timezone.utc)).seconds / (
+        24.0 * 60.0 * 60.0
+    )
     return mdn.toordinal() + round(frac, 6)
 
 
 def matlab2python(datenum: float | Iterable) -> Iterable[datetime] | datetime:
     """Convert MATLAB datenum to Python datetime."""
-    warnings.filterwarnings(
-        "ignore", message="Discarding nonzero nanoseconds in conversion"
-    )
+    warnings.filterwarnings("ignore", message="Discarding nonzero nanoseconds in conversion")
 
     datenum = np.asarray(datenum, dtype=float)
-    datenum = pd.to_datetime(
-        datenum - 719529, unit="D", origin=pd.Timestamp("1970-01-01")
-    ).to_pydatetime()
+    datenum = pd.to_datetime(datenum - 719529, unit="D", origin=pd.Timestamp("1970-01-01")).to_pydatetime()
 
     if isinstance(datenum, Iterable):
         datenum = [x.replace(tzinfo=timezone.utc) for x in datenum]
@@ -137,9 +120,7 @@ def pol2cart(
     return (x, y)
 
 
-def cart2pol(
-    x: NDArray[np.float64], y: NDArray[np.float64]
-) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+def cart2pol(x: NDArray[np.float64], y: NDArray[np.float64]) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """transforms cartesian coordinates x, y to polar coordinates theta (in rad) and radius"""
     z = x + 1j * y
     return np.angle(z), np.abs(z)

@@ -12,7 +12,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Tuple, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -45,13 +45,10 @@ class OMNIHighRes:
     START_YEAR = 1981
     LABEL = "omni"
 
-
     def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(
-                    f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
-                )
+                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
@@ -98,9 +95,7 @@ class OMNIHighRes:
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
         try:
-            file_paths, time_intervals = self._get_processed_file_list(
-                start_time, end_time, cadence_min
-            )
+            file_paths, time_intervals = self._get_processed_file_list(start_time, end_time, cadence_min)
 
             for file_path, time_interval in zip(file_paths, time_intervals):
                 if file_path.exists():
@@ -180,9 +175,7 @@ class OMNIHighRes:
         for file_path in file_paths:
             if not file_path.exists():
                 if download:
-                    self.download_and_process(
-                        start_time, end_time, cadence_min=cadence_min
-                    )
+                    self.download_and_process(start_time, end_time, cadence_min=cadence_min)
                 else:
                     logging.warning(f"File {file_path} not found")
                     continue
@@ -270,14 +263,12 @@ class OMNIHighRes:
         df = pd.DataFrame([line.split() for line in data_lines], columns=columns)
         df = df.apply(pd.to_numeric)
 
-        df["timestamp"] = df["YYYY"].map(str).apply(lambda x: x + "-01-01 ") + df[
-            "HR"
-        ].map(str).apply(lambda x: x.zfill(2))
+        df["timestamp"] = df["YYYY"].map(str).apply(lambda x: x + "-01-01 ") + df["HR"].map(str).apply(
+            lambda x: x.zfill(2)
+        )
         df["timestamp"] += df["MN"].map(str).apply(lambda x: ":" + x.zfill(2) + ":00")
         df["timestamp"] = pd.to_datetime(df["timestamp"])
-        df["timestamp"] = df["timestamp"] + df["DOY"].apply(
-            lambda x: timedelta(days=int(x) - 1)
-        )
+        df["timestamp"] = df["timestamp"] + df["DOY"].apply(lambda x: timedelta(days=int(x) - 1))
 
         df.drop(columns=["YYYY", "HR", "MN", "DOY"], inplace=True)
         df.set_index("timestamp", inplace=True)
@@ -290,7 +281,7 @@ class OMNIHighRes:
             "speed": 99999.8,
             "proton_density": 999.8,
             "temperature": 9999998.0,
-            "pdyn": 99.
+            "pdyn": 99.0,
         }
 
         df.columns = maxes.keys()
@@ -341,9 +332,7 @@ class OMNIHighRes:
 
         return df
 
-    def _get_data_from_omni(
-        self, start: datetime, end: datetime, cadence: int = 1
-    ) -> list:
+    def _get_data_from_omni(self, start: datetime, end: datetime, cadence: int = 1) -> list:
         """
         Fetches data from NASA's OMNIWeb service.
 
@@ -356,18 +345,7 @@ class OMNIHighRes:
             "start_date": start.strftime("%Y%m%d"),
             "end_date": end.strftime("%Y%m%d"),
         }
-        common_vars = {
-            "vars": [
-                "13",
-                "14",
-                "17",
-                "18",
-                "21",
-                "25",
-                "26",
-                "27"
-            ]
-        }
+        common_vars = {"vars": ["13", "14", "17", "18", "21", "25", "26", "27"]}
         if cadence == 1:
             params = {"res": "min", "spacecraft": "omni_min"}
             payload.update(params)
@@ -401,9 +379,7 @@ class OMNIHighRes:
                         )
 
                         # Recursively call the function with the original start date and the new end date
-                        return self._get_data_from_omni(
-                            start=start, end=new_end_date, cadence=cadence
-                        )
+                        return self._get_data_from_omni(start=start, end=new_end_date, cadence=cadence)
             msg = f"An unspecified error occurred: {data}"
             logging.error(msg)
             raise ValueError(msg)

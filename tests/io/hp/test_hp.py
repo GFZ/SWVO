@@ -110,9 +110,7 @@ class TestHpGFZ:
         start_time = datetime(2020, 1, 1)  # noqa: DTZ001
         end_time = datetime(2021, 12, 31)  # noqa: DTZ001
 
-        file_paths, time_intervals = hp30gfz._get_processed_file_list(
-            start_time, end_time
-        )
+        file_paths, time_intervals = hp30gfz._get_processed_file_list(start_time, end_time)
 
         assert len(file_paths) == 2
         assert all(isinstance(p, Path) for p in file_paths)
@@ -133,9 +131,7 @@ class TestHpGFZ:
 
         mocked = mocker.patch("wget.download")
         mocker.patch("shutil.rmtree")
-        mocker.patch.object(
-            hp30gfz, "_process_single_file", return_value=pd.DataFrame()
-        )
+        mocker.patch.object(hp30gfz, "_process_single_file", return_value=pd.DataFrame())
 
         hp30gfz.download_and_process(start_time, end_time)
 
@@ -178,9 +174,5 @@ class TestHpGFZ:
         assert len(result_df) == 3
         assert isinstance(result_df.index, pd.DatetimeIndex)
         assert result_df[index_name].tolist() == values
-        assert result_df.index[0] == pd.Timestamp(
-            "2020-01-01 00:00:00", tzinfo=timezone.utc
-        )
-        assert result_df.index[-1] == pd.Timestamp(
-            "2020-01-01 01:00:00", tzinfo=timezone.utc
-        )
+        assert result_df.index[0] == pd.Timestamp("2020-01-01 00:00:00", tzinfo=timezone.utc)
+        assert result_df.index[-1] == pd.Timestamp("2020-01-01 01:00:00", tzinfo=timezone.utc)

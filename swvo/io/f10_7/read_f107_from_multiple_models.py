@@ -5,11 +5,11 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
-import warnings
 
 from swvo.io.f10_7 import F107OMNI, F107SWPC
 from swvo.io.utils import any_nans, construct_updated_data_frame
@@ -80,18 +80,12 @@ def read_f107_from_multiple_models(
             logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
             data_one_model = model.read(start_time, end_time, download=download)
 
-            index_range = pd.date_range(
-                start=historical_data_cutoff_time, end=end_time, freq="d"
-            )
-            data_one_model = data_one_model.reindex(
-                data_one_model.index.union(index_range)
-            )
+            index_range = pd.date_range(start=historical_data_cutoff_time, end=end_time, freq="d")
+            data_one_model = data_one_model.reindex(data_one_model.index.union(index_range))
 
             data_one_model.loc[historical_data_cutoff_time:end_time, "f107"] = np.nan
             data_one_model = data_one_model.fillna({"file_name": np.nan})
-            logging.info(
-                f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}"
-            )
+            logging.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
 
         if isinstance(model, F107SWPC):
             logging.info(

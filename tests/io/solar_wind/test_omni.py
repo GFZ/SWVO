@@ -3,13 +3,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
-import pytest
-from pathlib import Path
 from datetime import datetime, timezone
-from swvo.io.solar_wind import SWOMNI
-import pandas as pd
-
+from pathlib import Path
 from unittest.mock import patch
+
+import pandas as pd
+import pytest
+
+from swvo.io.solar_wind import SWOMNI
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
@@ -67,7 +68,6 @@ class TestSWOMNI:
         swomni.read(start_time, end_time, download=True)
         swomni.download_and_process.assert_called_once()
 
-
     def test_invalid_cadence(self, swomni):
         start_time = datetime(2022, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2022, 12, 31, tzinfo=timezone.utc)
@@ -97,9 +97,7 @@ class TestSWOMNI:
                 "Start date chosen falls behind the existing data. Moving start date to first available mission files..."
             )
 
-            assert (
-                len(dfs) == 0
-            ), "Expected dfs list to be empty since no files are found."
+            assert len(dfs) == 0, "Expected dfs list to be empty since no files are found."
 
     def test_remove_processed_file(self):
         os.remove(Path(TEST_DIR) / "data/OMNI_HIGH_RES_1min_2020.csv")

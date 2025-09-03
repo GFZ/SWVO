@@ -3,13 +3,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
-import pytest
-from pathlib import Path
-from datetime import datetime, timezone
-from swvo.io.omni.omni_low_res import OMNILowRes
-import pandas as pd
 import warnings
+from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import patch
+
+import pandas as pd
+import pytest
+
+from swvo.io.omni.omni_low_res import OMNILowRes
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
@@ -39,9 +41,7 @@ class TestOMNILowRes:
         mocker.patch.object(
             omni_low_res,
             "_process_single_file",
-            return_value=omni_low_res._process_single_file(
-                Path(TEST_DIR) / "data/omni2_2020.dat"
-            ),
+            return_value=omni_low_res._process_single_file(Path(TEST_DIR) / "data/omni2_2020.dat"),
         )
 
         start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
@@ -72,10 +72,7 @@ class TestOMNILowRes:
             omni_low_res,
             "_read_single_file",
             return_value=pd.DataFrame(
-                index=pd.date_range(
-                    start=datetime(2022, 1, 1), end=datetime(2022, 12, 31),
-                    tz=timezone.utc
-                )
+                index=pd.date_range(start=datetime(2022, 1, 1), end=datetime(2022, 12, 31), tz=timezone.utc)
             ),
         )
         start_time = datetime(2022, 1, 1, tzinfo=timezone.utc)
@@ -104,9 +101,7 @@ class TestOMNILowRes:
 
         mocked_df = pd.DataFrame(index=pd.date_range(start_time, end_time))
 
-        mocker.patch.object(
-            omni_low_res, "_get_processed_file_list", return_value=([], [])
-        )
+        mocker.patch.object(omni_low_res, "_get_processed_file_list", return_value=([], []))
         mocker.patch.object(omni_low_res, "_read_single_file", return_value=mocked_df)
 
         mocker.patch("pandas.concat", return_value=pd.DataFrame())

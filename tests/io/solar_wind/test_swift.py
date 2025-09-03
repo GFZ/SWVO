@@ -2,14 +2,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 import os
 import shutil
-from datetime import datetime, timezone, timedelta
-from pathlib import Path
-import json
-from unittest.mock import patch
-import logging
 import warnings
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -19,7 +18,6 @@ from swvo.io.solar_wind import SWSWIFTEnsemble
 
 TEST_DATA_DIR = Path("test_data")
 MOCK_DATA_PATH = TEST_DATA_DIR / "mock_swift"
-
 
 
 class TestSWIFT:
@@ -33,21 +31,15 @@ class TestSWIFT:
         if TEST_DATA_DIR.exists():
             shutil.rmtree(TEST_DATA_DIR, ignore_errors=True)
 
-
     @pytest.fixture
     def swift_instance(self):
         with patch.dict("os.environ", {SWSWIFTEnsemble.ENV_VAR_NAME: str(MOCK_DATA_PATH)}):
             instance = SWSWIFTEnsemble()
             return instance
 
-
     @pytest.fixture
     def sample_swift_data(self):
-        current_time = int(
-            datetime.now(timezone.utc)
-            .replace(microsecond=0, minute=0, second=0)
-            .timestamp()
-        )
+        current_time = int(datetime.now(timezone.utc).replace(microsecond=0, minute=0, second=0).timestamp())
         return {
             "arrays": {
                 "Unix time": {"data": [current_time, current_time + 3 * 24 * 3600]},
@@ -61,7 +53,6 @@ class TestSWIFT:
                 "Rho": {"data": [1e-20, 1.1e-20]},
             }
         }
-
 
     @pytest.fixture
     def create_mock_swift_files(self, sample_swift_data):
@@ -82,11 +73,8 @@ class TestSWIFT:
 
         return _create_files
 
-
     def test_initialization_with_env_var(self):
-        with patch.dict(
-            "os.environ", {SWSWIFTEnsemble.ENV_VAR_NAME: str(MOCK_DATA_PATH)}
-        ):
+        with patch.dict("os.environ", {SWSWIFTEnsemble.ENV_VAR_NAME: str(MOCK_DATA_PATH)}):
             swift = SWSWIFTEnsemble()
             assert swift.data_dir == MOCK_DATA_PATH
 
@@ -133,16 +121,12 @@ class TestSWIFT:
         ]
         assert all(col in data.columns for col in expected_columns)
 
-        assert data["speed"].iloc[0] == pytest.approx(
-            np.sqrt((-400) ** 2 + 50**2 + 10**2)
-        )
+        assert data["speed"].iloc[0] == pytest.approx(np.sqrt((-400) ** 2 + 50**2 + 10**2))
         assert data["bx_gsm"].iloc[0] == pytest.approx(5.0)
         assert data["proton_density"].iloc[0] > 0
         assert data["temperature"].iloc[0] == 200000
 
-    def test_read_single_file_with_old_columns(
-        self, swift_instance, sample_swift_data, tmp_path
-    ):
+    def test_read_single_file_with_old_columns(self, swift_instance, sample_swift_data, tmp_path):
         test_file = tmp_path / "test_gsm.json"
         with open(test_file, "w") as f:
             json.dump(sample_swift_data, f)
@@ -166,9 +150,7 @@ class TestSWIFT:
         assert all(col in data.columns for col in expected_columns)
 
     def test_read_ensemble(self, swift_instance, create_mock_swift_files):
-        base_date = datetime.now(timezone.utc).replace(
-            microsecond=0, minute=0, second=0
-        )
+        base_date = datetime.now(timezone.utc).replace(microsecond=0, minute=0, second=0)
         create_mock_swift_files(base_date, num_tasks=3)
 
         start_time = base_date
@@ -194,7 +176,9 @@ class TestSWIFT:
             assert all(col in df.columns for col in expected_columns)
 
     def test_read_with_missing_gsm_files(
-        self, swift_instance, create_mock_swift_files,
+        self,
+        swift_instance,
+        create_mock_swift_files,
     ):
         base_date = datetime.now().replace(microsecond=0, minute=0, second=0)
         task_dir = create_mock_swift_files(base_date, num_tasks=1)
@@ -209,9 +193,7 @@ class TestSWIFT:
             assert len(result) == 0
 
     def test_read_with_default_times(self, swift_instance, create_mock_swift_files):
-        base_date = datetime.now(timezone.utc).replace(
-            microsecond=0, minute=0, second=0
-        )
+        base_date = datetime.now(timezone.utc).replace(microsecond=0, minute=0, second=0)
         create_mock_swift_files(base_date, num_tasks=2)
 
         result = swift_instance.read(None, None)
@@ -231,7 +213,5 @@ class TestSWIFT:
         data = swace_instance.read(start_time, end_time, propagation=True)
         assert isinstance(data, list)
         for df in data:
-            assert any(
-                df["file_name"] == "propagated from previous SWIFT FORECAST file"
-            )
+            assert any(df["file_name"] == "propagated from previous SWIFT FORECAST file")
             assert df.index.is_monotonic_increasing

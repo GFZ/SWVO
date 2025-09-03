@@ -97,9 +97,7 @@ def create_RBSP_line_data(
         target_type = TargetType[target_type]
 
     if target_type == TargetType.TargetPairs:
-        assert len(target_en) == len(
-            target_al
-        ), "For TargetType.Pairs, the target vectors must have the same size!"
+        assert len(target_en) == len(target_al), "For TargetType.Pairs, the target vectors must have the same size!"
 
     result_arr = []
     list_instruments_used = []
@@ -122,15 +120,11 @@ def create_RBSP_line_data(
 
             # strip of time dimention
             if rbm_data[i].energy_channels.shape[0] == len(rbm_data[i].time):
-                rbm_data[i].energy_channels_no_time = np.nanmean(
-                    rbm_data[i].energy_channels, axis=0
-                )
+                rbm_data[i].energy_channels_no_time = np.nanmean(rbm_data[i].energy_channels, axis=0)
             else:
                 rbm_data[i].energy_channels_no_time = rbm_data[i].energy_channels
             if rbm_data[i].alpha_local.shape[0] == len(rbm_data[i].time):
-                rbm_data[i].alpha_local_no_time = np.nanmean(
-                    rbm_data[i].alpha_local, axis=0
-                )
+                rbm_data[i].alpha_local_no_time = np.nanmean(rbm_data[i].alpha_local, axis=0)
             else:
                 rbm_data[i].alpha_local_no_time = rbm_data[i].alpha_local
 
@@ -148,7 +142,7 @@ def create_RBSP_line_data(
 
                 if verbose:
                     print(
-                        f"\t{instrument.name}:\tabsolute: {energy_offsets[i]:.2e}, \trelative: {energy_offsets[i]/target_en_single:.2e}"
+                        f"\t{instrument.name}:\tabsolute: {energy_offsets[i]:.2e}, \trelative: {energy_offsets[i] / target_en_single:.2e}"
                     )
 
                 # initiate the RBMDataSet for the result
@@ -156,15 +150,9 @@ def create_RBSP_line_data(
                     rbm_data_set_result = deepcopy(rbm_data[i])
 
                     if target_type == TargetType.TargetPairs:
-                        rbm_data_set_result.line_data_flux = np.empty(
-                            (len(rbm_data_set_result.time), len(target_en))
-                        )
-                        rbm_data_set_result.line_data_energy = np.empty(
-                            (len(target_en),)
-                        )
-                        rbm_data_set_result.line_data_alpha_local = np.empty(
-                            (len(target_al),)
-                        )
+                        rbm_data_set_result.line_data_flux = np.empty((len(rbm_data_set_result.time), len(target_en)))
+                        rbm_data_set_result.line_data_energy = np.empty((len(target_en),))
+                        rbm_data_set_result.line_data_alpha_local = np.empty((len(target_al),))
                     elif target_type == TargetType.TargetMeshGrid:
                         rbm_data_set_result.line_data_flux = np.empty(
                             (
@@ -173,12 +161,8 @@ def create_RBSP_line_data(
                                 len(target_al),
                             )
                         )
-                        rbm_data_set_result.line_data_energy = np.empty(
-                            (len(target_en),)
-                        )
-                        rbm_data_set_result.line_data_alpha_local = np.empty(
-                            (len(target_al),)
-                        )
+                        rbm_data_set_result.line_data_energy = np.empty((len(target_en),))
+                        rbm_data_set_result.line_data_alpha_local = np.empty((len(target_al),))
 
             energy_offsets_relative = energy_offsets / target_en_single
             if np.all(np.abs(energy_offsets_relative) > energy_offset_threshold):
@@ -186,41 +170,33 @@ def create_RBSP_line_data(
                     f"For the given energy target ({target_en_single:.2e} MeV), no suitable energy channel was found for a threshold of {energy_offset_threshold:.02f}!"
                 )
 
-            min_offset_instrument = np.argmax(
-                np.abs(energy_offsets_relative) <= energy_offset_threshold
-            )
+            min_offset_instrument = np.argmax(np.abs(energy_offsets_relative) <= energy_offset_threshold)
             list_instruments_used.append(instruments[min_offset_instrument])
 
             if verbose:
                 print(
-                    f"Choosing {instruments[min_offset_instrument].value} with an offset of {energy_offsets_relative[min_offset_instrument]*100:.1f}%\n"
+                    f"Choosing {instruments[min_offset_instrument].value} with an offset of {energy_offsets_relative[min_offset_instrument] * 100:.1f}%\n"
                 )
 
             closest_en_idx = np.nanargmin(
-                np.abs(
-                    rbm_data[min_offset_instrument].energy_channels_no_time
-                    - target_en_single
-                )
+                np.abs(rbm_data[min_offset_instrument].energy_channels_no_time - target_en_single)
             )
-            rbm_data_set_result.line_data_energy[e] = rbm_data[
-                min_offset_instrument
-            ].energy_channels_no_time[closest_en_idx]
+            rbm_data_set_result.line_data_energy[e] = rbm_data[min_offset_instrument].energy_channels_no_time[
+                closest_en_idx
+            ]
 
             if target_type == TargetType.TargetPairs:
                 closest_al_idx = np.nanargmin(
-                    np.abs(
-                        rbm_data[min_offset_instrument].alpha_local_no_time
-                        - target_al[e]
-                    )
+                    np.abs(rbm_data[min_offset_instrument].alpha_local_no_time - target_al[e])
                 )
-                rbm_data_set_result.line_data_alpha_local[e] = rbm_data[
-                    min_offset_instrument
-                ].alpha_local_no_time[closest_al_idx]
+                rbm_data_set_result.line_data_alpha_local[e] = rbm_data[min_offset_instrument].alpha_local_no_time[
+                    closest_al_idx
+                ]
 
                 if adjust_targets:
-                    rbm_data_set_result.line_data_flux[:, e] = rbm_data[
-                        min_offset_instrument
-                    ].Flux[:, closest_en_idx, closest_al_idx]
+                    rbm_data_set_result.line_data_flux[:, e] = rbm_data[min_offset_instrument].Flux[
+                        :, closest_en_idx, closest_al_idx
+                    ]
                 else:
                     rbm_data_set_result.line_data_flux[:, e] = np.squeeze(
                         rbm_data[min_offset_instrument].interp_flux(
@@ -231,19 +207,16 @@ def create_RBSP_line_data(
             elif target_type == TargetType.TargetMeshGrid:
                 for a, target_al_single in enumerate(target_al):
                     closest_al_idx = np.nanargmin(
-                        np.abs(
-                            rbm_data[min_offset_instrument].alpha_local_no_time
-                            - target_al_single
-                        )
+                        np.abs(rbm_data[min_offset_instrument].alpha_local_no_time - target_al_single)
                     )
-                    rbm_data_set_result.line_data_alpha_local[a] = rbm_data[
-                        min_offset_instrument
-                    ].alpha_local_no_time[closest_al_idx]
+                    rbm_data_set_result.line_data_alpha_local[a] = rbm_data[min_offset_instrument].alpha_local_no_time[
+                        closest_al_idx
+                    ]
 
                     if adjust_targets:
-                        rbm_data_set_result.line_data_flux[:, e, a] = rbm_data[
-                            min_offset_instrument
-                        ].Flux[:, closest_en_idx, closest_al_idx]
+                        rbm_data_set_result.line_data_flux[:, e, a] = rbm_data[min_offset_instrument].Flux[
+                            :, closest_en_idx, closest_al_idx
+                        ]
                     else:
                         rbm_data_set_result.line_data_flux[:, e, a] = np.squeeze(
                             rbm_data[min_offset_instrument].interp_flux(
