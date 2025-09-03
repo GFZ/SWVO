@@ -205,6 +205,7 @@ class DSCOVR:
                 "proton_density": nan_data,
                 "speed": nan_data,
                 "temperature": nan_data,
+                "pdyn": nan_data,
             },
         )
 
@@ -378,6 +379,8 @@ class DSCOVR:
         data_plasma.rename(
             columns={"bt": "bavg", "density": "proton_density"}, inplace=True
         )
+        data_plasma["pdyn"] = 2e-6 * data_plasma["proton_density"].values * data_plasma["speed"].values**2
+
 
         return data_plasma
 

@@ -451,6 +451,7 @@ class SWACE:
 
         mask = data_sw["temperature"] < -99999.0
         data_sw.loc[mask, "temperature"] = np.nan
+        data_sw["pdyn"] = 2e-6 * data_sw["proton_density"].values * data_sw["speed"].values ** 2
 
         return data_sw
 

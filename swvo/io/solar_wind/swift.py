@@ -194,6 +194,7 @@ class SWSWIFTEnsemble:
         b = np.sqrt(bx**2 + by**2 + bz**2)
 
         n = np.array(data["arrays"]["Rho"]["data"]) / self.PROTON_MASS * 1.0e-6
+        pdyn = 2e-6 * n * speed**2
 
         if use_old_column_names:
             df = pd.DataFrame(
@@ -208,6 +209,7 @@ class SWSWIFTEnsemble:
                     "ux": ux,
                     "uy": uy,
                     "uz": uz,
+                    "pdyn": pdyn,
                 },
                 index=time,
             )
@@ -221,6 +223,7 @@ class SWSWIFTEnsemble:
                     "bx_gsm": bx,
                     "by_gsm": by,
                     "bz_gsm": bz,
+                    "pdyn": pdyn,
                 },
                 index=time,
             )
@@ -265,6 +268,7 @@ class SWSWIFTEnsemble:
                 "bx_gsm": [np.nan] * len(t),
                 "by_gsm": [np.nan] * len(t),
                 "bz_gsm": [np.nan] * len(t),
+                "pdyn": [np.nan] * len(t),
                 "file_name": [np.nan] * len(t),
             },
             index=t,
