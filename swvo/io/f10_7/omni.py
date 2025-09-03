@@ -9,6 +9,7 @@ Module for handling F10.7 data from OMNI low resolution files.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -22,7 +23,7 @@ class F107OMNI(OMNILowRes):
     Inherits the :func:`download_and_process`, other private methods and attributes from :class:`OMNILowRes`.
     """
 
-    def __init__(self, data_dir: str | None = None):
+    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         """
         Initialize a F107OMNI object.
 

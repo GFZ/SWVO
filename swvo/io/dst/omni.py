@@ -12,6 +12,7 @@ from pathlib import Path
 import warnings
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -27,7 +28,7 @@ class DSTOMNI(OMNILowRes):
     Inherits the `download_and_process`, other private methods and attributes from OMNILowRes.
     """
 
-    def __init__(self, data_dir: str | None = None):
+    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         """
         Initialize a DSTOMNI object.
 

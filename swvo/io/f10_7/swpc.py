@@ -13,7 +13,7 @@ import os
 import shutil
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import List, Tuple
+from typing import Optional, Union
 import warnings
 
 
@@ -49,7 +49,7 @@ class F107SWPC:
 
     LABEL = "swpc"
 
-    def __init__(self, data_dir: str | Path | None = None):
+    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
                 msg = f"Necessary environment variable {self.ENV_VAR_NAME} not set!"

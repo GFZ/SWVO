@@ -9,6 +9,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import warnings
+from typing import Optional, Union
 
 import pandas as pd
 
@@ -38,7 +39,7 @@ class HpEnsemble:
     ENV_VAR_NAME = "PLACEHOLDER; SEE DERIVED CLASSES BELOW"
     LABEL = "ensemble"
 
-    def __init__(self, index: str, data_dir: str | Path | None = None):
+    def __init__(self, index: str, data_dir: Optional[Union[str, Path]] = None) -> None:
         self.index = index
         if self.index not in ("hp30", "hp60"):
             msg = "Encountered invalid index: {self.index}. Possible options are: hp30, hp60!"
@@ -154,7 +155,7 @@ class Hp30Ensemble(HpEnsemble):
 
     ENV_VAR_NAME = "HP30_ENSEMBLE_FORECAST_DIR"
 
-    def __init__(self, data_dir: str | Path | None = None):
+    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         super().__init__("hp30", data_dir)
 
 
@@ -169,5 +170,5 @@ class Hp60Ensemble(HpEnsemble):
 
     ENV_VAR_NAME = "HP60_ENSEMBLE_FORECAST_DIR"
 
-    def __init__(self, data_dir: str | Path | None = None):
+    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         super().__init__("hp60", data_dir)

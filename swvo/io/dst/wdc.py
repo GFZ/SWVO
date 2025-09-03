@@ -12,7 +12,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Union
 import warnings
 
 import numpy as np
@@ -47,7 +47,7 @@ class DSTWDC:
     URL = "https://wdc.kugi.kyoto-u.ac.jp/dst_realtime/YYYYMM/"
     LABEL = "wdc"
 
-    def __init__(self, data_dir: str | Path = None):
+    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(

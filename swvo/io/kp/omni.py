@@ -9,6 +9,8 @@ Module holding the reader for reading Kp data from OMNI files.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import Optional, Union
+from pathlib import Path
 
 import pandas as pd
 
@@ -21,7 +23,7 @@ class KpOMNI(OMNILowRes):
     Inherits the :func:`download_and_process`, other private methods and attributes from :class:`OMNILowRes`.
     """
 
-    def __init__(self, data_dir: str | None = None) -> None:
+    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         """
         Initialize a KpOMNI object.
 

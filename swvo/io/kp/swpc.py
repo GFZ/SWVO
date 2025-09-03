@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
 import warnings
+from typing import Optional, Union
 
 import pandas as pd
 import numpy as np
@@ -50,7 +51,7 @@ class KpSWPC:
 
     LABEL = "swpc"
 
-    def __init__(self, data_dir: str | Path = None):
+    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(

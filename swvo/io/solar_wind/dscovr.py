@@ -11,7 +11,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Union
 import warnings
 import numpy as np
 import pandas as pd
@@ -51,7 +51,7 @@ class DSCOVR:
 
     LABEL = "dscovr"
 
-    def __init__(self, data_dir: str | Path = None):
+    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(
@@ -379,6 +379,7 @@ class DSCOVR:
         data_plasma.rename(
             columns={"bt": "bavg", "density": "proton_density"}, inplace=True
         )
+        data_plasma = data_plasma.astype(float)
         data_plasma["pdyn"] = 2e-6 * data_plasma["proton_density"].values * data_plasma["speed"].values**2
 
 

@@ -14,7 +14,7 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 import warnings
 import numpy as np
 import pandas as pd
@@ -48,7 +48,7 @@ class SWSWIFTEnsemble:
     ENV_VAR_NAME = "SWIFT_ENSEMBLE_OUTPUT_DIR"
     LABEL = "swift"
 
-    def __init__(self, data_dir: str | Path = None):
+    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(
