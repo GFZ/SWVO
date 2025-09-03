@@ -290,6 +290,7 @@ class OMNIHighRes:
             "speed": 99999.8,
             "proton_density": 999.8,
             "temperature": 9999998.0,
+            "pdyn": 99.
         }
 
         df.columns = maxes.keys()
@@ -364,6 +365,7 @@ class OMNIHighRes:
                 "21",
                 "25",
                 "26",
+                "27"
             ]
         }
         if cadence == 1:
