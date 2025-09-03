@@ -2,4 +2,4 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import swvo.io.plasmasphere.read_plasmasphere as read_plasmasphere
+from swvo.io.plasmasphere import read_plasmasphere as read_plasmasphere
