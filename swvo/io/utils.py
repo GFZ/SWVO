@@ -198,7 +198,7 @@ def sw_mag_propagation(sw_data: pd.DataFrame) -> pd.DataFrame:
 
     sw_data["t"] = sw_data.index
     sw_data["t"] = sw_data["t"].astype("int64") / 1e9
-    sw_data = sw_data.dropna()
+    sw_data = sw_data.dropna(how="any")
 
     distance = 1.5e6
     shifted_time = distance / sw_data["speed"]
