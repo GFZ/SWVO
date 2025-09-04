@@ -24,7 +24,6 @@ classifiers = [
     'Operating System :: POSIX',
     'Operating System :: Unix',
     'Operating System :: MacOS',
-    'License :: OSI Approved :: Apache Software License'
 ]
 dynamic = ["dependencies", "version"]
 
