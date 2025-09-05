@@ -34,7 +34,7 @@ dependencies = {file = ["requirements.txt"]}
 
 [project.urls]
 Homepage = "https://github.com/GFZ/SWVO"
-Documentation = "https://spsw.git-pages.gfz-potsdam.de/swvo"
+Documentation = "https://swvo.readthedocs.io/en/latest/"
 Download = "https://pypi.org/project/swvo/#files"
 Tracker = "https://github.com/GFZ/SWVO/issues"
 
