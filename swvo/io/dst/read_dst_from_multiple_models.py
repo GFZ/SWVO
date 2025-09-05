@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from swvo.io.dst import DSTOMNI, DSTWDC
+from swvo.io.exceptions import ModelError
 from swvo.io.utils import any_nans, construct_updated_data_frame
 
 DSTModel = DSTOMNI | DSTWDC
@@ -75,6 +76,8 @@ def read_dst_from_multiple_models(
     data_out = pd.DataFrame()
 
     for model in model_order:
+        if not isinstance(model, DSTModel):
+            raise ModelError(f"Unknown or incompatible model: {type(model).__name__}")
         logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
         data_one_model = model.read(start_time, end_time, download=download)
 

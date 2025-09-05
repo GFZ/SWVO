@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 
+from swvo.io.exceptions import ModelError
 from swvo.io.f10_7 import F107OMNI, F107SWPC
 from swvo.io.utils import any_nans, construct_updated_data_frame
 
@@ -76,6 +77,8 @@ def read_f107_from_multiple_models(
     data_out = pd.DataFrame()
 
     for model in model_order:
+        if not isinstance(model, F107Model):
+            raise ModelError(f"Unknown or incompatible model: {type(model).__name__}")
         if isinstance(model, F107OMNI):
             logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
             data_one_model = model.read(start_time, end_time, download=download)

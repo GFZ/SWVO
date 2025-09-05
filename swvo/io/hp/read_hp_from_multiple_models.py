@@ -14,6 +14,7 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 
+from swvo.io.exceptions import ModelError
 from swvo.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ
 from swvo.io.utils import any_nans, construct_updated_data_frame
 
@@ -88,6 +89,8 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     data_out = [pd.DataFrame()]
 
     for model in model_order:
+        if not isinstance(model, HpModel):
+            raise ModelError(f"Unknown or incompatible model: {type(model).__name__}")
         data_one_model = _read_from_model(
             model,
             start_time,
