@@ -213,3 +213,75 @@ class TestReadKpFromMultipleModels:
                 end_time=sample_times["future_end"],
                 model_order=[fake],
             )
+
+    def test_recurrence_with_Niemegk_recurr(self, sample_times):
+        """Test basic 27-day recurrence filling functionality."""
+        data = read_kp_from_multiple_models(
+            start_time=sample_times["past_start"],
+            end_time=sample_times["future_end"],
+            model_order=[KpOMNI(), KpNiemegk()],
+            rec_model_order=[KpNiemegk()],
+            recurrence=True,
+            download=True,
+        )
+        assert data.loc["2024-11-27 00:00:00+00:00":].model.unique()[0] == "niemegk_recurrence"
+
+    def test_recurrence_with_both_recurr(self, sample_times):
+        """Test recurrence with custom historical model order."""
+        data = read_kp_from_multiple_models(
+            start_time=sample_times["past_start"],
+            end_time=sample_times["future_end"],
+            model_order=[KpOMNI(), KpNiemegk()],
+            recurrence=True,
+            rec_model_order=[KpNiemegk(), KpOMNI()],
+            download=True,
+        )
+        assert data.loc["2024-11-25 15:00:00+00:00":"2024-11-26 00:00:00+00:00"].model.unique()[0] == "omni_recurrence"
+        assert data.loc["2024-11-27 00:00:00+00:00":].model.unique()[0] == "niemegk_recurrence"
+
+    def test_recurrence_fills_gaps(self, sample_times):
+        """Test that recurrence actually fills missing values."""
+        data_no_rec = read_kp_from_multiple_models(
+            start_time=sample_times["past_start"],
+            end_time=sample_times["future_end"],
+            model_order=[KpOMNI()],
+            recurrence=False,
+            download=False,
+        )
+        data_with_rec = read_kp_from_multiple_models(
+            start_time=sample_times["past_start"],
+            end_time=sample_times["future_end"],
+            model_order=[KpOMNI()],
+            recurrence=True,
+            download=False,
+        )
+        nan_count_no_rec = data_no_rec["kp"].isna().sum()
+        nan_count_with_rec = data_with_rec["kp"].isna().sum()
+
+        assert nan_count_with_rec <= nan_count_no_rec
+
+    def test_recurrence_preserves_existing_data(self, sample_times):
+        """Test that recurrence doesn't overwrite existing valid data."""
+        data_no_rec = read_kp_from_multiple_models(
+            start_time=sample_times["past_start"],
+            end_time=sample_times["future_end"],
+            model_order=[KpOMNI(), KpNiemegk()],
+            recurrence=False,
+            download=False,
+        )
+
+        data_with_rec = read_kp_from_multiple_models(
+            start_time=sample_times["past_start"],
+            end_time=sample_times["future_end"],
+            model_order=[KpOMNI(), KpNiemegk()],
+            recurrence=True,
+            download=False,
+        )
+
+        valid_mask = ~data_no_rec["kp"].isna()
+        if valid_mask.any():
+            pd.testing.assert_series_equal(
+                data_no_rec.loc[valid_mask, "kp"],
+                data_with_rec.loc[valid_mask, "kp"],
+                check_names=False,
+            )
