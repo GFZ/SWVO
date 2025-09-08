@@ -32,6 +32,8 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
     *,
     synthetic_now_time: datetime | None = None,  # deprecated
     download: bool = False,
+    recurrence: bool = False,
+    rec_model_order: list[KpOMNI | KpNiemegk] = None,
 ) -> pd.DataFrame | list[pd.DataFrame]:
     """Read Kp data from multiple models.
 
@@ -55,6 +57,14 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
         (OMNI, Niemegk). Defaults to None.
     download : bool, optional
         Flag to decide whether new data should be downloaded. Defaults to False.
+        Also applies to recurrence filling.
+    recurrence : bool, optional
+        If True, fill missing values using 27-day recurrence from historical models (OMNI, Niemegk).
+        Defaults to False.
+    rec_model_order : list[KpOMNI | KpNiemegk], optional
+        The order in which historical models will be used for 27-day recurrence filling.
+        Defaults to [OMNI, Niemegk].
+
 
     Returns
     -------
@@ -95,6 +105,13 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
         data_out = construct_updated_data_frame(data_out, data_one_model, model.LABEL)
         if not any_nans(data_out):
             break
+
+    if recurrence:
+        if rec_model_order is None:
+            rec_model_order = [KpOMNI(), KpNiemegk()]
+        for i, df in enumerate(data_out):
+            if not df.empty:
+                data_out[i] = _recursive_fill_27d_historical(df, download, rec_model_order)
 
     if len(data_out) == 1:
         data_out = data_out[0]
@@ -322,3 +339,55 @@ def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"
         raise NotImplementedError(msg)
 
     return data_reduced
+
+
+def _recursive_fill_27d_historical(df, download, historical_models):
+    """Recursively fill missing values in using OMNI/Niemegk for (`date` - 27 days).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame to fill with gaps.
+    download : bool
+        Download new data or not.
+    historical_models : list[KpOMNI | KpNiemegk]
+        List of historical models to use for filling gaps.
+    value_col : str, optional
+        _description_, by default "kp"
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with gaps filled using 27d recurrence.
+    """
+    df = df.copy()
+    value_col = "kp"
+    missing = df.index[df[value_col].isna()]
+    tried = set()
+    while len(missing) > 0:
+        fill_map = {}
+        for idx in missing:
+            prev_idx = idx - timedelta(days=27)
+            if prev_idx not in tried:
+                # Try each historical model in priority order
+                for model in historical_models:
+                    prev_data = model.read(
+                        prev_idx - timedelta(days=3), prev_idx + timedelta(days=3), download=download
+                    )
+                    if not prev_data.empty and not pd.isna(prev_data.loc[prev_idx, value_col]):
+                        fill_map[idx] = (
+                            prev_data.loc[prev_idx, value_col],
+                            model.LABEL,
+                            prev_data.loc[prev_idx, "file_name"],
+                        )
+                        break
+                tried.add(prev_idx)
+        for idx, (val, label, fname) in fill_map.items():
+            df.loc[idx, value_col] = val
+            df.loc[idx, "model"] = f"{label}_recurrence"
+            df.loc[idx, "file_name"] = fname
+        # Update missing for next recursion
+        missing = df.index[df[value_col].isna()]
+        if not fill_map:
+            break
+    return df
