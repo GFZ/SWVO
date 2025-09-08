@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from swvo.io.exceptions import ModelError
 from swvo.io.solar_wind import (
     DSCOVR,
     SWACE,
@@ -175,4 +176,16 @@ class TestReadSolarWindFromMultipleModels:
                 start_time=sample_times["past_start"],
                 end_time=sample_times["future_end"],
                 synthetic_now_time=sample_times["test_time_now"],
+            )
+
+    def test_model_check_with_wrong_class(self, sample_times):
+        class FakeModel:
+            pass
+
+        fake = FakeModel()
+        with pytest.raises(ModelError, match="Unknown or incompatible model"):
+            read_solar_wind_from_multiple_models(
+                start_time=sample_times["past_start"],
+                end_time=sample_times["future_end"],
+                model_order=[fake],
             )

@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 
 from swvo.io.dst import DSTOMNI, DSTWDC, read_dst_from_multiple_models
+from swvo.io.exceptions import ModelError
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
@@ -129,4 +130,16 @@ class TestReadDSTFromMultipleModels:
                 start_time=sample_times["past_start"],
                 end_time=sample_times["future_end"],
                 synthetic_now_time=sample_times["test_time_now"],
+            )
+
+    def test_model_check_with_wrong_class(self, sample_times):
+        class FakeModel:
+            pass
+
+        fake = FakeModel()
+        with pytest.raises(ModelError, match="Unknown or incompatible model"):
+            read_dst_from_multiple_models(
+                start_time=sample_times["past_start"],
+                end_time=sample_times["future_end"],
+                model_order=[fake],
             )

@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from swvo.io.dst.read_dst_from_multiple_models import ModelError
 from swvo.io.hp import (
     Hp30Ensemble,
     Hp30GFZ,
@@ -164,6 +165,21 @@ class TestHpFromMultipleModels:
                 synthetic_now_time=sample_times["test_time_now"],
                 hp_index=hp_index,
                 model_order=[models[0]()],
+            )
+
+    def test_model_check_with_wrong_class(self, sample_times, hp_index, models):
+        _ = models
+
+        class FakeModel:
+            pass
+
+        fake = FakeModel()
+        with pytest.raises(ModelError, match="Unknown or incompatible model"):
+            read_hp_from_multiple_models(
+                start_time=sample_times["past_start"],
+                end_time=sample_times["future_end"],
+                hp_index=hp_index,
+                model_order=[fake],
             )
 
 
