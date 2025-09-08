@@ -76,8 +76,6 @@ profile = "black"
 
 [tool.pytest.ini_options]
 addopts = "--verbose -r s"
-asyncio_mode = "strict"
-asyncio_default_fixture_loop_scope = "session"
 
 [tool.bumpver]
 current_version = "1.0.0"
