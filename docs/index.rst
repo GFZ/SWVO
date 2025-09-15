@@ -17,9 +17,10 @@ API
 
    swvo
 
-Changelog
---------
+User Guide
+----------
 .. toctree::
    :maxdepth: 1
 
-   changelog
+   Changelog <changelog>
+   Contributing Guide <CONTRIBUTING>

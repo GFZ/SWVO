@@ -34,6 +34,11 @@ extensions = [
     "sphinx.ext.imgconverter",
 ]
 
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
+
 myst_enable_extensions = [
     "amsmath",
     "colon_fence",
