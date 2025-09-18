@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""Function to read Solar Wind from multiple models."""
+
 from __future__ import annotations
 
 import logging
@@ -12,6 +14,7 @@ from typing import Literal
 
 import numpy as np
 import pandas as pd
+from scipy.interpolate import UnivariateSpline
 
 from swvo.io.exceptions import ModelError
 from swvo.io.solar_wind import DSCOVR, SWACE, SWOMNI, SWSWIFTEnsemble
@@ -75,6 +78,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
         logging.warning("No model order specified, using default order: OMNI, ACE, SWIFT ensemble")
 
     data_out = [pd.DataFrame()]
+    swift_data_available = True
 
     for model in model_order:
         if not isinstance(model, SWModel):
@@ -88,14 +92,78 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
             download=download,
         )
 
+        # Check if SWIFT ensemble returned empty data
+        if isinstance(model, SWSWIFTEnsemble):
+            if (
+                not data_one_model
+                or (isinstance(data_one_model, list) and len(data_one_model) == 0)
+                or (isinstance(data_one_model, pd.DataFrame) and data_one_model.empty)
+            ):
+                swift_data_available = False
+                logging.info("SWIFT ensemble data not available for future dates")
+            else:
+                # Check if SWIFT data is all NaN
+                swift_has_valid_data = False
+                if isinstance(data_one_model, list):
+                    for df in data_one_model:
+                        if not df.empty:
+                            numeric_cols = df.select_dtypes(include=[np.number]).columns
+                            if len(numeric_cols) > 0 and not df[numeric_cols].isna().all().all():
+                                swift_has_valid_data = True
+                                break
+                elif isinstance(data_one_model, pd.DataFrame) and not data_one_model.empty:
+                    numeric_cols = data_one_model.select_dtypes(include=[np.number]).columns
+                    if len(numeric_cols) > 0 and not data_one_model[numeric_cols].isna().all().all():
+                        swift_has_valid_data = True
+
+                if not swift_has_valid_data:
+                    swift_data_available = False
+                    logging.info("SWIFT ensemble data contains only NaN values for future dates")
+
         data_out = construct_updated_data_frame(data_out, data_one_model, model.LABEL)
         if not any_nans(data_out):
             break
 
+    # Ensure continuous dataframe and handle SWIFT unavailability
+    data_out = _ensure_continuous_dataframe(
+        data_out,
+        start_time,
+        end_time,
+        historical_data_cutoff_time,
+        swift_data_available,
+    )
+
     if len(data_out) == 1:
         data_out = data_out[0]
+        _set_interpolated_flags(data_out, label="interpolated")
+
+    else:
+        for df in data_out:
+            _set_interpolated_flags(df, label="interpolated")
 
     return data_out
+
+
+def _set_interpolated_flags(df: pd.DataFrame, label: str) -> None:
+    """
+    Set appropriate flags in the 'model' column for interpolated data points.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Data frame to process.
+    label : str
+        The label to set for interpolated data points.
+
+    Returns
+    -------
+    None
+        The function modifies the data frames in place.
+    """
+    if not df.empty and "file_name" in df.columns:
+        # Handle interpolated data
+        interpolated_indices = df.index[df["file_name"] == label]
+        df.loc[interpolated_indices, "model"] = label
 
 
 def _read_from_model(  # noqa: PLR0913
@@ -159,7 +227,7 @@ def _read_historical_model(
     historical_data_cutoff_time: datetime,
     *,
     download: bool,
-) -> tuple[pd.DataFrame, str]:
+) -> pd.DataFrame:
     """Reads SW data from historical models (DSCOVR, SWACE or SWOMNI) within the specified time range.
 
     Parameters
@@ -186,14 +254,42 @@ def _read_historical_model(
         If the provided model is not an instance of DSCOVR, SWACE or SWOMNI.
 
     """
-    logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
+    logging.info("Reading %s from %s to %s", model.LABEL, start_time, end_time)
     if isinstance(model, SWOMNI):
         data_one_model = model.read(start_time, end_time, download=download)
     else:
         data_one_model = model.read(start_time, end_time, download=download, propagation=True)
-    # set nan for 'future' values
-    data_one_model.loc[historical_data_cutoff_time + timedelta(minutes=1) : end_time] = np.nan
-    logging.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
+
+    # Create continuous index from start to end time
+    continuous_index = pd.date_range(start=start_time, end=end_time, freq="1min", tz="UTC")
+
+    if not data_one_model.empty:
+        continuous_df = pd.DataFrame(index=continuous_index)
+        continuous_df.index.name = data_one_model.index.name
+        for col in data_one_model.columns:
+            if data_one_model[col].dtype == "object":
+                continuous_df[col] = None
+            else:
+                continuous_df[col] = np.nan
+
+        common_index = data_one_model.index.intersection(continuous_index)
+        if len(common_index) > 0:
+            for col in data_one_model.columns:
+                continuous_df.loc[common_index, col] = data_one_model.loc[common_index, col]
+
+        data_one_model = continuous_df
+
+        historical_data = data_one_model.loc[:historical_data_cutoff_time]
+        if not historical_data.empty:
+            interpolated_historical = _interpolate_short_gaps(historical_data, max_gap_minutes=180)
+            data_one_model.loc[:historical_data_cutoff_time] = interpolated_historical
+            logging.info(
+                f"Applied spline interpolation to short gaps (<= 3 hours) in {model.LABEL} historical data",
+            )
+
+    if historical_data_cutoff_time < end_time:
+        data_one_model.loc[historical_data_cutoff_time + timedelta(minutes=1) : end_time] = np.nan
+        logging.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
 
     return data_one_model
 
@@ -203,8 +299,6 @@ def _read_latest_ensemble_files(
     historical_data_cutoff_time: datetime,
     end_time: datetime,
 ) -> list[pd.DataFrame]:
-    # we are trying to read the most recent file; it this fails, we go one step back (1 day) and see if this file is present
-
     """
     Reads the most recent SW ensemble data file available from the specified model.
 
@@ -223,13 +317,22 @@ def _read_latest_ensemble_files(
     -------
     list[pd.DataFrame]
         A list of data frames containing ensemble data for the specified range.
+        Returns empty list if no data is available.
     """
+    # Only try to read SWIFT data if historical cutoff is before end time
+    if historical_data_cutoff_time >= end_time:
+        return []
 
     target_time = min(historical_data_cutoff_time, end_time)
     data_one_model = []
 
     while target_time > (historical_data_cutoff_time - timedelta(days=5)):
-        data_one_model = model.read(target_time, end_time)
+        try:
+            data_one_model = model.read(target_time, end_time)
+        except Exception as e:
+            logging.warning("Failed to read SWIFT ensemble for %s: %s", target_time, str(e))
+            target_time -= timedelta(days=1)
+            continue
 
         if len(data_one_model) == 0:
             target_time -= timedelta(days=1)
@@ -240,7 +343,10 @@ def _read_latest_ensemble_files(
         )
         break
 
-    logging.info(f"Reading SWIFT ensemble from {target_time} to {end_time}")
+    if len(data_one_model) > 0:
+        logging.info(f"Reading SWIFT ensemble from {target_time} to {end_time}")
+    else:
+        logging.info("No SWIFT ensemble data available for the requested time range")
 
     return data_one_model
 
@@ -309,6 +415,178 @@ def _interpolate_to_common_indices(
         )
 
     return data
+
+
+def _interpolate_short_gaps(df: pd.DataFrame, max_gap_minutes: int = 180) -> pd.DataFrame:
+    """
+    Interpolate short gaps in historical data using spline interpolation.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataframe with potential gaps
+    max_gap_minutes : int, optional
+        Maximum gap size in minutes to interpolate (default 180 = 3 hours)
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe with short gaps interpolated
+    """
+    if df.empty:
+        return df
+
+    df_interpolated = df.copy()
+    interpolated_indices = set()
+
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+
+    for col in numeric_cols:
+        series = df_interpolated[col]
+
+        is_nan = series.isna()
+        nan_groups = (is_nan != is_nan.shift()).cumsum()
+
+        for group_id in nan_groups[is_nan].unique():
+            nan_mask = (nan_groups == group_id) & is_nan
+            gap_size = nan_mask.sum()
+
+            if gap_size <= max_gap_minutes:
+                # Get indices of the gap
+                gap_start_idx = nan_mask.idxmax()
+                gap_end_idx = nan_mask[::-1].idxmax()
+
+                # Find valid data points around the gap for interpolation
+                valid_before = series.loc[:gap_start_idx].dropna()
+                valid_after = series.loc[gap_end_idx:].dropna()
+
+                # Need at least 2 points before and after for spline interpolation
+                if len(valid_before) >= 2 and len(valid_after) >= 2:
+                    # Take last 10 points before and first 10 points after for context
+                    context_before = valid_before.tail(10)
+                    context_after = valid_after.head(10)
+
+                    x_context = np.concatenate(
+                        [
+                            np.arange(len(context_before)) - len(context_before),
+                            np.arange(gap_size) + 1,
+                            np.arange(len(context_after)) + gap_size + 1,
+                        ]
+                    )
+                    y_context = np.concatenate(
+                        [
+                            context_before.values,
+                            np.full(gap_size, np.nan),
+                            context_after.values,
+                        ]
+                    )
+
+                    valid_mask = ~np.isnan(y_context)
+                    if np.sum(valid_mask) >= 4:  # Need at least 4 points for spline
+                        try:
+                            spline = UnivariateSpline(
+                                x_context[valid_mask],
+                                y_context[valid_mask],
+                                s=0,
+                                k=min(3, np.sum(valid_mask) - 1),
+                            )
+                            gap_x = np.arange(gap_size) + 1
+                            interpolated_values = spline(gap_x)
+                            df_interpolated.loc[nan_mask, col] = np.round(interpolated_values, 1)
+                            interpolated_indices.update(df_interpolated.index[nan_mask])
+
+                        except Exception as e:
+                            logging.warning(f"Spline interpolation failed for column {col}: {e}")
+                            interpolated_mask = df_interpolated[col].isna() & nan_mask
+                            df_interpolated.loc[interpolated_mask, col] = df_interpolated[col].interpolate(
+                                method="linear"
+                            )[interpolated_mask]
+                            interpolated_indices.update(df_interpolated.index[interpolated_mask])
+
+    # Mark interpolated values in file_name and model columns
+    if interpolated_indices:
+        df_interpolated.loc[list(interpolated_indices), "file_name"] = "interpolated"
+
+    return df_interpolated
+
+
+def _ensure_continuous_dataframe(
+    data_out: list[pd.DataFrame],
+    start_time: datetime,
+    end_time: datetime,
+    historical_data_cutoff_time: datetime,
+    swift_data_available: bool,
+) -> list[pd.DataFrame]:
+    """
+    Ensure the dataframe is continuous from start to end time, handling gaps and SWIFT unavailability.
+
+    Parameters
+    ----------
+    data_out : list[pd.DataFrame]
+        The current data frames
+    start_time : datetime
+        Start time of the data request
+    end_time : datetime
+        End time of the data request
+    historical_data_cutoff_time : datetime
+        Time representing "now"
+    swift_data_available : bool
+        Whether SWIFT data is available for future dates
+
+    Returns
+    -------
+    list[pd.DataFrame]
+        Continuous data frames with proper NaN filling
+    """
+    if not data_out or all(df.empty for df in data_out):
+        print("I am here")
+        return data_out
+
+    swift_data_all_nan = False
+    if historical_data_cutoff_time < end_time:
+        for df in data_out:
+            if not df.empty:
+                future_data = df.loc[historical_data_cutoff_time:end_time]
+                if not future_data.empty:
+                    numeric_cols = future_data.select_dtypes(include=[np.number]).columns
+                    if len(numeric_cols) > 0:
+                        swift_data_all_nan = future_data[numeric_cols].isna().all().all()
+                    break
+
+    # Determine actual end time based on SWIFT availability
+    if (not swift_data_available or swift_data_all_nan) and historical_data_cutoff_time < end_time:
+        actual_end_time = historical_data_cutoff_time
+        logging.info(
+            "Since SWIFT is not available for future dates, final dataframe truncated to %s",
+            historical_data_cutoff_time,
+        )
+    else:
+        actual_end_time = end_time
+
+    continuous_index = pd.date_range(start=start_time, end=actual_end_time, freq="1min", tz="UTC")
+
+    for i, df in enumerate(data_out):
+        if df.empty:
+            continue
+
+        continuous_df = pd.DataFrame(index=continuous_index)
+        continuous_df.index.name = df.index.name
+
+        for col in df.columns:
+            if df[col].dtype == "object":
+                continuous_df[col] = None
+            else:
+                continuous_df[col] = np.nan
+
+        # Fill in the available data
+        common_index = df.index.intersection(continuous_index)
+        if len(common_index) > 0:
+            for col in df.columns:
+                continuous_df.loc[common_index, col] = df.loc[common_index, col]
+
+        data_out[i] = continuous_df
+
+    return data_out
 
 
 def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"]) -> pd.DataFrame:
