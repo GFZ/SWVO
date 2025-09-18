@@ -272,7 +272,7 @@ def _read_historical_model(
         If the provided model is not an instance of DSCOVR, SWACE or SWOMNI.
 
     """
-    logging.info("Reading %s from %s to %s", model.LABEL, start_time, end_time)
+    logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
     if isinstance(model, SWOMNI):
         data_one_model = model.read(start_time, end_time, download=download)
     else:
