@@ -109,7 +109,7 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
 
     if recurrence:
         if rec_model_order is None:
-            rec_model_order = [KpOMNI(), KpNiemegk()]
+            rec_model_order = [m for m in model_order if isinstance(m, (KpOMNI, KpNiemegk))]
         for i, df in enumerate(data_out):
             if not df.empty:
                 data_out[i] = _recursive_fill_27d_historical(df, download, rec_model_order)
