@@ -34,6 +34,8 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     *,
     synthetic_now_time: datetime | None = None,  # deprecated
     download: bool = False,
+    recurrence: bool = False,
+    rec_model_order: list[DSCOVR | SWACE | SWOMNI] | None = None,
 ) -> pd.DataFrame | list[pd.DataFrame]:
     """
     Read solar wind data from multiple models.
@@ -54,6 +56,13 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
         Time which represents "now". After this time, no data will be taken from historical models (OMNI, ACE). Defaults to None.
     download : bool, optional
         Flag which decides whether new data should be downloaded. Defaults to False.
+        Also applies to recurrence filling.
+    recurrence : bool, optional
+        If True, fill missing values using 27-day recurrence from historical models (OMNI, ACE, SWIFT).
+        Defaults to False.
+    rec_model_order : list[DSCOVR | SWACE | SWOMNI], optional
+        The order in which historical models will be used for 27-day recurrence filling.
+        Defaults to [OMNI, ACE, SWIFT].
 
     Returns
     -------
@@ -123,6 +132,15 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
         data_out = construct_updated_data_frame(data_out, data_one_model, model.LABEL)
         if not any_nans(data_out):
             break
+
+    # Apply 27-day recurrence if requested
+
+    if recurrence:
+        if rec_model_order is None:
+            rec_model_order = [m for m in model_order if isinstance(m, (DSCOVR, SWACE, SWOMNI))]
+        for i, df in enumerate(data_out):
+            if not df.empty:
+                data_out[i] = _recursive_fill_27d_historical(df, download, rec_model_order)
 
     # Ensure continuous dataframe and handle SWIFT unavailability
     data_out = _ensure_continuous_dataframe(
@@ -587,6 +605,125 @@ def _ensure_continuous_dataframe(
         data_out[i] = continuous_df
 
     return data_out
+
+
+def _recursive_fill_27d_historical(
+    df: pd.DataFrame, download: bool, historical_models: list[DSCOVR | SWACE | SWOMNI]
+) -> pd.DataFrame:
+    """Fill missing values using historical models for (`date` - 27 days).
+
+    For continuous missing data blocks, copies the entire corresponding 27-day-back block.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame to fill with gaps.
+    download : bool
+        Download new data or not.
+    historical_models : list[DSCOVR | SWACE | SWOMNI]
+        List of historical models to use for filling gaps.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with gaps filled using 27d recurrence.
+    """
+    df = df.copy()
+
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    value_cols = [col for col in numeric_cols if col not in ["file_name", "model"]]
+
+    if not value_cols:
+        return df
+
+    # Find continuous blocks of missing data
+    missing_mask = df[value_cols].isna().all(axis=1)
+
+    if not missing_mask.any():
+        return df
+
+    # continuous blocks of missing data
+    missing_blocks = []
+    in_block = False
+    block_start = None
+
+    for idx in df.index:
+        if missing_mask[idx]:
+            if not in_block:
+                block_start = idx
+                in_block = True
+        else:
+            if in_block:
+                missing_blocks.append((block_start, idx - timedelta(minutes=1)))
+                in_block = False
+
+    if in_block:
+        missing_blocks.append((block_start, df.index[-1]))
+
+    for block_start, block_end in missing_blocks:
+        # Calculate 27-day-back period
+        recurrence_start = block_start - timedelta(days=27)
+        recurrence_end = block_end - timedelta(days=27)
+
+        filled = False
+        for model in historical_models:
+            try:
+                prev_data = model.read(
+                    recurrence_start - timedelta(hours=1),
+                    recurrence_end + timedelta(hours=1),
+                    download=download,
+                    propagation=True if not isinstance(model, SWOMNI) else False,
+                )
+
+                if prev_data.empty:
+                    continue
+
+                # Check if we have data for the recurrence period
+                recurrence_mask = (prev_data.index >= recurrence_start) & (prev_data.index <= recurrence_end)
+                recurrence_data = prev_data[recurrence_mask]
+
+                if recurrence_data.empty:
+                    continue
+
+                # Check if recurrence data has valid values (not all NaN)
+                has_valid_data = False
+                for col in value_cols:
+                    if col in recurrence_data.columns and not recurrence_data[col].isna().all():
+                        has_valid_data = True
+                        break
+
+                if not has_valid_data:
+                    continue
+
+                current_block_mask = (df.index >= block_start) & (df.index <= block_end)
+
+                for current_idx in df.index[current_block_mask]:
+                    recurrence_idx = current_idx - timedelta(days=27)
+
+                    if recurrence_idx in recurrence_data.index:
+                        for col in value_cols:
+                            if col in recurrence_data.columns and not pd.isna(recurrence_data.loc[recurrence_idx, col]):
+                                df.loc[current_idx, col] = recurrence_data.loc[recurrence_idx, col]
+
+                        # if all the numeric columns are still NaN, skip setting model and file_name
+                        if df.loc[current_idx, value_cols].isna().all():
+                            continue
+                        df.loc[current_idx, "model"] = f"{model.LABEL}_recurrence_27d"
+                        original_fname = recurrence_data.loc[recurrence_idx].get("file_name", "recurrence_27d")
+                        df.loc[current_idx, "file_name"] = f"{original_fname}_recurrence_27d"
+
+                filled = True
+                logging.info(f"Filled missing block {block_start} to {block_end} using {model.LABEL} 27d recurrence")
+                break
+
+            except Exception as e:
+                logging.warning(f"Failed to read {model.LABEL} for 27d recurrence block {block_start}-{block_end}: {e}")
+                continue
+
+        if not filled:
+            logging.warning(f"Could not fill missing block {block_start} to {block_end} with 27d recurrence")
+
+    return df
 
 
 def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"]) -> pd.DataFrame:
