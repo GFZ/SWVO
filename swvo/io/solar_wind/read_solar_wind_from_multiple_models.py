@@ -348,7 +348,7 @@ def _read_latest_ensemble_files(
         try:
             data_one_model = model.read(target_time, end_time)
         except Exception as e:
-            logging.warning("Failed to read SWIFT ensemble for %s: %s", target_time, str(e))
+            logging.warning(f"Failed to read SWIFT ensemble for {target_time}: {e}")
             target_time -= timedelta(days=1)
             continue
 
@@ -574,8 +574,7 @@ def _ensure_continuous_dataframe(
     if (not swift_data_available or swift_data_all_nan) and historical_data_cutoff_time < end_time:
         actual_end_time = historical_data_cutoff_time
         logging.info(
-            "Since SWIFT is not available for future dates, final dataframe truncated to %s",
-            historical_data_cutoff_time,
+            f"Since SWIFT is not available for future dates, final dataframe truncated to {historical_data_cutoff_time}"
         )
     else:
         actual_end_time = end_time
