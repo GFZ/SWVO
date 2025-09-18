@@ -62,7 +62,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
         Defaults to False.
     rec_model_order : list[DSCOVR | SWACE | SWOMNI], optional
         The order in which historical models will be used for 27-day recurrence filling.
-        Defaults to [OMNI, ACE, SWIFT].
+        Defaults to [DSCOVR, SWACE, SWOMNI].
 
     Returns
     -------
