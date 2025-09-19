@@ -10,7 +10,7 @@ import logging
 import warnings
 from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
-from typing import Literal
+from typing import Literal, Optional
 
 import numpy as np
 import pandas as pd
@@ -29,7 +29,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     start_time: datetime,
     end_time: datetime,
     model_order: Sequence[SWModel] | None = None,
-    reduce_ensemble: str | None = None,
+    reduce_ensemble: Optional[Literal["mean", "median"]] = None,
     historical_data_cutoff_time: datetime | None = None,
     *,
     synthetic_now_time: datetime | None = None,  # deprecated
@@ -50,7 +50,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
         End time of the data request.
     model_order : list, optional
         Order in which data will be read from the models. Defaults to [OMNI, ACE, SWIFT].
-    reduce_ensemble : {'mean'}, optional
+    reduce_ensemble : Literal["mean", "median"], optional
         The method to reduce ensembles to a single time series. Defaults to None.
     historical_data_cutoff_time : datetime, optional
         Time which represents "now". After this time, no data will be taken from historical models (OMNI, ACE). Defaults to None.
@@ -68,7 +68,17 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     -------
     Union[:class:`pandas.DataFrame`, list[:class:`pandas.DataFrame`]]
         A data frame or a list of data frames containing data for the requested period.
+
+    Raises
+    ------
+    ModelError
+        If an unknown or incompatible model is provided in the model order.
+    AssertionError
+        If `reduce_ensemble` is not None, "mean" or "median".
     """
+
+    assert reduce_ensemble in (None, "mean", "median"), "reduce_ensemble must be None, `mean` or `median`"
+
     if synthetic_now_time is not None:
         warnings.warn(
             "`synthetic_now_time` is deprecated and will be removed in a future version. "
@@ -103,10 +113,8 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
 
         # Check if SWIFT ensemble returned empty data
         if isinstance(model, SWSWIFTEnsemble):
-            if (
-                not data_one_model
-                or (isinstance(data_one_model, list) and len(data_one_model) == 0)
-                or (isinstance(data_one_model, pd.DataFrame) and data_one_model.empty)
+            if (isinstance(data_one_model, list) and len(data_one_model) == 0) or (
+                isinstance(data_one_model, pd.DataFrame) and data_one_model.empty
             ):
                 swift_data_available = False
                 logging.info("SWIFT ensemble data not available for future dates")
@@ -724,7 +732,43 @@ def _recursive_fill_27d_historical(
     return df
 
 
-def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean"]) -> pd.DataFrame:
-    """Reduce a list of data frames representing ensemble data to a single data frame using the provided method."""
-    msg = "This reduction method has not been implemented yet!"
-    raise NotImplementedError(msg)
+def _reduce_ensembles(data_ensembles: list[pd.DataFrame], method: Literal["mean", "median"]) -> pd.DataFrame:
+    """Reduce a list of data frames representing ensemble data to a single data frame using the provided method.
+
+    Parameters
+    ----------
+    data_ensembles : list[pd.DataFrame]
+        List of dataframes to reduce.
+    method : Literal["mean", "median"]
+        Method to reduce the ensembles.
+
+    Returns
+    -------
+    pd.DataFrame
+        Reduced data frame.
+
+    Raises
+    ------
+    ValueError
+        If the method is not recognized.
+    ValueError
+        If the data frames have different lengths.
+    """
+
+    lengths = [len(d) for d in data_ensembles if not d.empty]
+    if len(set(lengths)) > 1:
+        raise ValueError("Ensemble data frames have different lengths, cannot reduce.")
+
+    combined_df = pd.concat(data_ensembles)
+    if method == "mean":
+        reduced_df = combined_df.groupby(combined_df.index).mean(numeric_only=True)
+    elif method == "median":
+        reduced_df = combined_df.groupby(combined_df.index).median(numeric_only=True)
+
+    # For non-numeric columns, take the first non-null value
+    non_numeric_cols = combined_df.select_dtypes(exclude=[np.number]).columns
+    for col in non_numeric_cols:
+        reduced_df[col] = combined_df[col].groupby(combined_df.index).first()
+
+    reduced_df = reduced_df.sort_index()
+    return reduced_df
