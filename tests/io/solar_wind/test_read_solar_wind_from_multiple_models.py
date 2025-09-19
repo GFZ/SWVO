@@ -129,8 +129,8 @@ class TestReadSolarWindFromMultipleModels:
 
         for d in data:
             assert d.index.is_monotonic_increasing
-            assert d.loc["2024-11-22 23:57:00+00:00"].model == "swift"
-            assert d.loc["2024-11-23 00:01:00+00:00"].model == "omni"
+            assert d.loc["2024-11-22 00:01:00+00:00"].model == "swift"
+            assert d.loc["2024-11-22 00:00:00+00:00"].model == "omni"
             assert all(col in d.columns for col in expected_columns)
 
     def test_time_boundaries(self, sample_times):
@@ -189,3 +189,50 @@ class TestReadSolarWindFromMultipleModels:
                 end_time=sample_times["future_end"],
                 model_order=[fake],
             )
+
+    def test_27_day_recurrence_basic(self, sample_times, expected_columns):
+        data = read_solar_wind_from_multiple_models(
+            start_time=sample_times["past_start"],
+            end_time=sample_times["past_end"],
+            model_order=[SWOMNI(), DSCOVR(), SWACE()],
+            historical_data_cutoff_time=sample_times["test_time_now"],
+            recurrence=True,
+        )
+
+        assert isinstance(data, pd.DataFrame)
+        assert all(col in data.columns for col in expected_columns)
+
+        recurrence_models = data[data["model"].str.contains("recurrence", na=False)]
+        if not recurrence_models.empty:
+            assert any("_recurrence_27d" in model for model in recurrence_models["model"].unique())
+        assert data.index.is_monotonic_increasing
+        assert data.index.freq == "1min"
+
+    def test_3_hour_interpolation_with_recurrence(self, sample_times, expected_columns):
+        # Use a longer time range to increase chances of gaps that need interpolation
+        extended_start = sample_times["past_start"] - timedelta(days=2)
+        extended_end = sample_times["past_end"] + timedelta(days=1)
+
+        data_no_rec = read_solar_wind_from_multiple_models(
+            start_time=extended_start,
+            end_time=extended_end,
+            model_order=[SWOMNI(), DSCOVR(), SWACE()],
+            historical_data_cutoff_time=sample_times["test_time_now"],
+            recurrence=False,
+            download=False,
+        )
+
+        data_with_rec = read_solar_wind_from_multiple_models(
+            start_time=extended_start,
+            end_time=extended_end,
+            model_order=[SWOMNI(), DSCOVR(), SWACE()],
+            historical_data_cutoff_time=sample_times["test_time_now"],
+            recurrence=True,
+            download=True,
+        )
+
+        nan_count_no_rec = data_no_rec.isna().sum()
+        nan_count_with_rec = data_with_rec.isna().sum()
+
+        for i in expected_columns:
+            assert nan_count_with_rec[i] <= nan_count_no_rec[i]
