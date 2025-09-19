@@ -236,3 +236,24 @@ class TestReadSolarWindFromMultipleModels:
 
         for i in expected_columns:
             assert nan_count_with_rec[i] <= nan_count_no_rec[i]
+
+    def test_ensemble_reduction_methods(self, sample_times, expected_columns):
+        reduction_methods = [None, "mean", "median"]
+
+        for method in reduction_methods:
+            data = read_solar_wind_from_multiple_models(
+                start_time=sample_times["future_start"],
+                end_time=sample_times["future_end"],
+                model_order=[SWSWIFTEnsemble()],
+                reduce_ensemble=method,
+                historical_data_cutoff_time=sample_times["test_time_now"],
+            )
+
+            if method is None:
+                assert isinstance(data, list)
+                assert len(data) > 1
+                for d in data:
+                    assert all(col in d.columns for col in expected_columns)
+            else:
+                assert isinstance(data, pd.DataFrame)
+                assert all(col in data.columns for col in expected_columns)
