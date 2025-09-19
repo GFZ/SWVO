@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+
+sphinx-copybutton
+sphinx-github-changelog
+sphinx
+pydata-sphinx-theme
+myst-parser
+alabaster
+docutils
+imagesize
+numpydoc
+linkify-it-py

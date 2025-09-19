@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "swvo"
 authors = [
-    {name = "Bernhard Haas, Sahil Jhawar, Stefano Bianco, Ruggero Vasile", email = "sec15@gfz.de"},
+    { name = "Bernhard Haas, Sahil Jhawar, Stefano Bianco, Ruggero Vasile", email = "sec15@gfz.de" },
 ]
 description = "Tools for downloading and reading space-weather data and geomagnetic indices."
 readme = "README.md"
@@ -25,12 +25,13 @@ classifiers = [
     'Operating System :: Unix',
     'Operating System :: MacOS',
 ]
-dynamic = ["dependencies", "version"]
+dynamic = ["dependencies", "optional-dependencies", "version"]
 
 
 [tool.setuptools.dynamic]
-version = {attr = "swvo.__version__"}
-dependencies = {file = ["requirements.txt"]}
+version = { attr = "swvo.__version__" }
+dependencies = { file = ["requirements.txt"] }
+optional-dependencies.docs = { file = ["docs/requirements.txt"] }
 
 [project.urls]
 Homepage = "https://github.com/GFZ/SWVO"
@@ -40,7 +41,6 @@ Tracker = "https://github.com/GFZ/SWVO/issues"
 
 [tool.setuptools.packages.find]
 include = ["swvo*"]
-
 
 
 [tool.coverage.run]
@@ -67,8 +67,8 @@ exclude_lines = [
     'if __name__ == "__main__":',
     "err =",
     "logger.error",
-    "raise"
-    ]
+    "raise",
+]
 ignore_errors = true
 
 [tool.isort]
