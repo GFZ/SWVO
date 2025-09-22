@@ -7,7 +7,7 @@ Module handling SW data from OMNI High Resolution files.
 """
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 from swvo.io.omni import OMNIHighRes
 
@@ -18,13 +18,13 @@ class SWOMNI(OMNIHighRes):
     Inherits the :func:`download_and_process`, other private methods and attributes from :class:`OMNIHighRes`.
     """
 
-    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
+    def __init__(self, data_dir: Optional[Path] = None) -> None:
         """
         Initialize a SWOMNI object.
 
         Parameters
         ----------
-        data_dir : str | None, optional
+        data_dir : Path | None
             Data directory for the OMNI SW data. If not provided, it will be read from the environment variable
         """
         super().__init__(data_dir=data_dir)

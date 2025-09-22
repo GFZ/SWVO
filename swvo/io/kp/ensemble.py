@@ -11,7 +11,7 @@ import os
 import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -24,7 +24,7 @@ class KpEnsemble:
 
     Parameters
     ----------
-    data_dir : str | Path, optional
+    data_dir : Path | None
         Data directory for the Hp data. If not provided, it will be read from the environment variable
 
     Methods
@@ -42,7 +42,7 @@ class KpEnsemble:
     ENV_VAR_NAME = "KP_ENSEMBLE_OUTPUT_DIR"
     LABEL = "ensemble"
 
-    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
+    def __init__(self, data_dir: Optional[Path] = None) -> None:
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
