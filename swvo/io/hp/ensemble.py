@@ -9,7 +9,7 @@ import os
 import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 import pandas as pd
 
@@ -21,7 +21,7 @@ class HpEnsemble:
     ----------
     index : str
         Hp index Possible options are: hp30, hp60.
-    data_dir : str | Path, optional
+    data_dir : Path | None
         Data directory for the Hp data. If not provided, it will be read from the environment variable
 
     Methods
@@ -39,7 +39,7 @@ class HpEnsemble:
     ENV_VAR_NAME = "PLACEHOLDER; SEE DERIVED CLASSES BELOW"
     LABEL = "ensemble"
 
-    def __init__(self, index: str, data_dir: Optional[Union[str, Path]] = None) -> None:
+    def __init__(self, index: str, data_dir: Optional[Path] = None) -> None:
         self.index = index
         if self.index not in ("hp30", "hp60"):
             msg = "Encountered invalid index: {self.index}. Possible options are: hp30, hp60!"
@@ -151,7 +151,7 @@ class Hp30Ensemble(HpEnsemble):
 
     ENV_VAR_NAME = "HP30_ENSEMBLE_FORECAST_DIR"
 
-    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
+    def __init__(self, data_dir: Optional[Path] = None) -> None:
         super().__init__("hp30", data_dir)
 
 
@@ -166,5 +166,5 @@ class Hp60Ensemble(HpEnsemble):
 
     ENV_VAR_NAME = "HP60_ENSEMBLE_FORECAST_DIR"
 
-    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
+    def __init__(self, data_dir: Optional[Path] = None) -> None:
         super().__init__("hp60", data_dir)

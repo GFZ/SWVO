@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 import pandas as pd
 
@@ -23,13 +23,13 @@ class KpOMNI(OMNILowRes):
     Inherits the :func:`download_and_process`, other private methods and attributes from :class:`OMNILowRes`.
     """
 
-    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
+    def __init__(self, data_dir: Optional[Path] = None) -> None:
         """
         Initialize a KpOMNI object.
 
         Parameters
         ----------
-        data_dir : str | None, optional
+        data_dir : Path | None
             Data directory for the OMNI Kp data. If not provided, it will be read from the environment variable
         """
         super().__init__(data_dir=data_dir)

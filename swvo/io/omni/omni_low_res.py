@@ -12,7 +12,7 @@ import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -26,7 +26,7 @@ class OMNILowRes:
 
     Parameters
     ----------
-    data_dir : str | Path, optional
+    data_dir : Path | None
         Data directory for the OMNI Low Resolution data. If not provided, it will be read from the environment variable
 
     Methods
@@ -103,7 +103,7 @@ class OMNILowRes:
         "magnetosonic_mach_n",
     ]
 
-    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
+    def __init__(self, data_dir: Optional[Path] = None) -> None:
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")

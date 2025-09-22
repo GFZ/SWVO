@@ -9,7 +9,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import Optional, Union
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -23,7 +23,7 @@ class HpGFZ:
     ----------
     index : str
         Hp index. Possible options are: hp30, hp60.
-    data_dir : str | Path, optional
+    data_dir : Path | None
         Data directory for the Hp data. If not provided, it will be read from the environment variable
 
     Methods
@@ -43,7 +43,7 @@ class HpGFZ:
     URL = "ftp://ftp.gfz-potsdam.de/pub/home/obs/Hpo/"
     LABEL = "gfz"
 
-    def __init__(self, index: str, data_dir: Optional[Union[str, Path]] = None) -> None:
+    def __init__(self, index: str, data_dir: Optional[Path] = None) -> None:
         self.index = index
         if self.index not in ("hp30", "hp60"):
             msg = f"Encountered invalid index: {self.index}. Possible options are: hp30, hp60!"
@@ -318,7 +318,7 @@ class Hp30GFZ(HpGFZ):
 
     """
 
-    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
+    def __init__(self, data_dir: Optional[Path] = None) -> None:
         super().__init__("hp30", data_dir)
 
 
@@ -332,5 +332,5 @@ class Hp60GFZ(HpGFZ):
 
     """
 
-    def __init__(self, data_dir: Optional[Union[str, Path]] = None) -> None:
+    def __init__(self, data_dir: Optional[Path] = None) -> None:
         super().__init__("hp60", data_dir)
