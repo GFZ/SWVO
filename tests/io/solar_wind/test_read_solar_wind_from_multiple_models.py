@@ -228,6 +228,8 @@ class TestReadSolarWindFromMultipleModels:
             download=False,
         )
 
+        print(data_no_rec)
+
         data_with_rec = read_solar_wind_from_multiple_models(
             start_time=extended_start,
             end_time=extended_end,
@@ -242,6 +244,47 @@ class TestReadSolarWindFromMultipleModels:
 
         for i in expected_columns:
             assert nan_count_with_rec[i] <= nan_count_no_rec[i]
+
+    def test_recurrence_consistency_t0_and_t0_minus_27(self, monkeypatch):
+        t0 = datetime(2024, 1, 28, 0, 0, tzinfo=timezone.utc)
+        t0_minus_27 = t0 - timedelta(days=27)
+
+        n = 600
+
+        data_t0_minus_27 = pd.DataFrame(
+            {"value": np.random.rand(n), "file_name": ["file_27d"] * n, "model": ["DSCOVR"] * n},
+            index=pd.date_range(t0_minus_27, periods=n, freq="1min", tz="UTC"),
+        )
+
+        data_t0 = pd.DataFrame(
+            {"value": [np.nan] * n, "file_name": [np.nan] * n, "model": [np.nan] * n},
+            index=pd.date_range(t0, periods=n, freq="1min", tz="UTC"),
+        )
+
+        def mock_read(self, start, end, download=False, propagation=True):
+            overlap_start = max(start, t0_minus_27)
+            overlap_end = min(end, t0_minus_27 + timedelta(minutes=n - 1))
+            if overlap_start <= overlap_end:
+                return data_t0_minus_27.loc[overlap_start:overlap_end]
+            if start >= t0:
+                return data_t0
+            return pd.DataFrame(index=pd.date_range(start, end, freq="1min", tz="UTC"))
+
+        monkeypatch.setattr(DSCOVR, "read", mock_read)
+
+        # Call for t0-27 to get base data
+        df_base = read_solar_wind_from_multiple_models(
+            t0_minus_27, t0_minus_27 + timedelta(minutes=n - 1), model_order=[DSCOVR()], recurrence=False
+        )
+
+        df_recurrence = read_solar_wind_from_multiple_models(
+            t0, t0 + timedelta(minutes=n - 1), model_order=[DSCOVR()], recurrence=True
+        )
+
+        expected_values = df_base["value"].tolist()
+        np.testing.assert_array_almost_equal(df_recurrence["value"].tolist(), expected_values)
+        assert all(df_recurrence["model"].str.contains("recurrence_27d"))
+        assert all(df_recurrence["file_name"].str.contains("_recurrence_27d"))
 
     def test_ensemble_reduction_methods(self, sample_times, expected_columns):
         reduction_methods = [None, "mean", "median"]
