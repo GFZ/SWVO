@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import warnings
+from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
@@ -24,7 +25,7 @@ logging.captureWarnings(True)
 def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     start_time: datetime,
     end_time: datetime,
-    model_order: list[SWModel] | None = None,
+    model_order: Sequence[SWModel] | None = None,
     reduce_ensemble: str | None = None,
     historical_data_cutoff_time: datetime | None = None,
     *,

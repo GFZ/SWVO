@@ -37,7 +37,7 @@ def test_get_file_path_any_format_multiple_match(tmp_path: Path):
 
 
 def test_get_file_path_any_format_no_match(tmp_path: Path):
-    (tmp_path / "nonexistent.tmp").touch()
+    (tmp_path / "nonexistent").touch()
     result = utils.get_file_path_any_format(tmp_path, "nonexistent", "pickle")
     assert result is None
 

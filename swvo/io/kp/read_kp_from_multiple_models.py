@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import warnings
+from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
@@ -26,14 +27,14 @@ logging.captureWarnings(True)
 def read_kp_from_multiple_models(  # noqa: PLR0913
     start_time: datetime,
     end_time: datetime,
-    model_order: list[KpModel] | None = None,
+    model_order: Sequence[KpModel] | None = None,
     reduce_ensemble: Literal["mean", "median"] | None = None,
     historical_data_cutoff_time: datetime | None = None,
     *,
     synthetic_now_time: datetime | None = None,  # deprecated
     download: bool = False,
     recurrence: bool = False,
-    rec_model_order: list[KpOMNI | KpNiemegk] = None,
+    rec_model_order: Sequence[KpOMNI | KpNiemegk] | None = None,
 ) -> pd.DataFrame | list[pd.DataFrame]:
     """Read Kp data from multiple models.
 
@@ -48,10 +49,10 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
         The start time of the data request.
     end_time : datetime
         The end time of the data request.
-    model_order : list or None, optional
+    model_order : Sequence or None, optional
         The order in which data will be read from the models. Defaults to [OMNI, Niemegk, Ensemble, SWPC].
-    reduce_ensemble : {"mean", None}, optional
-        The method to reduce ensembles to a single time series. Defaults to None.
+    reduce_ensemble : {"mean", "median"} or None, optional
+        The method to reduce ensembles to a single time series. Can be "mean", "median", or None. Defaults to None.
     historical_data_cutoff_time : datetime or None, optional
         Represents "now". After this time, no data will be taken from historical models
         (OMNI, Niemegk). Defaults to None.
@@ -61,7 +62,7 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
     recurrence : bool, optional
         If True, fill missing values using 27-day recurrence from historical models (OMNI, Niemegk).
         Defaults to False.
-    rec_model_order : list[KpOMNI | KpNiemegk], optional
+    rec_model_order : Sequence[KpOMNI | KpNiemegk], optional
         The order in which historical models will be used for 27-day recurrence filling.
         Defaults to [OMNI, Niemegk].
 

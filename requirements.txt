@@ -14,3 +14,4 @@ wget
 distance
 tqdm
 pytest-mock
+netcdf4

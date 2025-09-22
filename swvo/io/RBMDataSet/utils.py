@@ -34,8 +34,8 @@ def get_file_path_any_format(folder_path: Path, file_stem: str, preferred_ext: s
 
     if len(all_files) >= 1:
         extensions_found = [file.suffix[1:] for file in all_files]
-        if preferred_ext in extensions_found:
-            if len(all_files) > 1:
+        if len(all_files) > 1:
+            if preferred_ext in extensions_found:
                 warnings.warn(
                     (
                         f"Several files found for {folder_path / (file_stem + '.*')} with extensions: {extensions_found}. "
@@ -45,13 +45,20 @@ def get_file_path_any_format(folder_path: Path, file_stem: str, preferred_ext: s
                 )
 
                 return folder_path / (file_stem + "." + preferred_ext)
-            return all_files[0]
-        else:
-            warnings.warn(
-                f"File not found: {folder_path / (file_stem + '.' + preferred_ext)}",
-                stacklevel=2,
+
+            msg = (
+                f"Several files found for {folder_path / (file_stem + '.*')} with extensions: {extensions_found}. "
+                f"However, the preferred extension ({preferred_ext}) is not available!"
             )
-            return None
+            raise ValueError(msg)
+
+        if len(all_files) == 1:
+            return all_files[0]
+
+        warnings.warn(
+            f"File not found: {folder_path / (file_stem + '.' + preferred_ext)}",
+            stacklevel=2,
+        )
 
     return None
 

@@ -8,7 +8,7 @@ import datetime as dt
 import typing
 from datetime import timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import distance
 import numpy as np
@@ -19,7 +19,9 @@ from swvo.io.RBMDataSet import (
     FileCadenceEnum,
     FolderTypeEnum,
     InstrumentEnum,
+    InstrumentLike,
     MfmEnum,
+    MfmLike,
     SatelliteEnum,
     SatelliteLike,
     Variable,
@@ -92,9 +94,9 @@ class RBMDataSet:
         end_time: dt.datetime,
         folder_path: Path,
         satellite: SatelliteLike,
-        instrument: InstrumentEnum,
-        mfm: MfmEnum,
-        preferred_extension: str = "pickle",
+        instrument: InstrumentLike,
+        mfm: MfmLike,
+        preferred_extension: Literal["mat", "pickle"] = "pickle",
         *,
         verbose: bool = True,
     ) -> None:
@@ -110,8 +112,15 @@ class RBMDataSet:
         if isinstance(satellite, str):
             satellite = SatelliteEnum[satellite.upper()]
         self._satellite = satellite
+
+        if isinstance(instrument, str):
+            instrument = InstrumentEnum[instrument.upper()]
         self._instrument = instrument
+
+        if isinstance(mfm, str):
+            mfm = MfmEnum[mfm.upper()]
         self._mfm = mfm
+
         self._folder_path = Path(folder_path)
 
         self._preferred_ext = preferred_extension
@@ -130,7 +139,7 @@ class RBMDataSet:
         return self.__repr__()
 
     def __dir__(self):
-        return super().__dir__() + [var.var_name for var in VariableEnum]
+        return list(super().__dir__()) + [var.var_name for var in VariableEnum]
 
     def __getattr__(self, name: str):
         # check if a sat variable is requested
@@ -252,10 +261,10 @@ class RBMDataSet:
                 next_month = start_month + relativedelta(months=1, days=-1)
                 date_str = start_month.strftime("%Y%m%d") + "to" + next_month.strftime("%Y%m%d")
 
-                file_name_no_format = self._file_name_stem + date_str + "_" + var.data_server_file_prefix
+                file_name_no_format = self._file_name_stem + date_str + "_" + var.mat_file_prefix
 
-                if var.data_server_has_B:
-                    file_name_no_format += "_" + self._mfm.value
+                if var.mat_has_B:
+                    file_name_no_format += "_n4_4_" + self._mfm.value
 
                 file_name_no_format += "_ver4"
             else:
@@ -264,7 +273,7 @@ class RBMDataSet:
             full_file_path = get_file_path_any_format(self._file_path_stem, file_name_no_format, self._preferred_ext)
 
             if full_file_path is None:
-                print(f"File not found {full_file_path}")
+                print(f"File not found: {self._file_path_stem}, {file_name_no_format}")
                 continue
 
             if self._verbose:
@@ -317,6 +326,34 @@ class RBMDataSet:
                 loaded_var_arrs[var_name] = list(loaded_var_arrs[var_name])  # type: ignore
 
             setattr(self, var_name, loaded_var_arrs[var_name])
+
+    def __eq__(self, other: RBMDataSet) -> bool:
+        if self._satellite != other._satellite:
+            return False
+        if self._instrument != other._instrument:
+            return False
+        if self._mfm != other._mfm:
+            return False
+
+        for var in VariableEnum:
+            self_var = getattr(self, var.var_name)
+            other_var = getattr(other, var.var_name)
+
+            if isinstance(self_var, list) and isinstance(other_var, list):
+                if len(self_var) != len(other_var):
+                    return False
+                for dt1, dt2 in zip(self_var, other_var):
+                    if dt1 != dt2:
+                        return False
+            elif isinstance(self_var, np.ndarray) and isinstance(other_var, np.ndarray):
+                if self_var.shape != other_var.shape:
+                    return False
+                if not np.allclose(self_var, other_var, equal_nan=True):
+                    return False
+            elif self_var != other_var:
+                return False
+
+        return True
 
     from .bin_and_interpolate_to_model_grid import bin_and_interpolate_to_model_grid
     from .interp_functions import interp_flux

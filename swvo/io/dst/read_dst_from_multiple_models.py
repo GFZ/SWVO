@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import warnings
+from collections.abc import Sequence
 from datetime import datetime, timezone
 
 import numpy as np
@@ -23,7 +24,7 @@ logging.captureWarnings(True)
 def read_dst_from_multiple_models(
     start_time: datetime,
     end_time: datetime,
-    model_order: list[DSTModel] | None = None,
+    model_order: Sequence[DSTModel] | None = None,
     historical_data_cutoff_time: datetime | None = None,
     *,
     synthetic_now_time: datetime | None = None,  # deprecated
@@ -43,7 +44,7 @@ def read_dst_from_multiple_models(
         Start time of the data request.
     end_time : datetime
         End time of the data request.
-    model_order : list or None, optional
+    model_order : Sequence or None, optional
         Order in which data will be read from the models. Defaults to [OMNI, WDC].
     historical_data_cutoff_time : datetime or None, optional
         Time representing "now". After this time, no data will be taken from

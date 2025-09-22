@@ -27,8 +27,8 @@ class FileCadenceEnum(Enum):
 @dataclass(frozen=True)
 class Variable:
     var_name: str
-    data_server_file_prefix: str
-    data_server_has_B: bool
+    mat_file_prefix: str
+    mat_has_B: bool
 
 
 without_B: bool = False
@@ -140,6 +140,7 @@ class InstrumentEnum(Enum):
     HOPE = "hope"
     MAGEIS = "mageis"
     REPT = "rept"
+    ECT_COMBINED = "ect_combined"
 
     # GOES
     MAGEDandEPEAD = "MAGEDandEPEAD"
@@ -157,9 +158,32 @@ class InstrumentEnum(Enum):
     TED = "TED-electron"
 
 
+InstrumentLiteral = Literal[
+    "hope",
+    "mageis",
+    "rept",
+    "ect_combined",
+    "MAGEDandEPEAD",
+    "MAGED",
+    "XEP",
+    "mepe",
+    "PWE-density",
+    "orbit",
+    "TED-electron",
+]
+InstrumentLike: TypeAlias = InstrumentLiteral | InstrumentEnum
+
+
 class MfmEnum(Enum):
-    T89 = "n4_4_T89"
-    T04s = "n4_4_T04s"
+    T89 = "T89"
+    T04s = "T04s"
+    T96 = "T96"
+    TS04 = "T04s"
+    OP77 = "OP77"
+
+
+MfmEnumLiteral = Literal["T89", "T04s", "TS04", "T96", "OP77"]
+MfmLike: TypeAlias = MfmEnumLiteral | MfmEnum
 
 
 class ElPasoMFMEnum(Enum):

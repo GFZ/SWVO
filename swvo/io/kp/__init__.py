@@ -9,3 +9,4 @@ from swvo.io.kp.swpc import KpSWPC as KpSWPC
 
 # This has to be imported after the models to avoid a circular import
 from swvo.io.kp.read_kp_from_multiple_models import read_kp_from_multiple_models as read_kp_from_multiple_models  # noqa: I001
+from swvo.io.kp.read_kp_from_multiple_models import KpModel as KpModel

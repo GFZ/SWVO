@@ -12,7 +12,9 @@ from swvo.io.RBMDataSet.custom_enums import (
     SatelliteLike as SatelliteLike,
     SatelliteEnum as SatelliteEnum,
     InstrumentEnum as InstrumentEnum,
+    InstrumentLike as InstrumentLike,
     MfmEnum as MfmEnum,
+    MfmLike as MfmLike,
     ElPasoMFMEnum as ElPasoMFMEnum,
     SatelliteLiteral as SatelliteLiteral,
 )
@@ -20,4 +22,5 @@ from swvo.io.RBMDataSet.RBMDataSetManager import RBMDataSetManager as RBMDataSet
 from swvo.io.RBMDataSet.interp_functions import TargetType as TargetType
 from swvo.io.RBMDataSet.scripts.create_RBSP_line_data import create_RBSP_line_data as create_RBSP_line_data
 from swvo.io.RBMDataSet.RBMDataSet import RBMDataSet as RBMDataSet
+from swvo.io.RBMDataSet.RBMNcDataSet import RBMNcDataSet as RBMNcDataSet
 from swvo.io.RBMDataSet.RBMDataSetElPaso import RBMDataSetElPaso as RBMDataSetElPaso
