@@ -228,8 +228,6 @@ class TestReadSolarWindFromMultipleModels:
             download=False,
         )
 
-        print(data_no_rec)
-
         data_with_rec = read_solar_wind_from_multiple_models(
             start_time=extended_start,
             end_time=extended_end,
