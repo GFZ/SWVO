@@ -93,8 +93,10 @@ def construct_updated_data_frame(
         raise ValueError(msg)
 
     for i, _ in enumerate(data_one_model):
-        data_one_model[i]["model"] = model_label
-        data_one_model[i].loc[data_one_model[i].isna().any(axis=1), "model"] = None
+        mask_not_interpolated = data_one_model[i]["model"] != "interpolated"
+        data_one_model[i].loc[mask_not_interpolated, "model"] = model_label
+        mask_nan = data_one_model[i].isna().any(axis=1)
+        data_one_model[i].loc[mask_nan, "model"] = None
         data[i] = data[i].combine_first(data_one_model[i])
 
     return data
