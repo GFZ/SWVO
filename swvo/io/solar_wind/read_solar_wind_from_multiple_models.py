@@ -166,38 +166,8 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
 
     if len(data_out) == 1:
         data_out = data_out[0]
-        _set_interpolated_flags(data_out, "interpolated", do_interpolation)
-
-    else:
-        for df in data_out:
-            _set_interpolated_flags(df, "interpolated", do_interpolation)
 
     return data_out
-
-
-def _set_interpolated_flags(df: pd.DataFrame, label: str, set_flag: bool) -> None:
-    """
-    Set appropriate flags in the 'model' column for interpolated data points.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Data frame to process.
-    label : str
-        The label to set for interpolated data points.
-
-    Returns
-    -------
-    None
-        The function modifies the data frames in place.
-    """
-    if not set_flag:
-        return
-    else:
-        if not df.empty and "file_name" in df.columns:
-            # Handle interpolated data
-            interpolated_indices = df.index[df["file_name"] == label]
-            df.loc[interpolated_indices, "model"] = label
 
 
 def _read_from_model(  # noqa: PLR0913
@@ -548,6 +518,7 @@ def _interpolate_short_gaps(df: pd.DataFrame, max_gap_minutes: int = 180) -> pd.
     # Mark interpolated values in file_name and model columns
     if interpolated_indices:
         df_interpolated.loc[list(interpolated_indices), "file_name"] = "interpolated"
+        df_interpolated.loc[list(interpolated_indices), "model"] = "interpolated"
 
     return df_interpolated
 
