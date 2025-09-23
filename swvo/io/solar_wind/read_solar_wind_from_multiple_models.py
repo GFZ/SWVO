@@ -36,6 +36,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     download: bool = False,
     recurrence: bool = False,
     rec_model_order: list[DSCOVR | SWACE | SWOMNI] | None = None,
+    do_interpolation: bool = False,
 ) -> pd.DataFrame | list[pd.DataFrame]:
     """
     Read solar wind data from multiple models.
@@ -63,6 +64,9 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     rec_model_order : list[DSCOVR | SWACE | SWOMNI], optional
         The order in which historical models will be used for 27-day recurrence filling.
         Defaults to [DSCOVR, SWACE, SWOMNI].
+    do_interpolation : bool, optional
+        If True, apply spline interpolation to short gaps (<= 3 hours) in historical data.
+        Defaults to False.
 
     Returns
     -------
@@ -109,6 +113,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
             historical_data_cutoff_time,
             reduce_ensemble,
             download=download,
+            do_interpolation=do_interpolation,
         )
 
         # Check if SWIFT ensemble returned empty data
@@ -161,35 +166,8 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
 
     if len(data_out) == 1:
         data_out = data_out[0]
-        _set_interpolated_flags(data_out, label="interpolated")
-
-    else:
-        for df in data_out:
-            _set_interpolated_flags(df, label="interpolated")
 
     return data_out
-
-
-def _set_interpolated_flags(df: pd.DataFrame, label: str) -> None:
-    """
-    Set appropriate flags in the 'model' column for interpolated data points.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Data frame to process.
-    label : str
-        The label to set for interpolated data points.
-
-    Returns
-    -------
-    None
-        The function modifies the data frames in place.
-    """
-    if not df.empty and "file_name" in df.columns:
-        # Handle interpolated data
-        interpolated_indices = df.index[df["file_name"] == label]
-        df.loc[interpolated_indices, "model"] = label
 
 
 def _read_from_model(  # noqa: PLR0913
@@ -200,6 +178,7 @@ def _read_from_model(  # noqa: PLR0913
     reduce_ensemble: str,
     *,
     download: bool,
+    do_interpolation: bool,
 ) -> list[pd.DataFrame] | pd.DataFrame:
     """Reads SW data from a given model within the specified time range.
 
@@ -217,6 +196,8 @@ def _read_from_model(  # noqa: PLR0913
         The method to reduce ensemble data (e.g., "mean"). If None, ensemble members are not reduced.
     download : bool, optional
         Whether to download new data or not.
+    do_interpolation : bool, optional
+        If True, apply spline interpolation to short gaps (<= 3 hours) in historical data
 
     Returns
     -------
@@ -232,6 +213,7 @@ def _read_from_model(  # noqa: PLR0913
             end_time,
             historical_data_cutoff_time,
             download=download,
+            do_interpolation=do_interpolation,
         )
 
     # Forecasting models are called with synthetic now time
@@ -253,6 +235,7 @@ def _read_historical_model(
     historical_data_cutoff_time: datetime,
     *,
     download: bool,
+    do_interpolation: bool,
 ) -> pd.DataFrame:
     """Reads SW data from historical models (DSCOVR, SWACE or SWOMNI) within the specified time range.
 
@@ -268,6 +251,8 @@ def _read_historical_model(
         Represents "now". Data after this time is set to NaN.
     download : bool, optional
         Whether to download new data or not.
+    do_interpolation : bool, optional
+        If True, apply spline interpolation to short gaps (<= 3 hours) in historical data
 
     Returns
     -------
@@ -307,11 +292,12 @@ def _read_historical_model(
 
         historical_data = data_one_model.loc[:historical_data_cutoff_time]
         if not historical_data.empty:
-            interpolated_historical = _interpolate_short_gaps(historical_data, max_gap_minutes=180)
-            data_one_model.loc[:historical_data_cutoff_time] = interpolated_historical
-            logging.info(
-                f"Applied spline interpolation to short gaps (<= 3 hours) in {model.LABEL} historical data",
-            )
+            if do_interpolation:
+                interpolated_historical = _interpolate_short_gaps(historical_data, max_gap_minutes=180)
+                data_one_model.loc[:historical_data_cutoff_time] = interpolated_historical
+                logging.info(
+                    f"Applied spline interpolation to short gaps (<= 3 hours) in {model.LABEL} historical data",
+                )
 
         if historical_data_cutoff_time < end_time:
             data_one_model.loc[historical_data_cutoff_time + timedelta(minutes=1) : end_time] = np.nan
@@ -532,6 +518,7 @@ def _interpolate_short_gaps(df: pd.DataFrame, max_gap_minutes: int = 180) -> pd.
     # Mark interpolated values in file_name and model columns
     if interpolated_indices:
         df_interpolated.loc[list(interpolated_indices), "file_name"] = "interpolated"
+        df_interpolated.loc[list(interpolated_indices), "model"] = "interpolated"
 
     return df_interpolated
 

@@ -226,6 +226,7 @@ class TestReadSolarWindFromMultipleModels:
             historical_data_cutoff_time=sample_times["test_time_now"],
             recurrence=False,
             download=False,
+            do_interpolation=True,
         )
 
         data_with_rec = read_solar_wind_from_multiple_models(
@@ -235,6 +236,7 @@ class TestReadSolarWindFromMultipleModels:
             historical_data_cutoff_time=sample_times["test_time_now"],
             recurrence=True,
             download=True,
+            do_interpolation=True,
         )
 
         nan_count_no_rec = data_no_rec.isna().sum()
@@ -392,6 +394,7 @@ class TestInterpolateShortGaps:
         assert not result["bavg"].iloc[gap_slice].isna().any()
 
         assert all(result["file_name"].iloc[gap_slice] == "interpolated")
+        assert all(result["model"].iloc[gap_slice] == "interpolated")
 
         assert result["proton_density"].iloc[0] == sample_dataframe_with_short_gap["proton_density"].iloc[0]
         assert result["proton_density"].iloc[gap_start - 1] == original_before
