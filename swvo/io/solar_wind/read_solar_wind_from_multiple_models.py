@@ -66,7 +66,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
         Defaults to [DSCOVR, SWACE, SWOMNI].
     interpolation : bool, optional
         If True, apply spline interpolation to short gaps (<= 3 hours) in historical data.
-        Defaults to False. (Currently always applied if historical data is available)
+        Defaults to False.
 
     Returns
     -------
