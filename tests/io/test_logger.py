@@ -15,7 +15,7 @@ class TestLogger:
         root_logger = logging.getLogger()
         for h in root_logger.handlers[:]:
             root_logger.removeHandler(h)
-
+        sys.modules.pop(module_name)
         importlib.import_module(module_name)
 
         captured = capsys.readouterr()
