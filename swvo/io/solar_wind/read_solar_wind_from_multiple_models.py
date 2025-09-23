@@ -36,7 +36,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     download: bool = False,
     recurrence: bool = False,
     rec_model_order: list[DSCOVR | SWACE | SWOMNI] | None = None,
-    interpolation: bool = False,
+    do_interpolation: bool = False,
 ) -> pd.DataFrame | list[pd.DataFrame]:
     """
     Read solar wind data from multiple models.
@@ -64,7 +64,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     rec_model_order : list[DSCOVR | SWACE | SWOMNI], optional
         The order in which historical models will be used for 27-day recurrence filling.
         Defaults to [DSCOVR, SWACE, SWOMNI].
-    interpolation : bool, optional
+    do_interpolation : bool, optional
         If True, apply spline interpolation to short gaps (<= 3 hours) in historical data.
         Defaults to False.
 
@@ -113,7 +113,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
             historical_data_cutoff_time,
             reduce_ensemble,
             download=download,
-            interpolation=interpolation,
+            do_interpolation=do_interpolation,
         )
 
         # Check if SWIFT ensemble returned empty data
@@ -166,11 +166,11 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
 
     if len(data_out) == 1:
         data_out = data_out[0]
-        _set_interpolated_flags(data_out, "interpolated", interpolation)
+        _set_interpolated_flags(data_out, "interpolated", do_interpolation)
 
     else:
         for df in data_out:
-            _set_interpolated_flags(df, "interpolated", interpolation)
+            _set_interpolated_flags(df, "interpolated", do_interpolation)
 
     return data_out
 
@@ -208,7 +208,7 @@ def _read_from_model(  # noqa: PLR0913
     reduce_ensemble: str,
     *,
     download: bool,
-    interpolation: bool,
+    do_interpolation: bool,
 ) -> list[pd.DataFrame] | pd.DataFrame:
     """Reads SW data from a given model within the specified time range.
 
@@ -226,7 +226,7 @@ def _read_from_model(  # noqa: PLR0913
         The method to reduce ensemble data (e.g., "mean"). If None, ensemble members are not reduced.
     download : bool, optional
         Whether to download new data or not.
-    interpolation : bool, optional
+    do_interpolation : bool, optional
         If True, apply spline interpolation to short gaps (<= 3 hours) in historical data
 
     Returns
@@ -238,7 +238,12 @@ def _read_from_model(  # noqa: PLR0913
     # Read from historical models
     if isinstance(model, (DSCOVR, SWACE, SWOMNI)):
         data_one_model = _read_historical_model(
-            model, start_time, end_time, historical_data_cutoff_time, download=download, interpolation=interpolation
+            model,
+            start_time,
+            end_time,
+            historical_data_cutoff_time,
+            download=download,
+            do_interpolation=do_interpolation,
         )
 
     # Forecasting models are called with synthetic now time
@@ -260,7 +265,7 @@ def _read_historical_model(
     historical_data_cutoff_time: datetime,
     *,
     download: bool,
-    interpolation: bool,
+    do_interpolation: bool,
 ) -> pd.DataFrame:
     """Reads SW data from historical models (DSCOVR, SWACE or SWOMNI) within the specified time range.
 
@@ -276,7 +281,7 @@ def _read_historical_model(
         Represents "now". Data after this time is set to NaN.
     download : bool, optional
         Whether to download new data or not.
-    interpolation : bool, optional
+    do_interpolation : bool, optional
         If True, apply spline interpolation to short gaps (<= 3 hours) in historical data
 
     Returns
@@ -317,7 +322,7 @@ def _read_historical_model(
 
         historical_data = data_one_model.loc[:historical_data_cutoff_time]
         if not historical_data.empty:
-            if interpolation:
+            if do_interpolation:
                 interpolated_historical = _interpolate_short_gaps(historical_data, max_gap_minutes=180)
                 data_one_model.loc[:historical_data_cutoff_time] = interpolated_historical
                 logging.info(
