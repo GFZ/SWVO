@@ -31,7 +31,6 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
     reduce_ensemble: Literal["mean", "median"] | None = None,
     historical_data_cutoff_time: datetime | None = None,
     *,
-    synthetic_now_time: datetime | None = None,  # deprecated
     download: bool = False,
     recurrence: bool = False,
     rec_model_order: Sequence[KpOMNI | KpNiemegk] | None = None,
@@ -73,16 +72,6 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
         A data frame or a list of data frames containing data for the requested period.
 
     """
-    if synthetic_now_time is not None:
-        warnings.warn(
-            "`synthetic_now_time` is deprecated and will be removed in a future version. "
-            "Use `historical_data_cutoff_time` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if historical_data_cutoff_time is None:
-            historical_data_cutoff_time = synthetic_now_time
-
     if historical_data_cutoff_time is None:
         historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
 

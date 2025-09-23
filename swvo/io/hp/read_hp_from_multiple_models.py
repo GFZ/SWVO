@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import logging
-import warnings
 from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
 from typing import Literal
@@ -32,7 +31,6 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     reduce_ensemble: Literal["mean", "median"] | None = None,
     historical_data_cutoff_time: datetime | None = None,
     *,
-    synthetic_now_time: datetime | None = None,  # deprecated
     download: bool = False,
 ) -> pd.DataFrame | list[pd.DataFrame]:
     """
@@ -63,16 +61,6 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     Union[:class:`pandas.DataFrame`, list[:class:`pandas.DataFrame`]]
         A data frame or a list of data frames containing data for the requested period.
     """
-    if synthetic_now_time is not None:
-        warnings.warn(
-            "`synthetic_now_time` is deprecated and will be removed in a future version. "
-            "Use `historical_data_cutoff_time` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if historical_data_cutoff_time is None:
-            historical_data_cutoff_time = synthetic_now_time
-
     if historical_data_cutoff_time is None:
         historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
 
