@@ -176,14 +176,6 @@ class TestReadSolarWindFromMultipleModels:
         for d1, d2 in zip(data1, data2):
             pd.testing.assert_frame_equal(d1, d2)
 
-    def test_synthetic_now_time_deprecation_with_message(self, sample_times):
-        with pytest.warns(DeprecationWarning, match="synthetic_now_time.*deprecated"):
-            read_solar_wind_from_multiple_models(
-                start_time=sample_times["past_start"],
-                end_time=sample_times["future_end"],
-                synthetic_now_time=sample_times["test_time_now"],
-            )
-
     def test_model_check_with_wrong_class(self, sample_times):
         class FakeModel:
             pass

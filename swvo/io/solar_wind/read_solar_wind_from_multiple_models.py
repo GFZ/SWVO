@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import logging
-import warnings
 from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
@@ -32,7 +31,6 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     reduce_ensemble: Optional[Literal["mean", "median"]] = None,
     historical_data_cutoff_time: datetime | None = None,
     *,
-    synthetic_now_time: datetime | None = None,  # deprecated
     download: bool = False,
     recurrence: bool = False,
     rec_model_order: list[DSCOVR | SWACE | SWOMNI] | None = None,
@@ -82,16 +80,6 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     """
 
     assert reduce_ensemble in (None, "mean", "median"), "reduce_ensemble must be None, `mean` or `median`"
-
-    if synthetic_now_time is not None:
-        warnings.warn(
-            "`synthetic_now_time` is deprecated and will be removed in a future version. "
-            "Use `historical_data_cutoff_time` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if historical_data_cutoff_time is None:
-            historical_data_cutoff_time = synthetic_now_time
 
     if historical_data_cutoff_time is None:
         historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
