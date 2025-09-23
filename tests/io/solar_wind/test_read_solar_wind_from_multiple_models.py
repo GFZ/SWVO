@@ -226,6 +226,7 @@ class TestReadSolarWindFromMultipleModels:
             historical_data_cutoff_time=sample_times["test_time_now"],
             recurrence=False,
             download=False,
+            interpolation=True,
         )
 
         data_with_rec = read_solar_wind_from_multiple_models(
@@ -235,6 +236,7 @@ class TestReadSolarWindFromMultipleModels:
             historical_data_cutoff_time=sample_times["test_time_now"],
             recurrence=True,
             download=True,
+            interpolation=True,
         )
 
         nan_count_no_rec = data_no_rec.isna().sum()
