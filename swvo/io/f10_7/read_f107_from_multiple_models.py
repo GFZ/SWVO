@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import logging
-import warnings
 from collections.abc import Sequence
 from datetime import datetime, timezone
 
@@ -27,7 +26,6 @@ def read_f107_from_multiple_models(
     model_order: Sequence[F107Model] | None = None,
     historical_data_cutoff_time: datetime | None = None,
     *,
-    synthetic_now_time: datetime | None = None,  # deprecated
     download: bool = False,
 ) -> pd.DataFrame:
     """
@@ -58,16 +56,6 @@ def read_f107_from_multiple_models(
         A data frame containing data for the requested
         period.
     """
-    if synthetic_now_time is not None:
-        warnings.warn(
-            "`synthetic_now_time` is deprecated and will be removed in a future version. "
-            "Use `historical_data_cutoff_time` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if historical_data_cutoff_time is None:
-            historical_data_cutoff_time = synthetic_now_time
-
     if historical_data_cutoff_time is None:
         historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
 
