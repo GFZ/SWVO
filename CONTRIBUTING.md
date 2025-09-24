@@ -40,6 +40,8 @@ We use `pytest` for testing.
     python -m pytest tests/io
     ```
 All new code should include tests when applicable.
+> [!NOTE]  
+> Tests may occasionally fail due to JSON parsing errors or server timeouts. These failures are not critical. Contributors should ensure that the implemented feature functions correctly and does not break any related functionality.
 ## Pull Requests
 1.  Push your branch:
     ```bash
