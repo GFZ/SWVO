@@ -42,7 +42,7 @@ jobs:
         run: python -m coverage run --source swvo -m pytest tests/io
 
       - name: Run Coveralls
-        if: ${{ success() }}
+        if: ${{ success() && matrix.python-version == '3.11' }}
         run: |
           coveralls --service=github
         env:
