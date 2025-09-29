@@ -182,7 +182,7 @@ class KpEnsemble:
             file_list = file_list_old_name
         return file_list
 
-    def read_with_horizon(self, start: datetime, end: datetime, horizon: int) -> list[pd.DataFrame]:
+    def read_with_horizon(self, start_time: datetime, end_time: datetime, horizon: int) -> list[pd.DataFrame]:
         """Read Ensemble Kp forecast data for a given time range and forecast horizon.
 
         Parameters
@@ -199,11 +199,13 @@ class KpEnsemble:
         list[:class:`pandas.DataFrame`]
             A list of data frames containing ensemble data for the requested period.
         """
-        start = start.replace(tzinfo=timezone.utc)
-        end = end.replace(tzinfo=timezone.utc)
+        if start_time is not None and not start_time.tzinfo:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+        if end_time is not None and not end_time.tzinfo:
+            end_time = end_time.replace(tzinfo=timezone.utc)
 
-        align_start_to_3hr = start.replace(hour=(start.hour // 3) * 3, minute=0, second=0, microsecond=0)
-        align_end_to_3hr = end.replace(hour=(end.hour // 3) * 3, minute=0, second=0, microsecond=0)
+        align_start_to_3hr = start_time.replace(hour=(start_time.hour // 3) * 3, minute=0, second=0, microsecond=0)
+        align_end_to_3hr = end_time.replace(hour=(end_time.hour // 3) * 3, minute=0, second=0, microsecond=0)
 
         full_time_range = pd.date_range(align_start_to_3hr, align_end_to_3hr, freq="3h", tz=timezone.utc)
 
