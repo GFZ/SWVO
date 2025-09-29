@@ -107,3 +107,122 @@ class TestKpEnsemble:
         assert isinstance(data[0], pd.DataFrame)
         assert all("kp" in i.columns for i in data)
         assert not data[0].empty
+
+    def make_csv_file(self, path, filename, times, values):
+        """Helper to create a CSV file with time-value pairs."""
+        df = pd.DataFrame({"Forecast Time": times, "kp": values})
+        file = path / filename
+        df.to_csv(file, header=False, index=False)
+        return file
+
+    def test_read_with_horizon_single_file(self, kp_ensemble_instance, tmp_path):
+        kp_ensemble_instance.data_dir = tmp_path
+
+        start = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
+        end = start + timedelta(hours=3)
+        horizon = 3
+
+        str_date = start.strftime("%Y%m%dT%H0000")
+        times = pd.date_range(start.replace(tzinfo=None), periods=10, freq="3h")
+        values = np.arange(10)
+
+        self.make_csv_file(
+            tmp_path,
+            f"FORECAST_Kp_{str_date}_ensemble_0.csv",
+            times,
+            values,
+        )
+        result = kp_ensemble_instance.read_with_horizon(start, end, horizon)
+
+        assert isinstance(result, list)
+        assert all(isinstance(df, pd.DataFrame) for df in result)
+        assert not result[0]["kp"].isna().all()
+        assert (result[0]["horizon"] == horizon).all()
+        assert "Forecast Time" in result[0].columns
+        assert "kp" in result[0].columns
+        assert "source" in result[0].columns
+
+    def test_read_with_horizon_multiple_ensembles(self, kp_ensemble_instance, tmp_path):
+        kp_ensemble_instance.data_dir = tmp_path
+
+        start = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
+        end = start + timedelta(hours=6)
+        horizon = 6
+
+        str_date = (start + timedelta(hours=-(horizon % 3))).strftime("%Y%m%dT%H0000")
+        times = pd.date_range(start.replace(tzinfo=None), periods=10, freq="3h")
+        values1 = np.arange(10)
+        values2 = np.arange(10, 20)
+
+        self.make_csv_file(tmp_path, f"FORECAST_Kp_{str_date}_ensemble_0.csv", times, values1)
+        self.make_csv_file(tmp_path, f"FORECAST_Kp_{str_date}_ensemble_1.csv", times, values2)
+
+        result = kp_ensemble_instance.read_with_horizon(start, end, horizon)
+
+        assert len(result) == 2
+        assert all("kp" in df.columns for df in result)
+        for df in result:
+            assert set(df.index) == set(pd.date_range(start, end, freq="3h", tz=timezone.utc))
+
+    def test_read_with_horizon_no_files(self, kp_ensemble_instance, tmp_path):
+        kp_ensemble_instance.data_dir = tmp_path
+
+        start = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
+        end = start + timedelta(hours=3)
+        horizon = 3
+
+        result = kp_ensemble_instance.read_with_horizon(start, end, horizon)
+
+        assert result == []
+
+    def test_read_with_horizon_nan_fill_for_missing_files(self, kp_ensemble_instance, tmp_path):
+        kp_ensemble_instance.data_dir = tmp_path
+
+        start = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
+        end = start + timedelta(hours=6)
+        horizon = 3
+
+        str_date = start.strftime("%Y%m%dT%H0000")
+        times = pd.date_range(start.replace(tzinfo=None), periods=10, freq="3h")
+        values = np.arange(10)
+        self.make_csv_file(tmp_path, f"FORECAST_Kp_{str_date}_ensemble_0.csv", times, values)
+
+        result = kp_ensemble_instance.read_with_horizon(start, end, horizon)
+
+        assert len(result) == 1
+        assert not result[0]["kp"].isna().all()
+        assert (result[0]["horizon"] == horizon).all()
+
+    def test_read_with_horizon_correct_horizon_selection(self, kp_ensemble_instance, tmp_path):
+        kp_ensemble_instance.data_dir = tmp_path
+
+        start = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
+        end = start + timedelta(hours=6)
+
+        horizons_to_test = [3, 25, 35]
+        for horizon in horizons_to_test:
+            file_time = start
+            file_offset = -(horizon % 3)
+            str_date = (file_time + timedelta(hours=file_offset)).strftime("%Y%m%dT%H0000")
+
+            times = pd.date_range(start.replace(tzinfo=None), periods=50, freq="3h")
+            values = np.arange(len(times)) + horizon
+
+            self.make_csv_file(
+                tmp_path,
+                f"FORECAST_Kp_{str_date}_ensemble_0.csv",
+                times,
+                values,
+            )
+
+            result = kp_ensemble_instance.read_with_horizon(start, end, horizon)
+            assert len(result) >= 1
+            df = result[0]
+
+            file_index = (horizon + 2) // 3
+            expected_value = values[file_index]
+
+            actual_value = df.loc[start, "kp"]
+            assert actual_value == expected_value, (
+                f"Expected {expected_value} but got {actual_value} for horizon {horizon}"
+            )
