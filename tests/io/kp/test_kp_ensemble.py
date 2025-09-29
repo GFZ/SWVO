@@ -226,3 +226,12 @@ class TestKpEnsemble:
             assert actual_value == expected_value, (
                 f"Expected {expected_value} but got {actual_value} for horizon {horizon}"
             )
+
+    def test_read_with_horizon_invalid_horizon(self, kp_ensemble_instance):
+        start = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
+        end = start + timedelta(hours=3)
+        invalid_horizons = [-1, 73, 100]
+
+        for horizon in invalid_horizons:
+            with pytest.raises(ValueError, match="Horizon must be between 0 and 72 hours"):
+                kp_ensemble_instance.read_with_horizon(start, end, horizon)

@@ -198,11 +198,19 @@ class KpEnsemble:
         -------
         list[:class:`pandas.DataFrame`]
             A list of data frames containing ensemble data for the requested period.
+
+        Raises
+        ------
+        ValueError
+            Raises `ValueError` if the horizon is not between 0 and 72 hours.
         """
         if start_time is not None and not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
         if end_time is not None and not end_time.tzinfo:
             end_time = end_time.replace(tzinfo=timezone.utc)
+
+        if not (0 <= horizon <= 72):
+            raise ValueError("Horizon must be between 0 and 72 hours")
 
         align_start_to_3hr = start_time.replace(hour=(start_time.hour // 3) * 3, minute=0, second=0, microsecond=0)
         align_end_to_3hr = end_time.replace(hour=(end_time.hour // 3) * 3, minute=0, second=0, microsecond=0)
