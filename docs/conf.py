@@ -32,6 +32,7 @@ extensions = [
     "myst_parser",
     "sphinx_copybutton",
     "sphinx.ext.imgconverter",
+    "sphinx_github_changelog",
 ]
 
 source_suffix = {
