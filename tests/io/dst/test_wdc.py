@@ -83,7 +83,7 @@ DAY
         assert len(time_intervals) == 36
 
     def test_download_and_process(self, dst_instance):
-        dst_instance.download_and_process(datetime(2025, 1, 1), datetime(2025, 2, 1))
+        dst_instance.download_and_process(datetime(2025, 9, 1), datetime(2025, 9, 1))
 
         expected_files = list(MOCK_DATA_PATH.glob("WDC_DST_*.csv"))
 
