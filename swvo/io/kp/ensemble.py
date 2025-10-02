@@ -224,16 +224,13 @@ class KpEnsemble:
 
         for file_time, file_offset, iloc in zip(full_time_range, file_offsets, time_indices):
             str_date = (file_time + timedelta(hours=file_offset)).strftime("%Y%m%dT%H0000")
-            file_list_new_name = sorted(
-                self.data_dir.glob(f"FORECAST_Kp_{str_date}_ensemble_*.csv"),
-                key=lambda x: int(x.stem.split("_")[-1]),
-            )
 
+            file_list = self.ensemble_file_list(str_date)
             for ensemble_idx in range(max_ensembles):
                 df = ensemble_dfs[ensemble_idx]
-                if ensemble_idx < len(file_list_new_name):
+                if ensemble_idx < len(file_list):
                     data = pd.read_csv(
-                        file_list_new_name[ensemble_idx],
+                        file_list[ensemble_idx],
                         names=["Forecast Time", "kp"],
                         parse_dates=["Forecast Time"],
                     ).iloc[iloc]
@@ -241,7 +238,7 @@ class KpEnsemble:
                     data["Forecast Time"] = data["Forecast Time"].tz_localize("UTC")
                     df.loc[file_time, "Forecast Time"] = data["Forecast Time"]
                     df.loc[file_time, "kp"] = data["kp"]
-                    df.loc[file_time, "source"] = file_list_new_name[ensemble_idx].stem
+                    df.loc[file_time, "source"] = file_list[ensemble_idx].stem
                 else:
                     df.loc[file_time, "kp"] = np.nan
 
