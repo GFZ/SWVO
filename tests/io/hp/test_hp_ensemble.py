@@ -116,3 +116,177 @@ class TestHpEnsemble:
         assert isinstance(data[0], pd.DataFrame)
         assert all("hp30" in i.columns for i in data)
         assert data[0].index.tz == timezone.utc
+
+    def make_csv_file(self, path, filename, times, values, index_name):
+        """Helper to create a CSV file with time-value pairs."""
+        df = pd.DataFrame({"Forecast Time": times, index_name: values})
+        file = path / filename
+        df.to_csv(file, header=False, index=False)
+        return file
+
+    @pytest.mark.parametrize("instance_type,index_name", [("hp30", "hp30"), ("hp60", "hp60")])
+    def test_read_with_horizon_single_file(self, instance_type, index_name):
+        ensemble_dir = DATA_DIR / instance_type
+        ensemble_dir.mkdir(exist_ok=True)
+        instance_class = Hp30Ensemble if instance_type == "hp30" else Hp60Ensemble
+        instance = instance_class(data_dir=ensemble_dir)
+
+        start = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
+        end = start + timedelta(hours=1)
+        horizon = 1.0 if instance_type == "hp30" else 1
+
+        str_date = start.strftime("%Y%m%dT%H0000")
+        times = pd.date_range(start.replace(tzinfo=None), periods=10, freq=f"{instance.index_number}min")
+        values = np.arange(10)
+
+        self.make_csv_file(
+            ensemble_dir,
+            f"FORECAST_{index_name.title()}_{str_date}_ensemble_0.csv",
+            times,
+            values,
+            index_name,
+        )
+        result = instance.read_with_horizon(start, end, horizon)
+
+        assert isinstance(result, list)
+        assert all(isinstance(df, pd.DataFrame) for df in result)
+        assert not result[0][index_name].isna().all()
+        assert (result[0]["horizon"] == horizon).all()
+        assert "Forecast Time" in result[0].columns
+        assert index_name in result[0].columns
+        assert "source" in result[0].columns
+
+    @pytest.mark.parametrize("instance_type,index_name", [("hp30", "hp30"), ("hp60", "hp60")])
+    def test_read_with_horizon_multiple_ensembles(self, instance_type, index_name):
+        ensemble_dir = DATA_DIR / instance_type
+        ensemble_dir.mkdir(exist_ok=True)
+        instance_class = Hp30Ensemble if instance_type == "hp30" else Hp60Ensemble
+        instance = instance_class(data_dir=ensemble_dir)
+
+        start = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
+        end = start + timedelta(hours=2)
+        horizon = 2.0 if instance_type == "hp30" else 2
+
+        str_date = start.strftime("%Y%m%dT%H0000")
+        times = pd.date_range(start.replace(tzinfo=None), periods=10, freq=f"{instance.index_number}min")
+        values1 = np.arange(10)
+        values2 = np.arange(10, 20)
+
+        self.make_csv_file(
+            ensemble_dir, f"FORECAST_{index_name.title()}_{str_date}_ensemble_0.csv", times, values1, index_name
+        )
+        self.make_csv_file(
+            ensemble_dir, f"FORECAST_{index_name.title()}_{str_date}_ensemble_1.csv", times, values2, index_name
+        )
+
+        result = instance.read_with_horizon(start, end, horizon)
+
+        assert len(result) == 2
+        assert all(index_name in df.columns for df in result)
+        freq = "0.5h" if instance_type == "hp30" else "1h"
+        expected_range = pd.date_range(start, end, freq=freq, tz=timezone.utc)
+        for df in result:
+            assert set(df.index) == set(expected_range)
+
+    @pytest.mark.parametrize("instance_type,index_name", [("hp30", "hp30"), ("hp60", "hp60")])
+    def test_read_with_horizon_nan_fill_for_missing_files(self, instance_type, index_name):
+        ensemble_dir = DATA_DIR / instance_type
+        ensemble_dir.mkdir(exist_ok=True)
+        instance_class = Hp30Ensemble if instance_type == "hp30" else Hp60Ensemble
+        instance = instance_class(data_dir=ensemble_dir)
+
+        start = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
+        end = start + timedelta(hours=2)
+        horizon = 1.0 if instance_type == "hp30" else 1
+
+        str_date = start.strftime("%Y%m%dT%H0000")
+        times = pd.date_range(start.replace(tzinfo=None), periods=10, freq=f"{instance.index_number}min")
+        values = np.arange(10)
+        self.make_csv_file(
+            ensemble_dir, f"FORECAST_{index_name.title()}_{str_date}_ensemble_0.csv", times, values, index_name
+        )
+
+        result = instance.read_with_horizon(start, end, horizon)
+
+        assert len(result) >= 1
+        assert not result[0][index_name].isna().all()
+        assert (result[0]["horizon"] == horizon).all()
+
+    @pytest.mark.parametrize("instance_type,index_name", [("hp30", "hp30"), ("hp60", "hp60")])
+    def test_read_with_horizon_correct_horizon_selection(self, instance_type, index_name):
+        ensemble_dir = DATA_DIR / instance_type
+        ensemble_dir.mkdir(exist_ok=True)
+        instance_class = Hp30Ensemble if instance_type == "hp30" else Hp60Ensemble
+        instance = instance_class(data_dir=ensemble_dir)
+
+        start = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
+        end = start + timedelta(hours=2)
+
+        horizons_to_test = [0.5, 1.0, 1.5] if instance_type == "hp30" else [1, 2]
+        for horizon in horizons_to_test:
+            for existing_file in ensemble_dir.glob("FORECAST_*.csv"):
+                existing_file.unlink()
+
+            str_date = start.strftime("%Y%m%dT%H0000")
+
+            times = pd.date_range(start.replace(tzinfo=None), periods=50, freq=f"{instance.index_number}min")
+            values = np.arange(len(times)) + horizon
+
+            self.make_csv_file(
+                ensemble_dir,
+                f"FORECAST_{index_name.title()}_{str_date}_ensemble_0.csv",
+                times,
+                values,
+                index_name,
+            )
+
+            result = instance.read_with_horizon(start, end, horizon)
+            assert len(result) >= 1
+            df = result[0]
+
+            assert not df[index_name].isna().all()
+            assert (df["horizon"] == horizon).all()
+
+    @pytest.mark.parametrize("instance_type", ["hp30", "hp60"])
+    def test_read_with_horizon_invalid_horizon(self, instance_type):
+        ensemble_dir = DATA_DIR / instance_type
+        ensemble_dir.mkdir(exist_ok=True)
+        instance_class = Hp30Ensemble if instance_type == "hp30" else Hp60Ensemble
+        instance = instance_class(data_dir=ensemble_dir)
+
+        start = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
+        end = start + timedelta(hours=1)
+
+        invalid_horizons = [-1, 73, 100]
+        for horizon in invalid_horizons:
+            with pytest.raises(ValueError, match="Horizon must be between 0 and 72 hours"):
+                instance.read_with_horizon(start, end, horizon)
+
+        if instance_type == "hp30":
+            invalid_increments = [0.3, 1.7, 2.2]
+            for horizon in invalid_increments:
+                with pytest.raises(ValueError, match="Horizon for hp30 must be in 0.5 hour increments"):
+                    instance.read_with_horizon(start, end, horizon)
+
+        if instance_type == "hp60":
+            invalid_increments = [0.5, 1.5, 2.3]
+            for horizon in invalid_increments:
+                with pytest.raises(ValueError, match="Horizon for hp60 must be in 1 hour increments"):
+                    instance.read_with_horizon(start, end, horizon)
+
+    @pytest.mark.parametrize("instance_type", ["hp30", "hp60"])
+    def test_read_with_horizon_no_files(self, instance_type):
+        ensemble_dir = DATA_DIR / instance_type
+        ensemble_dir.mkdir(exist_ok=True)
+        instance_class = Hp30Ensemble if instance_type == "hp30" else Hp60Ensemble
+        instance = instance_class(data_dir=ensemble_dir)
+
+        start = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
+        end = start + timedelta(hours=1)
+        horizon = 1.0 if instance_type == "hp30" else 1
+
+        for existing_file in ensemble_dir.glob("FORECAST_*.csv"):
+            existing_file.unlink()
+
+        with pytest.raises(FileNotFoundError, match="No ensemble data found"):
+            instance.read_with_horizon(start, end, horizon)
