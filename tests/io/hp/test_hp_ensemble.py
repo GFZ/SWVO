@@ -56,8 +56,8 @@ class TestHpEnsemble:
         ):
             Hp30Ensemble()
 
-    def test_invalid_index(self):
-        with pytest.raises(ValueError, match="Encountered invalid index:.*"):
+    def test_abc_instantiation(self):
+        with pytest.raises(TypeError, match="Can't instantiate abstract class*"):
             HpEnsemble("hp45", data_dir=DATA_DIR)
 
     @pytest.mark.parametrize("instance_type,index_name", [("hp30", "hp30"), ("hp60", "hp60")])
