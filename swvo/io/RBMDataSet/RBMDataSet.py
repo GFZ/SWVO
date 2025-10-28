@@ -44,7 +44,7 @@ class RBMDataSet:
     """RBMDataSet class for loading and managing data.
 
     This class can load data either from files or from a dictionary (ElPaso format).
-    
+
     For file-based loading, provide start_time, end_time, and folder_path.
     For dictionary-based loading, initialize without these parameters and use update_from_dict().
 
@@ -168,19 +168,19 @@ class RBMDataSet:
                 satellite = SatelliteEnum["GOESSecondary"]
             else:
                 satellite = SatelliteEnum[satellite.upper()]
-        
+
         if isinstance(instrument, str):
             instrument = InstrumentEnum[instrument.upper()]
-        
+
         if isinstance(mfm, str):
             mfm = MfmEnum[mfm.upper()]
-        
+
         # Store the original satellite enum for properties and other attributes
         self._satellite_enum = satellite
         self._instrument = instrument
         self._mfm = mfm
         self._verbose = verbose
-        
+
         # For dict-based loading (ElPaso mode), modify satellite properties
         if start_time is None and end_time is None and folder_path is None:
             # ElPaso mode: no file loading needed
@@ -197,13 +197,13 @@ class RBMDataSet:
             if start_time is None or end_time is None or folder_path is None:
                 msg = "For file-based loading, start_time, end_time, and folder_path must all be provided"
                 raise ValueError(msg)
-            
+
             if start_time.tzinfo is None:
                 start_time = start_time.replace(tzinfo=timezone.utc)
-            
+
             if end_time.tzinfo is None:
                 end_time = end_time.replace(tzinfo=timezone.utc)
-            
+
             self._start_time = start_time
             self._end_time = end_time
             self._satellite = satellite
@@ -229,15 +229,15 @@ class RBMDataSet:
         # Avoid recursion for internal attributes
         if name.startswith("_"):
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
-        
+
         # Handle computed properties for both modes
         if name == "P" and hasattr(self, "MLT"):
             return ((self.MLT + 12) / 12 * np.pi) % (2 * np.pi)
-        
+
         if name == "InvV" and hasattr(self, "InvK") and hasattr(self, "InvMu"):
             inv_K_repeated = np.repeat(self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1)
             return self.InvMu * (inv_K_repeated + 0.5) ** 2
-        
+
         # check if a sat variable is requested
         # if we find a similar word, suggest that to the user
         sat_variable = None
@@ -259,9 +259,13 @@ class RBMDataSet:
         if sat_variable is not None and hasattr(self, "_file_loading_mode") and self._file_loading_mode:
             self._load_variable(sat_variable)
             return getattr(self, name)
-        
+
         # For dict-loading mode, check if it's a mapped variable
-        if hasattr(self, "_file_loading_mode") and not self._file_loading_mode and name in self._variable_mapping.values():
+        if (
+            hasattr(self, "_file_loading_mode")
+            and not self._file_loading_mode
+            and name in self._variable_mapping.values()
+        ):
             raise AttributeError(
                 f"Attribute '{name}' is mapped but has not been set. "
                 "Make sure data is loaded or that this attribute is properly assigned."
