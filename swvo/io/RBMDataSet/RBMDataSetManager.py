@@ -152,12 +152,12 @@ class RBMDataSetManager:
                 return_list.append(cls._instance.data_set_dict[key_tuple])
             else:
                 cls._instance.data_set_dict[key_tuple] = RBMDataSet(
-                    start_time,
-                    end_time,
-                    folder_path,
-                    sat,
-                    instrument,
-                    mfm,
+                    satellite=sat,
+                    instrument=instrument,
+                    mfm=mfm,
+                    start_time=start_time,
+                    end_time=end_time,
+                    folder_path=folder_path,
                     verbose=verbose,
                     preferred_extension=preferred_extension,
                 )

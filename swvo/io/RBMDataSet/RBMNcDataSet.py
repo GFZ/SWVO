@@ -98,12 +98,12 @@ class RBMNcDataSet(RBMDataSet):
         verbose: bool = True,
     ) -> None:
         super().__init__(
-            start_time,
-            end_time,
-            folder_path,
-            satellite,
-            instrument,
+            satellite=satellite,
+            instrument=instrument,
             mfm=mfm,
+            start_time=start_time,
+            end_time=end_time,
+            folder_path=folder_path,
             verbose=verbose,
         )
 
