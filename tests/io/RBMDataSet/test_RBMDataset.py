@@ -42,12 +42,12 @@ def mock_dataset():
             }
 
             dataset = RBMDataSet(
-                start_time=start_time,
-                end_time=end_time,
-                folder_path=Path("/mock/path"),
                 satellite=SatelliteEnum.RBSPA,
                 instrument=InstrumentEnum.MAGEIS,
                 mfm=MfmEnum.T89,
+                start_time=start_time,
+                end_time=end_time,
+                folder_path=Path("/mock/path"),
                 preferred_extension="pickle",
                 verbose=False,
             )
@@ -67,12 +67,12 @@ def test_init_datetime_timezone(mock_module_string):
         mock.patch(f"{mock_module_string}._create_file_name_stem"),
     ):
         dataset = RBMDataSet(
-            start_time=start_time,
-            end_time=end_time,
-            folder_path=Path("/mock/path"),
             satellite=SatelliteEnum.RBSPA,
             instrument=InstrumentEnum.MAGEIS,
             mfm=MfmEnum.T89,
+            start_time=start_time,
+            end_time=end_time,
+            folder_path=Path("/mock/path"),
             preferred_extension="pickle",
         )
 
@@ -101,12 +101,12 @@ def test_satellite_string_input(mock_module_string):
         with mock.patch(f"{mock_module_string}._create_file_path_stem"):
             with mock.patch(f"{mock_module_string}._create_file_name_stem"):
                 dataset = RBMDataSet(
-                    start_time=dt.datetime(2023, 1, 1, tzinfo=timezone.utc),
-                    end_time=dt.datetime(2023, 1, 31, tzinfo=timezone.utc),
-                    folder_path=Path("/mock/path"),
                     satellite="RBSPA",
                     instrument=InstrumentEnum.MAGEIS,
                     mfm=MfmEnum.T89,
+                    start_time=dt.datetime(2023, 1, 1, tzinfo=timezone.utc),
+                    end_time=dt.datetime(2023, 1, 31, tzinfo=timezone.utc),
+                    folder_path=Path("/mock/path"),
                     preferred_extension="pickle",
                 )
 
@@ -169,12 +169,12 @@ def test_all_satellites_work(satellite, mock_module_string):
         with mock.patch(f"{mock_module_string}._create_file_path_stem"):
             with mock.patch(f"{mock_module_string}._create_file_name_stem"):
                 dataset = RBMDataSet(
-                    start_time=dt.datetime(2023, 1, 1, tzinfo=timezone.utc),
-                    end_time=dt.datetime(2023, 1, 31, tzinfo=timezone.utc),
-                    folder_path=Path("/mock/path"),
                     satellite=satellite,
                     instrument=InstrumentEnum.HOPE,
                     mfm=MfmEnum.T89,
+                    start_time=dt.datetime(2023, 1, 1, tzinfo=timezone.utc),
+                    end_time=dt.datetime(2023, 1, 31, tzinfo=timezone.utc),
+                    folder_path=Path("/mock/path"),
                 )
                 assert dataset._satellite == satellite
 
@@ -186,12 +186,12 @@ def test_all_instruments_work(instrument, mock_module_string):
         with mock.patch(f"{mock_module_string}._create_file_path_stem"):
             with mock.patch(f"{mock_module_string}._create_file_name_stem"):
                 dataset = RBMDataSet(
-                    start_time=dt.datetime(2023, 1, 1, tzinfo=timezone.utc),
-                    end_time=dt.datetime(2023, 1, 31, tzinfo=timezone.utc),
-                    folder_path=Path("/mock/path"),
                     satellite=SatelliteEnum.RBSPA,
                     instrument=instrument,
                     mfm=MfmEnum.T89,
+                    start_time=dt.datetime(2023, 1, 1, tzinfo=timezone.utc),
+                    end_time=dt.datetime(2023, 1, 31, tzinfo=timezone.utc),
+                    folder_path=Path("/mock/path"),
                 )
                 assert dataset._instrument == instrument
 
@@ -250,12 +250,12 @@ def test_load_variable_real_file():
     end_time = dt.datetime(2025, 4, 30, tzinfo=dt.timezone.utc)
 
     dataset = RBMDataSet(
-        start_time=start_time,
-        end_time=end_time,
-        folder_path=Path("path/to/real/files"),  # this does not matter for the test
         satellite=SatelliteEnum.GOESSecondary,
         instrument=InstrumentEnum.MAGED,
         mfm=MfmEnum.T89,
+        start_time=start_time,
+        end_time=end_time,
+        folder_path=Path("path/to/real/files"),  # this does not matter for the test
         preferred_extension="pickle",
         verbose=True,
     )

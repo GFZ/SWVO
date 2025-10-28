@@ -18,11 +18,11 @@ from numpy.typing import NDArray
 from tqdm import tqdm
 
 if TYPE_CHECKING:
-    from swvo.io.RBMDataSet import RBMDataSet, RBMDataSetElPaso
+    from swvo.io.RBMDataSet import RBMDataSet
 
 
 def bin_and_interpolate_to_model_grid(
-    self: RBMDataSet | RBMDataSetElPaso,
+    self: RBMDataSet,
     sim_time: list[datetime],
     grid_R: NDArray[np.float64],
     grid_mu_V: NDArray[np.float64],

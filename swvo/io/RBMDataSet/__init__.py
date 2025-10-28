@@ -23,4 +23,3 @@ from swvo.io.RBMDataSet.interp_functions import TargetType as TargetType
 from swvo.io.RBMDataSet.scripts.create_RBSP_line_data import create_RBSP_line_data as create_RBSP_line_data
 from swvo.io.RBMDataSet.RBMDataSet import RBMDataSet as RBMDataSet
 from swvo.io.RBMDataSet.RBMNcDataSet import RBMNcDataSet as RBMNcDataSet
-from swvo.io.RBMDataSet.RBMDataSetElPaso import RBMDataSetElPaso as RBMDataSetElPaso

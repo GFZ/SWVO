@@ -6,9 +6,10 @@ from __future__ import annotations
 
 import datetime as dt
 import typing
+from dataclasses import replace
 from datetime import timedelta, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal, TypeVar
 
 import distance
 import numpy as np
@@ -27,16 +28,44 @@ from swvo.io.RBMDataSet import (
     Variable,
     VariableEnum,
 )
+from swvo.io.RBMDataSet.custom_enums import ElPasoMFMEnum
 from swvo.io.RBMDataSet.utils import (
     get_file_path_any_format,
     join_var,
     load_file_any_format,
     matlab2python,
+    python2matlab,
 )
+
+ElPasoVariable = TypeVar("ElPasoVariable")  # Placeholder for ElPaso Variable type
 
 
 class RBMDataSet:
     """RBMDataSet class for loading and managing data.
+
+    This class can load data either from files or from a dictionary (ElPaso format).
+    
+    For file-based loading, provide start_time, end_time, and folder_path.
+    For dictionary-based loading, initialize without these parameters and use update_from_dict().
+
+    Parameters
+    ----------
+    satellite : :class:`SatelliteLike`
+        Satellite identifier as enum or string.
+    instrument : :class:`InstrumentLike`
+        Instrument enumeration or string.
+    mfm : :class:`MfmLike`
+        Magnetic field model enum or string.
+    start_time : dt.datetime, optional
+        Start time for file-based loading.
+    end_time : dt.datetime, optional
+        End time for file-based loading.
+    folder_path : Path, optional
+        Base folder path for file-based loading.
+    preferred_extension : Literal["mat", "pickle"], optional
+        Preferred file extension for file-based loading. Default is "pickle".
+    verbose : bool, optional
+        Whether to print verbose output. Default is True.
 
     Attributes
     ----------
@@ -65,6 +94,37 @@ class RBMDataSet:
     """
 
     _preferred_ext: str
+    _variable_mapping: ClassVar[dict[str, str]] = {
+        "Epoch_posixtime": "time",
+        "Energy_FEDU": "energy_channels",
+        "Energy_FPDU": "energy_channels",
+        "Energy_FEIU": "energy_channels",
+        "Energy_FEDO": "energy_channels",
+        "PA_local": "alpha_local",
+        "PA_eq_": "alpha_eq_model",
+        "alpha_eq_real": "alpha_eq_real",
+        "invMu_": "InvMu",
+        "InvMu_real": "InvMu_real",
+        "invK_": "InvK",
+        # "InvV": "InvV",# computed property
+        "Lstar_": "Lstar",
+        "FEDU": "Flux",
+        "FPDU": "Flux",
+        "FEIU": "Flux",
+        "FEDO": "Flux",
+        "PSD_FEDU": "PSD",
+        "PSD_FPDU": "PSD",
+        "PSD_FEIU": "PSD",
+        "PSD_FEDO": "PSD",
+        "MLT_": "MLT",
+        "B_SM": "B_SM",
+        "B_eq_": "B_total",
+        "B_local_": "B_sat",
+        "xGEO": "xGEO",
+        # "P": "P",# computed property
+        "R_eq_": "R0",
+        "density": "density",
+    }
 
     datetime: list[dt.datetime]
     time: NDArray[np.float64]
@@ -90,50 +150,74 @@ class RBMDataSet:
 
     def __init__(
         self,
-        start_time: dt.datetime,
-        end_time: dt.datetime,
-        folder_path: Path,
         satellite: SatelliteLike,
         instrument: InstrumentLike,
         mfm: MfmLike,
+        start_time: dt.datetime | None = None,
+        end_time: dt.datetime | None = None,
+        folder_path: Path | None = None,
         preferred_extension: Literal["mat", "pickle"] = "pickle",
         *,
         verbose: bool = True,
     ) -> None:
-        if start_time.tzinfo is None:
-            start_time = start_time.replace(tzinfo=timezone.utc)
-
-        if end_time.tzinfo is None:
-            end_time = end_time.replace(tzinfo=timezone.utc)
-
-        self._start_time = start_time
-        self._end_time = end_time
-
+        # Handle satellite conversion with special cases for GOES
         if isinstance(satellite, str):
-            satellite = SatelliteEnum[satellite.upper()]
-        self._satellite = satellite
-
+            if satellite.lower() == "goesprimary":
+                satellite = SatelliteEnum["GOESPrimary"]
+            elif satellite.lower() == "goessecondary":
+                satellite = SatelliteEnum["GOESSecondary"]
+            else:
+                satellite = SatelliteEnum[satellite.upper()]
+        
         if isinstance(instrument, str):
             instrument = InstrumentEnum[instrument.upper()]
-        self._instrument = instrument
-
+        
         if isinstance(mfm, str):
             mfm = MfmEnum[mfm.upper()]
+        
+        # Store the original satellite enum for properties and other attributes
+        self._satellite_enum = satellite
+        self._instrument = instrument
         self._mfm = mfm
-
-        self._folder_path = Path(folder_path)
-
-        self._preferred_ext = preferred_extension
-        self._folder_type = self._satellite.folder_type
         self._verbose = verbose
-
-        self._file_path_stem = self._create_file_path_stem()
-        self._file_name_stem = self._create_file_name_stem()
-        self._file_cadence = self._satellite.file_cadence
-        self._date_of_files = self._create_date_list()
+        
+        # For dict-based loading (ElPaso mode), modify satellite properties
+        if start_time is None and end_time is None and folder_path is None:
+            # ElPaso mode: no file loading needed
+            satellite_obj = replace(
+                satellite.value,
+                folder_type=FolderTypeEnum.NoFolder,
+                file_cadence=FileCadenceEnum.NoCadence,
+            )
+            self._satellite = satellite_obj
+            self._mfm_prefix = ElPasoMFMEnum[mfm.name].value
+            self._file_loading_mode = False
+        else:
+            # File loading mode: need all parameters
+            if start_time is None or end_time is None or folder_path is None:
+                msg = "For file-based loading, start_time, end_time, and folder_path must all be provided"
+                raise ValueError(msg)
+            
+            if start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=timezone.utc)
+            
+            if end_time.tzinfo is None:
+                end_time = end_time.replace(tzinfo=timezone.utc)
+            
+            self._start_time = start_time
+            self._end_time = end_time
+            self._satellite = satellite
+            self._folder_path = Path(folder_path)
+            self._preferred_ext = preferred_extension
+            self._folder_type = self._satellite.folder_type
+            self._file_path_stem = self._create_file_path_stem()
+            self._file_name_stem = self._create_file_name_stem()
+            self._file_cadence = self._satellite.file_cadence
+            self._date_of_files = self._create_date_list()
+            self._file_loading_mode = True
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self._satellite}, {self._instrument}, {self._mfm})"
+        return f"{self.__class__.__name__}({self._satellite_enum}, {self._instrument}, {self._mfm})"
 
     def __str__(self):
         return self.__repr__()
@@ -142,6 +226,18 @@ class RBMDataSet:
         return list(super().__dir__()) + [var.var_name for var in VariableEnum]
 
     def __getattr__(self, name: str):
+        # Avoid recursion for internal attributes
+        if name.startswith("_"):
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+        
+        # Handle computed properties for both modes
+        if name == "P" and hasattr(self, "MLT"):
+            return ((self.MLT + 12) / 12 * np.pi) % (2 * np.pi)
+        
+        if name == "InvV" and hasattr(self, "InvK") and hasattr(self, "InvMu"):
+            inv_K_repeated = np.repeat(self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1)
+            return self.InvMu * (inv_K_repeated + 0.5) ** 2
+        
         # check if a sat variable is requested
         # if we find a similar word, suggest that to the user
         sat_variable = None
@@ -159,11 +255,17 @@ class RBMDataSet:
                     levenstein_info["min_distance"] = dist
                     levenstein_info["var_name"] = var.var_name
 
-        # if yes, load it
-        if sat_variable is not None:
+        # if yes, load it (only in file loading mode)
+        if sat_variable is not None and hasattr(self, "_file_loading_mode") and self._file_loading_mode:
             self._load_variable(sat_variable)
-
             return getattr(self, name)
+        
+        # For dict-loading mode, check if it's a mapped variable
+        if hasattr(self, "_file_loading_mode") and not self._file_loading_mode and name in self._variable_mapping.values():
+            raise AttributeError(
+                f"Attribute '{name}' is mapped but has not been set. "
+                "Make sure data is loaded or that this attribute is properly assigned."
+            )
 
         if levenstein_info["min_distance"] <= 2:
             msg = f"{self.__class__.__name__} object has no attribute {name}. Maybe you meant {levenstein_info['var_name']}?"
@@ -177,6 +279,52 @@ class RBMDataSet:
 
     # def __setitem__(self, key, value):
     #     setattr(self, key, value)
+
+    @property
+    def satellite(self) -> SatelliteEnum:
+        """Returns the satellite enum."""
+        return self._satellite_enum
+
+    @property
+    def instrument(self) -> InstrumentEnum:
+        """Returns the instrument enum."""
+        return self._instrument
+
+    @property
+    def mfm(self) -> MfmEnum:
+        """Returns the MFM enum."""
+        return self._mfm
+
+    @property
+    def variable_mapping(self) -> dict[str, str]:
+        """Returns the variable mapping dictionary."""
+        return self._variable_mapping
+
+    def update_from_dict(self, source_dict: dict[str, ElPasoVariable]) -> None:
+        """Get data from ElPaso data dictionary and update the object.
+
+        Parameters
+        ----------
+        source_dict : dict[str, Any]
+            Dictionary containing the data to be loaded into the object.
+
+        """
+        for _, value in source_dict.items():
+            if value.standard_name in self._variable_mapping:
+                target_attr = self._variable_mapping[value.standard_name]
+
+                if value.standard_name == "Epoch_posixtime" and target_attr == "time":
+                    datetimes = [dt.datetime.fromtimestamp(ts, tz=timezone.utc) for ts in value.data]
+                    setattr(self, "datetime", datetimes)
+                    setattr(self, "time", [python2matlab(i) for i in datetimes])
+                else:
+                    setattr(self, target_attr, value.data)
+
+            elif hasattr(self, "_mfm_prefix") and value.standard_name.endswith(self._mfm_prefix):
+                base_key = value.standard_name.replace(self._mfm_prefix, "")
+                if base_key in self._variable_mapping:
+                    target_attr = self._variable_mapping[base_key]
+                    setattr(self, target_attr, value.data)
 
     def get_var(self, var: VariableEnum):
         return getattr(self, var.var_name)

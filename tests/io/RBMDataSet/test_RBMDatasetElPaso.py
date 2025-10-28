@@ -11,7 +11,7 @@ import pytest
 from swvo.io.RBMDataSet import (
     InstrumentEnum,
     MfmEnum,
-    RBMDataSetElPaso,
+    RBMDataSet,
     SatelliteEnum,
     SatelliteLiteral,
     VariableEnum,
@@ -29,7 +29,7 @@ class MockVariable:
 
 @pytest.fixture
 def dataset():
-    return RBMDataSetElPaso(
+    return RBMDataSet(
         satellite=SatelliteEnum.GOESSecondary,
         instrument=InstrumentEnum.MAGED,
         mfm=MfmEnum.T89,
@@ -38,7 +38,7 @@ def dataset():
 
 def test_init_accepts_string_inputs():
     """Test that the class can be initialized with string inputs."""
-    ds = RBMDataSetElPaso(satellite="GOESSecondary", instrument="MAGED", mfm=MfmEnum.T89)
+    ds = RBMDataSet(satellite="GOESSecondary", instrument="MAGED", mfm=MfmEnum.T89)
     assert ds.satellite.sat_name == "secondary"
     assert ds.instrument == InstrumentEnum.MAGED
     assert ds.mfm == MfmEnum.T89
@@ -51,12 +51,12 @@ def test_variable_mapping_exposed(dataset):
 
 
 def test_repr_and_str(dataset):
-    assert "RBMDataSetElPaso" in repr(dataset)
+    assert "RBMDataSet" in repr(dataset)
     assert str(dataset.satellite) in repr(dataset)
     assert str(dataset.instrument) in repr(dataset)
     assert str(dataset.mfm) in repr(dataset)
 
-    assert "RBMDataSetElPaso" in str(dataset)
+    assert "RBMDataSet" in str(dataset)
     assert str(dataset.satellite) in str(dataset)
     assert str(dataset.instrument) in str(dataset)
     assert str(dataset.mfm) in str(dataset)
@@ -221,7 +221,7 @@ def test_all_mfm_specific_mappings(dataset):
 
 @pytest.mark.parametrize("satellite, expected", [("goessecondary", "secondary"), ("goesprimary", "primary")])
 def test_goes_lowercase(satellite, expected):
-    goes_dataset = RBMDataSetElPaso(
+    goes_dataset = RBMDataSet(
         satellite=satellite,
         instrument=InstrumentEnum.MAGED,
         mfm=MfmEnum.T89,
@@ -234,7 +234,7 @@ uppercase_satellites = set(get_args(SatelliteLiteral)) - set(["GOESPrimary", "GO
 
 @pytest.mark.parametrize("satellite", [i.lower() for i in uppercase_satellites])
 def test_satellite_lowercase(satellite):
-    dataset = RBMDataSetElPaso(
+    dataset = RBMDataSet(
         satellite=satellite,
         instrument=InstrumentEnum.MAGED,
         mfm=MfmEnum.T89,
