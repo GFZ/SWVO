@@ -65,6 +65,8 @@ class RBMDataSet:
         Preferred file extension for file-based loading. Default is "pickle".
     verbose : bool, optional
         Whether to print verbose output. Default is True.
+    enable_dict_loading : bool, optional
+        Enable dictionary-based loading even in file mode. Default is False.
 
     Attributes
     ----------
@@ -127,6 +129,7 @@ class RBMDataSet:
         preferred_extension: Literal["mat", "pickle"] = "pickle",
         *,
         verbose: bool = True,
+        enable_dict_loading: bool = False,
     ) -> None:
         self.ep_variables = list(VariableLiteral.__args__)
         # Handle satellite conversion with special cases for GOES
@@ -184,6 +187,7 @@ class RBMDataSet:
             self._file_cadence = self._satellite.file_cadence
             self._date_of_files = self._create_date_list()
             self._file_loading_mode = True
+            self._enable_dict_loading = enable_dict_loading
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self._satellite_enum}, {self._instrument}, {self._mfm})"
@@ -278,6 +282,9 @@ class RBMDataSet:
             Dictionary containing the data to be loaded into the object.
 
         """
+        if self._file_loading_mode and not self._enable_dict_loading:
+            msg = "RBMDataSet is in file loading mode. Cannot update from dictionary. To use dictionary-based loading, set `enable_dict_loading=True` during initialization."
+            raise RuntimeError(msg)
         for key, value in source_dict.items():
             _, levenstein_info = self.find_similar_variable(key)
             if key in self.ep_variables:

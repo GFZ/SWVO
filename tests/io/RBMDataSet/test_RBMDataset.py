@@ -298,6 +298,20 @@ def test_all_variables_in_dir(mock_dataset: RBMDataSet):
         assert var in mock_dataset.__dir__()
 
 
+def test_disable_dict_loading_mode(mock_dataset: RBMDataSet):
+    """Test that default file loading mode raises RuntimeError on update_from_dict."""
+    with pytest.raises(RuntimeError):
+        mock_dataset.update_from_dict({"Flux": np.array([[1.0, 2.0, 3.0]])})
+
+
+def test_enable_dict_loading_mode(mock_dataset: RBMDataSet):
+    """Test that default file loading mode raises RuntimeError on update_from_dict."""
+    mock_dataset._enable_dict_loading = True
+    mock_dataset.update_from_dict({"Flux": np.array([[1.0, 2.0, 3.0]])})
+
+    assert hasattr(mock_dataset, "Flux")
+
+
 @pytest.fixture
 def dict_dataset():
     """Fixture for dictionary-based loading mode (no file parameters)"""
