@@ -42,7 +42,7 @@ from swvo.io.RBMDataSet.utils import (
 class RBMDataSet:
     """RBMDataSet class for loading and managing data.
 
-    This class can load data either from files or from a dictionary (ElPaso format).
+    This class can load data either from files or from a dictionary.
 
     For file-based loading, provide start_time, end_time, and folder_path.
     For dictionary-based loading, initialize without these parameters and use update_from_dict().
@@ -150,7 +150,7 @@ class RBMDataSet:
         self._mfm = mfm
         self._verbose = verbose
 
-        # For dict-based loading (ElPaso mode), modify satellite properties
+        # For dict-based loading, modify satellite properties
         if start_time is None and end_time is None and folder_path is None:
             # no file loading needed
             satellite_obj = replace(
@@ -270,7 +270,7 @@ class RBMDataSet:
         return self._mfm
 
     def update_from_dict(self, source_dict: dict[str, VariableLiteral]) -> None:
-        """Get data from ElPaso data dictionary and update the object.
+        """Get data from data dictionary and update the object.
 
         Parameters
         ----------
