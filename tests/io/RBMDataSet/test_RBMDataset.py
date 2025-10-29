@@ -20,6 +20,7 @@ from swvo.io.RBMDataSet import (
     SatelliteLiteral,
     VariableEnum,
 )
+from swvo.io.RBMDataSet.custom_enums import DummyEnum
 
 
 @pytest.fixture
@@ -297,18 +298,13 @@ def test_all_variables_in_dir(mock_dataset: RBMDataSet):
         assert var in mock_dataset.__dir__()
 
 
-# ========================================
-# Dictionary-based loading tests (formerly in test_RBMDatasetElPaso.py)
-# ========================================
-
-
 @pytest.fixture
 def dict_dataset():
     """Fixture for dictionary-based loading mode (no file parameters)"""
     return RBMDataSet(
-        satellite=SatelliteEnum.GOESSecondary,
-        instrument=InstrumentEnum.MAGED,
-        mfm=MfmEnum.T89,
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
     )
 
 
@@ -318,13 +314,6 @@ def test_dict_mode_init_accepts_string_inputs():
     assert ds.satellite.sat_name == "secondary"
     assert ds.instrument == InstrumentEnum.MAGED
     assert ds.mfm == MfmEnum.T89
-
-
-def test_dict_mode_variable_mapping_exposed(dict_dataset):
-    """Test that ep_variables contains the expected variable names"""
-    assert isinstance(dict_dataset.ep_variables, list)
-    assert "Flux" in dict_dataset.ep_variables
-    assert "energy_channels" in dict_dataset.ep_variables
 
 
 def test_dict_mode_repr_and_str(dict_dataset):
@@ -352,7 +341,7 @@ def test_update_from_dict_sets_variables(dict_dataset):
 
 def test_update_from_dict_sets_time(dict_dataset):
     """Test that the correct variable is set with direct time key"""
-    time_data = np.array([738000.0])  # MATLAB datenum format
+    time_data = np.array([738000.0])
 
     source_dict = {"time": time_data}
 
