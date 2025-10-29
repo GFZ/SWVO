@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from datetime import datetime, timezone
 from typing import get_args
 
 import numpy as np
@@ -16,15 +15,6 @@ from swvo.io.RBMDataSet import (
     SatelliteLiteral,
     VariableEnum,
 )
-from swvo.io.RBMDataSet.utils import python2matlab
-
-
-class MockVariable:
-    """Create a mock Elpaso Variable class for testing"""
-
-    def __init__(self, standard_name, data=None):
-        self.standard_name = standard_name
-        self.data = data
 
 
 @pytest.fixture
@@ -45,9 +35,10 @@ def test_init_accepts_string_inputs():
 
 
 def test_variable_mapping_exposed(dataset):
-    assert isinstance(dataset.variable_mapping, dict)
-    assert "FEDU" in dataset.variable_mapping
-    assert dataset.variable_mapping["FEDU"] == "Flux"
+    """Test that ep_variables contains the expected variable names"""
+    assert isinstance(dataset.ep_variables, list)
+    assert "Flux" in dataset.ep_variables
+    assert "energy_channels" in dataset.ep_variables
 
 
 def test_repr_and_str(dataset):
@@ -63,36 +54,36 @@ def test_repr_and_str(dataset):
 
 
 def test_update_from_dict_sets_variables(dataset):
-    """Test that the correct variable is set with the standard name"""
-    fedu_data = np.array([[1.0, 2.0]])
+    """Test that the correct variable is set with direct key"""
+    flux_data = np.array([[1.0, 2.0]])
 
-    source_dict = {"FEDU": MockVariable(standard_name="FEDU", data=fedu_data)}
+    source_dict = {"Flux": flux_data}
 
     dataset.update_from_dict(source_dict)
-    np.testing.assert_array_equal(dataset.Flux, fedu_data)
+    np.testing.assert_array_equal(dataset.Flux, flux_data)
 
 
 def test_update_from_dict_sets_time(dataset):
-    """Test that the correct variable is set with the time standard name"""
-    ts = [datetime(2025, 4, 1, tzinfo=timezone.utc).timestamp()]
+    """Test that the correct variable is set with direct time key"""
+    time_data = np.array([738000.0])  # MATLAB datenum format
 
-    source_dict = {"Epoch": MockVariable(standard_name="Epoch_posixtime", data=ts)}
+    source_dict = {"time": time_data}
 
     dataset.update_from_dict(source_dict)
     assert hasattr(dataset, "time")
-    assert hasattr(dataset, "datetime")
-    assert dataset.time[0] == python2matlab(datetime(2025, 4, 1, tzinfo=timezone.utc))
+    np.testing.assert_array_equal(dataset.time, time_data)
 
 
-def test_update_from_dict_with_mfm_suffix(dataset):
-    """Test that the correct variable is set with the MFM suffix"""
-    mfm_suffix = "_" + dataset._mfm_prefix
+def test_update_from_dict_with_multiple_variables(dataset):
+    """Test that multiple variables can be set at once"""
     lstar_data = np.array([4.5, 5.0, 5.5])
+    energy_data = np.array([100.0, 200.0, 300.0])
 
-    source_dict = {"Lstar": MockVariable(standard_name=f"Lstar{mfm_suffix}", data=lstar_data)}
+    source_dict = {"Lstar": lstar_data, "energy_channels": energy_data}
 
     dataset.update_from_dict(source_dict)
     np.testing.assert_array_equal(dataset.Lstar, lstar_data)
+    np.testing.assert_array_equal(dataset.energy_channels, energy_data)
 
 
 def test_computed_p_property(dataset):
@@ -115,7 +106,7 @@ def test_computed_invv_property(dataset):
 
 
 def test_getattr_errors(dataset):
-    with pytest.raises(AttributeError, match="mapped but has not been set"):
+    with pytest.raises(AttributeError, match="exists in `VariableLiteral` but has not been set"):
         _ = dataset.Flux
 
     with pytest.raises(AttributeError, match="no attribute"):
@@ -128,94 +119,57 @@ def test_dir_contains_variable_names(dataset):
         assert name in dir(dataset)
 
 
-def test_all_variable_mappings(dataset):
-    """Test that all variable mappings work correctly."""
+def test_update_from_dict_invalid_key(dataset):
+    """Test that invalid keys raise VariableNotFoundError"""
+    from swvo.io.exceptions import VariableNotFoundError
 
-    expected_mappings = {
-        "Epoch_posixtime": "time",
-        "Energy_FEDU": "energy_channels",
-        "PA_local": "alpha_local",
-        "PA_eq_": "alpha_eq_model",
-        "alpha_eq_real": "alpha_eq_real",
-        "invMu_": "InvMu",
-        "InvMu_real": "InvMu_real",
-        "invK_": "InvK",
-        "Lstar_": "Lstar",
-        "FEDU": "Flux",
-        "PSD_FEDU": "PSD",
-        "MLT_": "MLT",
-        "B_SM": "B_SM",
-        "B_eq_": "B_total",
-        "B_local_": "B_sat",
-        "xGEO": "xGEO",
-        "R_eq_": "R0",
-        "density": "density",
+    source_dict = {"InvalidKey": np.array([1.0, 2.0])}
+
+    with pytest.raises(VariableNotFoundError, match="not a valid `VariableLiteral`"):
+        dataset.update_from_dict(source_dict)
+
+
+def test_update_from_dict_similar_key(dataset):
+    """Test that similar keys suggest the correct variable"""
+    from swvo.io.exceptions import VariableNotFoundError
+
+    source_dict = {"Flx": np.array([1.0, 2.0])}  # Typo: should be "Flux"
+
+    with pytest.raises(VariableNotFoundError, match="Maybe you meant 'Flux'"):
+        dataset.update_from_dict(source_dict)
+
+
+def test_all_variable_literals(dataset):
+    """Test that all VariableLiteral values can be set and retrieved."""
+
+    # Test with a subset of common variables
+    test_variables = {
+        "time": np.array([738000.0, 738001.0]),
+        "energy_channels": np.array([100.0, 200.0, 300.0]),
+        "alpha_local": np.array([0.1, 0.2, 0.3]),
+        "alpha_eq_model": np.array([45.0, 60.0, 90.0]),
+        "InvMu": np.array([[0.1, 0.2]]),
+        "InvK": np.array([[1.0, 2.0]]),
+        "Lstar": np.array([4.5, 5.0, 5.5]),
+        "Flux": np.array([[1.0, 2.0, 3.0]]),
+        "PSD": np.array([[0.1, 0.2, 0.3]]),
+        "MLT": np.array([0.0, 6.0, 12.0]),
+        "B_SM": np.array([100.0, 200.0, 300.0]),
+        "B_total": np.array([50.0, 60.0, 70.0]),
+        "B_sat": np.array([45.0, 55.0, 65.0]),
+        "xGEO": np.array([6.6, 6.7, 6.8]),
+        "R0": np.array([5.0, 5.5, 6.0]),
+        "density": np.array([100.0, 200.0, 300.0]),
     }
 
-    for source, target in expected_mappings.items():
-        assert source in dataset.variable_mapping
-        assert dataset.variable_mapping[source] == target
+    dataset.update_from_dict(test_variables)
 
-    test_data = {}
-    for source, target in expected_mappings.items():
-        if source == "Epoch_posixtime":
-            data = [datetime(2025, 4, 1, tzinfo=timezone.utc).timestamp()]
-        else:
-            data = np.array([float(hash(source) % 1000) / 10.0])
-
-        test_data[source] = MockVariable(standard_name=source, data=data)
-
-    dataset.update_from_dict(test_data)
-
-    for source, target in expected_mappings.items():
-        if source == "Epoch_posixtime":
-            assert hasattr(dataset, "time")
-            assert hasattr(dataset, "datetime")
-            assert isinstance(dataset.datetime[0], datetime)
-            assert dataset.time[0] == python2matlab(dataset.datetime[0])
-        elif source in ["P", "InvV"]:
-            pass
-        else:
-            assert hasattr(dataset, target), f"Attribute {target} not set from {source}"
-
-            np.testing.assert_array_equal(
-                dataset.__getattribute__(target),
-                test_data[source].data,
-                err_msg=f"Data mismatch for {target} from {source}",
-            )
-
-
-def test_all_mfm_specific_mappings(dataset):
-    """Test that all MFM-specific variable mappings work correctly."""
-
-    mfm_variables = [
-        ("PA_eq", "alpha_eq_model"),
-        ("invMu", "InvMu"),
-        ("invK", "InvK"),
-        ("Lstar", "Lstar"),
-        ("B_eq", "B_total"),
-        ("B_local", "B_sat"),
-        ("R_eq", "R0"),
-    ]
-
-    mfm_suffix = "_" + dataset._mfm_prefix
-
-    test_data = {}
-    for source_base, target in mfm_variables:
-        source = f"{source_base}{mfm_suffix}"
-
-        data = np.array([float(hash(source) % 1000) / 10.0])
-        test_data[source] = MockVariable(standard_name=source, data=data)
-
-    dataset.update_from_dict(test_data)
-
-    for source_base, target in mfm_variables:
-        source = f"{source_base}{mfm_suffix}"
-        assert hasattr(dataset, target), f"Attribute {target} not set from {source}"
+    for var_name, expected_data in test_variables.items():
+        assert hasattr(dataset, var_name), f"Attribute {var_name} not set"
         np.testing.assert_array_equal(
-            dataset.__getattribute__(target),
-            test_data[source].data,
-            err_msg=f"Data mismatch for {target} from {source}",
+            getattr(dataset, var_name),
+            expected_data,
+            err_msg=f"Data mismatch for {var_name}",
         )
 
 
