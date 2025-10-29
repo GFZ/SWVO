@@ -9,13 +9,14 @@ import typing
 from dataclasses import replace
 from datetime import timedelta, timezone
 from pathlib import Path
-from typing import Any, ClassVar, Literal, TypeVar
+from typing import Any, Literal
 
 import distance
 import numpy as np
 from dateutil.relativedelta import relativedelta
 from numpy.typing import NDArray
 
+from swvo.io.exceptions import VariableNotFoundError
 from swvo.io.RBMDataSet import (
     FileCadenceEnum,
     FolderTypeEnum,
@@ -27,17 +28,15 @@ from swvo.io.RBMDataSet import (
     SatelliteLike,
     Variable,
     VariableEnum,
+    VariableLiteral,
 )
-from swvo.io.RBMDataSet.custom_enums import ElPasoMFMEnum
+from swvo.io.RBMDataSet.custom_enums import DummyEnum, DummyLike
 from swvo.io.RBMDataSet.utils import (
     get_file_path_any_format,
     join_var,
     load_file_any_format,
     matlab2python,
-    python2matlab,
 )
-
-ElPasoVariable = TypeVar("ElPasoVariable")  # Placeholder for ElPaso Variable type
 
 
 class RBMDataSet:
@@ -94,37 +93,6 @@ class RBMDataSet:
     """
 
     _preferred_ext: str
-    _variable_mapping: ClassVar[dict[str, str]] = {
-        "Epoch_posixtime": "time",
-        "Energy_FEDU": "energy_channels",
-        "Energy_FPDU": "energy_channels",
-        "Energy_FEIU": "energy_channels",
-        "Energy_FEDO": "energy_channels",
-        "PA_local": "alpha_local",
-        "PA_eq_": "alpha_eq_model",
-        "alpha_eq_real": "alpha_eq_real",
-        "invMu_": "InvMu",
-        "InvMu_real": "InvMu_real",
-        "invK_": "InvK",
-        # "InvV": "InvV",# computed property
-        "Lstar_": "Lstar",
-        "FEDU": "Flux",
-        "FPDU": "Flux",
-        "FEIU": "Flux",
-        "FEDO": "Flux",
-        "PSD_FEDU": "PSD",
-        "PSD_FPDU": "PSD",
-        "PSD_FEIU": "PSD",
-        "PSD_FEDO": "PSD",
-        "MLT_": "MLT",
-        "B_SM": "B_SM",
-        "B_eq_": "B_total",
-        "B_local_": "B_sat",
-        "xGEO": "xGEO",
-        # "P": "P",# computed property
-        "R_eq_": "R0",
-        "density": "density",
-    }
 
     datetime: list[dt.datetime]
     time: NDArray[np.float64]
@@ -150,9 +118,9 @@ class RBMDataSet:
 
     def __init__(
         self,
-        satellite: SatelliteLike,
-        instrument: InstrumentLike,
-        mfm: MfmLike,
+        satellite: SatelliteLike | DummyLike,
+        instrument: InstrumentLike | DummyLike,
+        mfm: MfmLike | DummyLike,
         start_time: dt.datetime | None = None,
         end_time: dt.datetime | None = None,
         folder_path: Path | None = None,
@@ -160,6 +128,7 @@ class RBMDataSet:
         *,
         verbose: bool = True,
     ) -> None:
+        self.ep_variables = list(VariableLiteral.__args__)
         # Handle satellite conversion with special cases for GOES
         if isinstance(satellite, str):
             if satellite.lower() == "goesprimary":
@@ -183,14 +152,14 @@ class RBMDataSet:
 
         # For dict-based loading (ElPaso mode), modify satellite properties
         if start_time is None and end_time is None and folder_path is None:
-            # ElPaso mode: no file loading needed
+            # no file loading needed
             satellite_obj = replace(
                 satellite.value,
                 folder_type=FolderTypeEnum.NoFolder,
                 file_cadence=FileCadenceEnum.NoCadence,
             )
             self._satellite = satellite_obj
-            self._mfm_prefix = ElPasoMFMEnum[mfm.name].value
+            self._mfm_prefix = DummyEnum.MFM.value if isinstance(mfm, DummyEnum) else MfmEnum[mfm.name].value
             self._file_loading_mode = False
         else:
             # File loading mode: need all parameters
@@ -231,44 +200,34 @@ class RBMDataSet:
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
         # Handle computed properties for both modes
-        if name == "P" and hasattr(self, "MLT"):
+        if name == "P":
+            if not hasattr(self, "MLT") or getattr(self, "MLT") is None or not isinstance(self.MLT, np.ndarray):
+                raise AttributeError("Cannot compute `P` because `MLT` is missing, not loaded or is not valid array.")
             return ((self.MLT + 12) / 12 * np.pi) % (2 * np.pi)
 
-        if name == "InvV" and hasattr(self, "InvK") and hasattr(self, "InvMu"):
+        if name == "InvV":
+            if not all(hasattr(self, attr) for attr in ("InvK", "InvMu")):
+                raise AttributeError("Cannot compute `InvV` because `InvK` or `InvMu` is missing.")
+            if not isinstance(self.InvK, np.ndarray) or not isinstance(self.InvMu, np.ndarray):
+                raise AttributeError("Cannot compute `InvV` because required arrays are invalid or not loaded.")
+            if self.InvK.ndim < 1 or self.InvMu.ndim < 2:
+                raise AttributeError("Cannot compute `InvV` because array dimensions are insufficient.")
             inv_K_repeated = np.repeat(self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1)
             return self.InvMu * (inv_K_repeated + 0.5) ** 2
 
         # check if a sat variable is requested
         # if we find a similar word, suggest that to the user
         sat_variable = None
-        levenstein_info: dict[str, Any] = {"min_distance": 10, "var_name": ""}
-        for var in VariableEnum:
-            if name == var.var_name:
-                sat_variable = var
-                break
-            else:
-                dist = distance.levenshtein(name, var.var_name)
-                if name.lower() in var.name.lower():
-                    dist = 1
+        sat_variable, levenstein_info = self.find_similar_variable(name)
 
-                if dist < levenstein_info["min_distance"]:
-                    levenstein_info["min_distance"] = dist
-                    levenstein_info["var_name"] = var.var_name
-
-        # if yes, load it (only in file loading mode)
-        if sat_variable is not None and hasattr(self, "_file_loading_mode") and self._file_loading_mode:
+        if sat_variable is not None and self._file_loading_mode:
             self._load_variable(sat_variable)
             return getattr(self, name)
 
-        # For dict-loading mode, check if it's a mapped variable
-        if (
-            hasattr(self, "_file_loading_mode")
-            and not self._file_loading_mode
-            and name in self._variable_mapping.values()
-        ):
+        if not self._file_loading_mode and name in self.ep_variables:
             raise AttributeError(
-                f"Attribute '{name}' is mapped but has not been set. "
-                "Make sure data is loaded or that this attribute is properly assigned."
+                f"Attribute '{name}' exists in `VariableLiteral` but has not been set. "
+                "Call `update_from_dict()` before accessing it."
             )
 
         if levenstein_info["min_distance"] <= 2:
@@ -278,11 +237,22 @@ class RBMDataSet:
 
         raise AttributeError(msg)
 
-    # def __getitem__(self, key:str):
-    #     return getattr(self, key:str)
+    def find_similar_variable(self, name):
+        levenstein_info: dict[str, Any] = {"min_distance": 10, "var_name": ""}
+        sat_variable = None
+        for var in self.ep_variables:
+            if name == var:
+                sat_variable = var
+                break
+            else:
+                dist = distance.levenshtein(name, var)
+                if name.lower() in var.lower():
+                    dist = 1
 
-    # def __setitem__(self, key, value):
-    #     setattr(self, key, value)
+                if dist < levenstein_info["min_distance"]:
+                    levenstein_info["min_distance"] = dist
+                    levenstein_info["var_name"] = var
+        return sat_variable, levenstein_info
 
     @property
     def satellite(self) -> SatelliteEnum:
@@ -299,36 +269,25 @@ class RBMDataSet:
         """Returns the MFM enum."""
         return self._mfm
 
-    @property
-    def variable_mapping(self) -> dict[str, str]:
-        """Returns the variable mapping dictionary."""
-        return self._variable_mapping
-
-    def update_from_dict(self, source_dict: dict[str, ElPasoVariable]) -> None:
+    def update_from_dict(self, source_dict: dict[str, VariableLiteral]) -> None:
         """Get data from ElPaso data dictionary and update the object.
 
         Parameters
         ----------
-        source_dict : dict[str, Any]
+        source_dict : dict[str, VariableLiteral]
             Dictionary containing the data to be loaded into the object.
 
         """
-        for _, value in source_dict.items():
-            if value.standard_name in self._variable_mapping:
-                target_attr = self._variable_mapping[value.standard_name]
-
-                if value.standard_name == "Epoch_posixtime" and target_attr == "time":
-                    datetimes = [dt.datetime.fromtimestamp(ts, tz=timezone.utc) for ts in value.data]
-                    setattr(self, "datetime", datetimes)
-                    setattr(self, "time", [python2matlab(i) for i in datetimes])
-                else:
-                    setattr(self, target_attr, value.data)
-
-            elif hasattr(self, "_mfm_prefix") and value.standard_name.endswith(self._mfm_prefix):
-                base_key = value.standard_name.replace(self._mfm_prefix, "")
-                if base_key in self._variable_mapping:
-                    target_attr = self._variable_mapping[base_key]
-                    setattr(self, target_attr, value.data)
+        for key, value in source_dict.items():
+            _, levenstein_info = self.find_similar_variable(key)
+            if key in self.ep_variables:
+                setattr(self, key, value)
+            elif levenstein_info["min_distance"] <= 2:
+                msg = f"Key '{key}' is not a valid `VariableLiteral`. Maybe you meant '{levenstein_info['var_name']}'?"
+                raise VariableNotFoundError(msg)
+            else:
+                msg = f"Key '{key}' is not a valid `VariableLiteral`."
+                raise VariableNotFoundError(msg)
 
     def get_var(self, var: VariableEnum):
         return getattr(self, var.var_name)
