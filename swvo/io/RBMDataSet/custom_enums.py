@@ -180,13 +180,22 @@ class MfmEnum(Enum):
     T96 = "T96"
     TS04 = "T04s"
     OP77 = "OP77"
+    T04 = "T04"
 
 
-MfmEnumLiteral = Literal["T89", "T04s", "TS04", "T96", "OP77"]
+MfmEnumLiteral = Literal["T89", "T04s", "TS04", "T96", "OP77", "T04"]
 MfmLike: TypeAlias = MfmEnumLiteral | MfmEnum
 
 
-class ElPasoMFMEnum(Enum):
-    T89 = "T89"
-    T04s = "T04s"
-    T04 = "T04"
+class DummyEnum(Enum):
+    SATELLITE = Satellite(
+        sat_name="dummy",
+        mission="dummy",
+        folder_type=FolderTypeEnum.NoFolder,
+        file_cadence=FileCadenceEnum.NoCadence,
+    )
+    INSTRUMENT = "dummy instrument"
+    MFM = "dummy mfm"
+
+
+DummyLike: TypeAlias = Literal["dummy"] | DummyEnum
