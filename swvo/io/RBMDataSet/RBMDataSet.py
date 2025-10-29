@@ -438,28 +438,42 @@ class RBMDataSet:
 
             setattr(self, var_name, loaded_var_arrs[var_name])
 
-    def __eq__(self, other: RBMDataSet) -> bool:
-        if self._satellite != other._satellite:
-            return False
-        if self._instrument != other._instrument:
-            return False
-        if self._mfm != other._mfm:
-            return False
-
+    def get_loaded_variables(self) -> list[str]:
+        """Get a list of currently loaded variable names."""
+        loaded_vars = []
         for var in VariableEnum:
-            self_var = getattr(self, var.var_name)
-            other_var = getattr(other, var.var_name)
+            if hasattr(self, var.var_name):
+                loaded_vars.append(var.var_name)
+        return loaded_vars
 
-            if isinstance(self_var, list) and isinstance(other_var, list):
-                if len(self_var) != len(other_var):
+    def __eq__(self, other: RBMDataSet) -> bool:
+        if self._file_loading_mode != other._file_loading_mode:
+            return False
+
+        if self._file_loading_mode:
+            if self._satellite != other._satellite or self._instrument != other._instrument or self._mfm != other._mfm:
+                return False
+            variables = [v.var_name for v in VariableEnum]
+
+        else:
+            self_vars = {v for v in self.ep_variables if hasattr(self, v)}
+            other_vars = {v for v in other.ep_variables if hasattr(other, v)}
+            if self_vars != other_vars:
+                return False
+            variables = self_vars
+
+        for var in variables:
+            self_var = getattr(self, var)
+            other_var = getattr(other, var)
+
+            if not isinstance(other_var, type(self_var)):
+                return False
+
+            if isinstance(self_var, list):
+                if len(self_var) != len(other_var) or any(a != b for a, b in zip(self_var, other_var)):
                     return False
-                for dt1, dt2 in zip(self_var, other_var):
-                    if dt1 != dt2:
-                        return False
-            elif isinstance(self_var, np.ndarray) and isinstance(other_var, np.ndarray):
-                if self_var.shape != other_var.shape:
-                    return False
-                if not np.allclose(self_var, other_var, equal_nan=True):
+            elif isinstance(self_var, np.ndarray):
+                if self_var.shape != other_var.shape or not np.allclose(self_var, other_var, equal_nan=True):
                     return False
             elif self_var != other_var:
                 return False
