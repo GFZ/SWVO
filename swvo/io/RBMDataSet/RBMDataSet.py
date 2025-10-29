@@ -447,20 +447,19 @@ class RBMDataSet:
         return loaded_vars
 
     def __eq__(self, other: RBMDataSet) -> bool:
-        if self._file_loading_mode != other._file_loading_mode:
+        if (
+            self._file_loading_mode != other._file_loading_mode
+            or self._satellite != other._satellite
+            or self._instrument != other._instrument
+            or self._mfm != other._mfm
+        ):
             return False
 
-        if self._file_loading_mode:
-            if self._satellite != other._satellite or self._instrument != other._instrument or self._mfm != other._mfm:
-                return False
-            variables = [v.var_name for v in VariableEnum]
-
-        else:
-            self_vars = {v for v in self.ep_variables if hasattr(self, v)}
-            other_vars = {v for v in other.ep_variables if hasattr(other, v)}
-            if self_vars != other_vars:
-                return False
-            variables = self_vars
+        self_vars = self.get_loaded_variables()
+        other_vars = other.get_loaded_variables()
+        if self_vars != other_vars:
+            return False
+        variables = self_vars
 
         for var in variables:
             self_var = getattr(self, var)
