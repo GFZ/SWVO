@@ -474,3 +474,343 @@ def test_dict_mode_satellite_lowercase(satellite):
         mfm=MfmEnum.T89,
     )
     assert dataset.satellite.sat_name == satellite.lower()
+
+
+def test_eq_file_loading_mode_identical(mock_module_string):
+    """Test equality for identical file loading mode datasets."""
+    start_time = dt.datetime(2023, 1, 1, tzinfo=timezone.utc)
+    end_time = dt.datetime(2023, 1, 31, tzinfo=timezone.utc)
+    folder_path = Path("/mock/path")
+
+    with mock.patch(f"{mock_module_string}._create_date_list"):
+        with mock.patch(f"{mock_module_string}._create_file_path_stem"):
+            with mock.patch(f"{mock_module_string}._create_file_name_stem"):
+                dataset1 = RBMDataSet(
+                    satellite=SatelliteEnum.RBSPA,
+                    instrument=InstrumentEnum.MAGEIS,
+                    mfm=MfmEnum.T89,
+                    start_time=start_time,
+                    end_time=end_time,
+                    folder_path=folder_path,
+                    verbose=False,
+                )
+
+                dataset2 = RBMDataSet(
+                    satellite=SatelliteEnum.RBSPA,
+                    instrument=InstrumentEnum.MAGEIS,
+                    mfm=MfmEnum.T89,
+                    start_time=start_time,
+                    end_time=end_time,
+                    folder_path=folder_path,
+                    verbose=False,
+                )
+
+                dataset1.Flux = np.array([[1.0, 2.0, 3.0]])
+                dataset1.time = np.array([738000.0])
+                dataset1.datetime = [dt.datetime(2023, 1, 15, tzinfo=timezone.utc)]
+
+                dataset2.Flux = np.array([[1.0, 2.0, 3.0]])
+                dataset2.time = np.array([738000.0])
+                dataset2.datetime = [dt.datetime(2023, 1, 15, tzinfo=timezone.utc)]
+
+                assert dataset1 == dataset2
+
+
+def test_eq_file_loading_mode_different_satellite(mock_module_string):
+    """Test inequality for file loading mode datasets with different satellites."""
+    start_time = dt.datetime(2023, 1, 1, tzinfo=timezone.utc)
+    end_time = dt.datetime(2023, 1, 31, tzinfo=timezone.utc)
+    folder_path = Path("/mock/path")
+
+    with mock.patch(f"{mock_module_string}._create_date_list"):
+        with mock.patch(f"{mock_module_string}._create_file_path_stem"):
+            with mock.patch(f"{mock_module_string}._create_file_name_stem"):
+                dataset1 = RBMDataSet(
+                    satellite=SatelliteEnum.RBSPA,
+                    instrument=InstrumentEnum.MAGEIS,
+                    mfm=MfmEnum.T89,
+                    start_time=start_time,
+                    end_time=end_time,
+                    folder_path=folder_path,
+                    verbose=False,
+                )
+
+                dataset2 = RBMDataSet(
+                    satellite=SatelliteEnum.RBSPB,  # Different satellite
+                    instrument=InstrumentEnum.MAGEIS,
+                    mfm=MfmEnum.T89,
+                    start_time=start_time,
+                    end_time=end_time,
+                    folder_path=folder_path,
+                    verbose=False,
+                )
+
+                print("sahil")
+
+                assert dataset1 != dataset2
+
+
+def test_eq_file_loading_mode_different_instrument(mock_module_string):
+    """Test inequality for file loading mode datasets with different instruments."""
+    start_time = dt.datetime(2023, 1, 1, tzinfo=timezone.utc)
+    end_time = dt.datetime(2023, 1, 31, tzinfo=timezone.utc)
+    folder_path = Path("/mock/path")
+
+    with mock.patch(f"{mock_module_string}._create_date_list"):
+        with mock.patch(f"{mock_module_string}._create_file_path_stem"):
+            with mock.patch(f"{mock_module_string}._create_file_name_stem"):
+                dataset1 = RBMDataSet(
+                    satellite=SatelliteEnum.RBSPA,
+                    instrument=InstrumentEnum.MAGEIS,
+                    mfm=MfmEnum.T89,
+                    start_time=start_time,
+                    end_time=end_time,
+                    folder_path=folder_path,
+                    verbose=False,
+                )
+
+                dataset2 = RBMDataSet(
+                    satellite=SatelliteEnum.RBSPA,
+                    instrument=InstrumentEnum.HOPE,  # Different instrument
+                    mfm=MfmEnum.T89,
+                    start_time=start_time,
+                    end_time=end_time,
+                    folder_path=folder_path,
+                    verbose=False,
+                )
+
+                assert dataset1 != dataset2
+
+
+def test_eq_file_loading_mode_different_mfm(mock_module_string):
+    """Test inequality for file loading mode datasets with different MFM."""
+    start_time = dt.datetime(2023, 1, 1, tzinfo=timezone.utc)
+    end_time = dt.datetime(2023, 1, 31, tzinfo=timezone.utc)
+    folder_path = Path("/mock/path")
+
+    with mock.patch(f"{mock_module_string}._create_date_list"):
+        with mock.patch(f"{mock_module_string}._create_file_path_stem"):
+            with mock.patch(f"{mock_module_string}._create_file_name_stem"):
+                dataset1 = RBMDataSet(
+                    satellite=SatelliteEnum.RBSPA,
+                    instrument=InstrumentEnum.MAGEIS,
+                    mfm=MfmEnum.T89,
+                    start_time=start_time,
+                    end_time=end_time,
+                    folder_path=folder_path,
+                    verbose=False,
+                )
+
+                dataset2 = RBMDataSet(
+                    satellite=SatelliteEnum.RBSPA,
+                    instrument=InstrumentEnum.MAGEIS,
+                    mfm=MfmEnum.T96,  # Different MFM
+                    start_time=start_time,
+                    end_time=end_time,
+                    folder_path=folder_path,
+                    verbose=False,
+                )
+
+                assert dataset1 != dataset2
+
+
+def test_eq_dict_mode_identical():
+    """Test equality for identical dict mode datasets."""
+    dataset1 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    dataset2 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    test_data = {
+        "Flux": np.array([[1.0, 2.0, 3.0]]),
+        "time": np.array([738000.0]),
+        "energy_channels": np.array([100.0, 200.0, 300.0]),
+        "Lstar": np.array([4.5, 5.0, 5.5]),
+    }
+
+    dataset1.update_from_dict(test_data)
+    dataset2.update_from_dict(test_data.copy())
+
+    assert dataset1 == dataset2
+
+
+def test_eq_dict_mode_different_variables():
+    """Test inequality for dict mode datasets with different variables."""
+    dataset1 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    dataset2 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    dataset1.update_from_dict({"Flux": np.array([[1.0, 2.0, 3.0]])})
+    dataset2.update_from_dict({"time": np.array([738000.0])})
+
+    assert dataset1 != dataset2
+
+
+def test_eq_dict_mode_same_variables_different_values():
+    """Test inequality for dict mode datasets with same variables but different values."""
+    dataset1 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    dataset2 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    dataset1.update_from_dict({"Flux": np.array([[1.0, 2.0, 3.0]])})
+    dataset2.update_from_dict({"Flux": np.array([[4.0, 5.0, 6.0]])})
+
+    assert dataset1 != dataset2
+
+
+def test_eq_different_modes(mock_module_string):
+    """Test inequality between file loading and dict mode datasets."""
+    # File loading mode dataset
+    start_time = dt.datetime(2023, 1, 1, tzinfo=timezone.utc)
+    end_time = dt.datetime(2023, 1, 31, tzinfo=timezone.utc)
+    folder_path = Path("/mock/path")
+
+    with mock.patch(f"{mock_module_string}._create_date_list"):
+        with mock.patch(f"{mock_module_string}._create_file_path_stem"):
+            with mock.patch(f"{mock_module_string}._create_file_name_stem"):
+                file_dataset = RBMDataSet(
+                    satellite=SatelliteEnum.RBSPA,
+                    instrument=InstrumentEnum.MAGEIS,
+                    mfm=MfmEnum.T89,
+                    start_time=start_time,
+                    end_time=end_time,
+                    folder_path=folder_path,
+                    verbose=False,
+                )
+
+    # Dict mode dataset
+    dict_dataset = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    assert file_dataset != dict_dataset
+
+
+def test_eq_array_comparison_with_nan():
+    """Test equality with NaN values in arrays."""
+    dataset1 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    dataset2 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    test_array = np.array([[1.0, np.nan, 3.0]])
+    dataset1.update_from_dict({"Flux": test_array})
+    dataset2.update_from_dict({"Flux": test_array.copy()})
+
+    assert dataset1 == dataset2
+
+
+def test_eq_list_comparison():
+    """Test equality with list variables."""
+    dataset1 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    dataset2 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    test_datetime_list = [dt.datetime(2023, 1, 15, tzinfo=timezone.utc)]
+    dataset1.datetime = test_datetime_list
+    dataset2.datetime = test_datetime_list.copy()
+
+    assert dataset1 == dataset2
+
+
+def test_eq_list_different_lengths():
+    """Test inequality with lists of different lengths."""
+    dataset1 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    dataset2 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    dataset1.datetime = [dt.datetime(2023, 1, 15, tzinfo=timezone.utc)]
+    dataset2.datetime = [
+        dt.datetime(2023, 1, 15, tzinfo=timezone.utc),
+        dt.datetime(2023, 1, 16, tzinfo=timezone.utc),
+    ]
+
+    assert dataset1 != dataset2
+
+
+def test_eq_array_different_shapes():
+    """Test inequality with arrays of different shapes."""
+    dataset1 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    dataset2 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    dataset1.update_from_dict({"Flux": np.array([[1.0, 2.0]])})
+    dataset2.update_from_dict({"Flux": np.array([1.0, 2.0])})
+
+    assert dataset1 != dataset2
+
+
+def test_eq_different_types():
+    """Test inequality when same variable has different types."""
+    dataset1 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    dataset2 = RBMDataSet(
+        satellite=DummyEnum.SATELLITE,
+        instrument=DummyEnum.INSTRUMENT,
+        mfm=DummyEnum.MFM,
+    )
+
+    dataset1.time = np.array([738000.0])
+    dataset2.time = [738000.0]
+
+    assert dataset1 != dataset2
