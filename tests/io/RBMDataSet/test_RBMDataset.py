@@ -5,6 +5,7 @@
 import datetime as dt
 from datetime import timezone
 from pathlib import Path
+from typing import get_args
 from unittest import mock
 
 import numpy as np
@@ -16,6 +17,7 @@ from swvo.io.RBMDataSet import (
     MfmEnum,
     RBMDataSet,
     SatelliteEnum,
+    SatelliteLiteral,
     VariableEnum,
 )
 
@@ -293,3 +295,193 @@ def test_all_variables_in_dir(mock_dataset: RBMDataSet):
 
     for var in vars:
         assert var in mock_dataset.__dir__()
+
+
+# ========================================
+# Dictionary-based loading tests (formerly in test_RBMDatasetElPaso.py)
+# ========================================
+
+
+@pytest.fixture
+def dict_dataset():
+    """Fixture for dictionary-based loading mode (no file parameters)"""
+    return RBMDataSet(
+        satellite=SatelliteEnum.GOESSecondary,
+        instrument=InstrumentEnum.MAGED,
+        mfm=MfmEnum.T89,
+    )
+
+
+def test_dict_mode_init_accepts_string_inputs():
+    """Test that the class can be initialized with string inputs in dict mode."""
+    ds = RBMDataSet(satellite="GOESSecondary", instrument="MAGED", mfm=MfmEnum.T89)
+    assert ds.satellite.sat_name == "secondary"
+    assert ds.instrument == InstrumentEnum.MAGED
+    assert ds.mfm == MfmEnum.T89
+
+
+def test_dict_mode_variable_mapping_exposed(dict_dataset):
+    """Test that ep_variables contains the expected variable names"""
+    assert isinstance(dict_dataset.ep_variables, list)
+    assert "Flux" in dict_dataset.ep_variables
+    assert "energy_channels" in dict_dataset.ep_variables
+
+
+def test_dict_mode_repr_and_str(dict_dataset):
+    """Test repr and str for dict mode"""
+    assert "RBMDataSet" in repr(dict_dataset)
+    assert str(dict_dataset.satellite) in repr(dict_dataset)
+    assert str(dict_dataset.instrument) in repr(dict_dataset)
+    assert str(dict_dataset.mfm) in repr(dict_dataset)
+
+    assert "RBMDataSet" in str(dict_dataset)
+    assert str(dict_dataset.satellite) in str(dict_dataset)
+    assert str(dict_dataset.instrument) in str(dict_dataset)
+    assert str(dict_dataset.mfm) in str(dict_dataset)
+
+
+def test_update_from_dict_sets_variables(dict_dataset):
+    """Test that the correct variable is set with direct key"""
+    flux_data = np.array([[1.0, 2.0]])
+
+    source_dict = {"Flux": flux_data}
+
+    dict_dataset.update_from_dict(source_dict)
+    np.testing.assert_array_equal(dict_dataset.Flux, flux_data)
+
+
+def test_update_from_dict_sets_time(dict_dataset):
+    """Test that the correct variable is set with direct time key"""
+    time_data = np.array([738000.0])  # MATLAB datenum format
+
+    source_dict = {"time": time_data}
+
+    dict_dataset.update_from_dict(source_dict)
+    assert hasattr(dict_dataset, "time")
+    np.testing.assert_array_equal(dict_dataset.time, time_data)
+
+
+def test_update_from_dict_with_multiple_variables(dict_dataset):
+    """Test that multiple variables can be set at once"""
+    lstar_data = np.array([4.5, 5.0, 5.5])
+    energy_data = np.array([100.0, 200.0, 300.0])
+
+    source_dict = {"Lstar": lstar_data, "energy_channels": energy_data}
+
+    dict_dataset.update_from_dict(source_dict)
+    np.testing.assert_array_equal(dict_dataset.Lstar, lstar_data)
+    np.testing.assert_array_equal(dict_dataset.energy_channels, energy_data)
+
+
+def test_dict_mode_computed_p_property(dict_dataset):
+    """Test P property with correct dimensions in dict mode"""
+    dict_dataset.MLT = np.array([0.0, 6.0, 12.0])
+
+    expected_p = ((dict_dataset.MLT + 12) / 12 * np.pi) % (2 * np.pi)
+    np.testing.assert_allclose(dict_dataset.P, expected_p)
+
+
+def test_dict_mode_computed_invv_property(dict_dataset):
+    """Test InvV property with correct dimensions in dict mode"""
+    dict_dataset.InvMu = np.array([[0.1, 0.2]])
+    dict_dataset.InvK = np.array([[1.0]])
+
+    inv_K_repeated = np.repeat(dict_dataset.InvK[:, np.newaxis, :], dict_dataset.InvMu.shape[1], axis=1)
+    expected_invv = dict_dataset.InvMu * (inv_K_repeated + 0.5) ** 2
+
+    np.testing.assert_allclose(dict_dataset.InvV, expected_invv)
+
+
+def test_dict_mode_getattr_errors(dict_dataset):
+    """Test error handling for unset attributes in dict mode"""
+    with pytest.raises(AttributeError, match="exists in `VariableLiteral` but has not been set"):
+        _ = dict_dataset.Flux
+
+    with pytest.raises(AttributeError, match="no attribute"):
+        _ = dict_dataset.NonExistent
+
+
+def test_dict_mode_dir_contains_variable_names(dict_dataset):
+    """Test that dir() includes variable names in dict mode"""
+    variable_names = [var.var_name for var in VariableEnum]
+    for name in variable_names:
+        assert name in dir(dict_dataset)
+
+
+def test_update_from_dict_invalid_key(dict_dataset):
+    """Test that invalid keys raise VariableNotFoundError"""
+    from swvo.io.exceptions import VariableNotFoundError
+
+    source_dict = {"InvalidKey": np.array([1.0, 2.0])}
+
+    with pytest.raises(VariableNotFoundError, match="not a valid `VariableLiteral`"):
+        dict_dataset.update_from_dict(source_dict)
+
+
+def test_update_from_dict_similar_key(dict_dataset):
+    """Test that similar keys suggest the correct variable"""
+    from swvo.io.exceptions import VariableNotFoundError
+
+    source_dict = {"Flx": np.array([1.0, 2.0])}  # Typo: should be "Flux"
+
+    with pytest.raises(VariableNotFoundError, match="Maybe you meant 'Flux'"):
+        dict_dataset.update_from_dict(source_dict)
+
+
+def test_all_variable_literals(dict_dataset):
+    """Test that all VariableLiteral values can be set and retrieved."""
+
+    # Test with a subset of common variables
+    test_variables = {
+        "time": np.array([738000.0, 738001.0]),
+        "energy_channels": np.array([100.0, 200.0, 300.0]),
+        "alpha_local": np.array([0.1, 0.2, 0.3]),
+        "alpha_eq_model": np.array([45.0, 60.0, 90.0]),
+        "InvMu": np.array([[0.1, 0.2]]),
+        "InvK": np.array([[1.0, 2.0]]),
+        "Lstar": np.array([4.5, 5.0, 5.5]),
+        "Flux": np.array([[1.0, 2.0, 3.0]]),
+        "PSD": np.array([[0.1, 0.2, 0.3]]),
+        "MLT": np.array([0.0, 6.0, 12.0]),
+        "B_SM": np.array([100.0, 200.0, 300.0]),
+        "B_total": np.array([50.0, 60.0, 70.0]),
+        "B_sat": np.array([45.0, 55.0, 65.0]),
+        "xGEO": np.array([6.6, 6.7, 6.8]),
+        "R0": np.array([5.0, 5.5, 6.0]),
+        "density": np.array([100.0, 200.0, 300.0]),
+    }
+
+    dict_dataset.update_from_dict(test_variables)
+
+    for var_name, expected_data in test_variables.items():
+        assert hasattr(dict_dataset, var_name), f"Attribute {var_name} not set"
+        np.testing.assert_array_equal(
+            getattr(dict_dataset, var_name),
+            expected_data,
+            err_msg=f"Data mismatch for {var_name}",
+        )
+
+
+@pytest.mark.parametrize("satellite, expected", [("goessecondary", "secondary"), ("goesprimary", "primary")])
+def test_dict_mode_goes_lowercase(satellite, expected):
+    """Test GOES satellite lowercase string handling in dict mode"""
+    goes_dataset = RBMDataSet(
+        satellite=satellite,
+        instrument=InstrumentEnum.MAGED,
+        mfm=MfmEnum.T89,
+    )
+    assert goes_dataset.satellite.sat_name == expected
+
+
+uppercase_satellites = set(get_args(SatelliteLiteral)) - set(["GOESPrimary", "GOESSecondary"])
+
+
+@pytest.mark.parametrize("satellite", [i.lower() for i in uppercase_satellites])
+def test_dict_mode_satellite_lowercase(satellite):
+    """Test satellite lowercase string handling in dict mode"""
+    dataset = RBMDataSet(
+        satellite=satellite,
+        instrument=InstrumentEnum.MAGED,
+        mfm=MfmEnum.T89,
+    )
+    assert dataset.satellite.sat_name == satellite.lower()
