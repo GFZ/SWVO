@@ -5,3 +5,6 @@
 
 class ModelError(Exception):
     pass
+
+class VariableNotFoundError(Exception):
+    pass
