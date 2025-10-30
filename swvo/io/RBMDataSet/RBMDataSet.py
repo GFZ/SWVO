@@ -273,13 +273,25 @@ class RBMDataSet:
         """Returns the MFM enum."""
         return self._mfm
 
-    def update_from_dict(self, source_dict: dict[str, VariableLiteral]) -> None:
+    def update_from_dict(self, source_dict: dict[str, VariableLiteral]) -> RBMDataSet:
         """Get data from data dictionary and update the object.
 
         Parameters
         ----------
         source_dict : dict[str, VariableLiteral]
             Dictionary containing the data to be loaded into the object.
+
+        Returns
+        -------
+        RBMDataSet
+            The updated RBMDataSet object.
+
+        Raises
+        ------
+        VariableNotFoundError
+            If a key in the `source_dict` is not a valid `VariableLiteral`.
+        RuntimeError
+            If the `RBMDataSet` is in file loading mode and dictionary loading is not enabled.
 
         """
         if self._file_loading_mode and not self._enable_dict_loading:
@@ -295,6 +307,7 @@ class RBMDataSet:
             else:
                 msg = f"Key '{key}' is not a valid `VariableLiteral`."
                 raise VariableNotFoundError(msg)
+        return self
 
     def get_var(self, var: VariableEnum):
         return getattr(self, var.var_name)

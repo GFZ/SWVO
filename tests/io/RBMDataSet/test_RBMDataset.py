@@ -343,6 +343,14 @@ def test_dict_mode_repr_and_str(dict_dataset):
     assert str(dict_dataset.mfm) in str(dict_dataset)
 
 
+def test_update_from_dict_returns_self(dict_dataset):
+    """Test that update_from_dict returns self for method chaining"""
+    source_dict = {"Flux": np.array([[1.0, 2.0]])}
+
+    result = dict_dataset.update_from_dict(source_dict)
+    assert isinstance(result, RBMDataSet)
+
+
 def test_update_from_dict_sets_variables(dict_dataset):
     """Test that the correct variable is set with direct key"""
     flux_data = np.array([[1.0, 2.0]])
