@@ -44,16 +44,16 @@ class RBMDataSet:
 
     This class can load data either from files or from a dictionary.
 
-    For file-based loading, provide start_time, end_time, and folder_path.
-    For dictionary-based loading, initialize without these parameters and use update_from_dict().
+    For file-based loading, provide `start_time`, `end_time`, and `folder_path`.
+    For dictionary-based loading, initialize without these parameters and use `update_from_dict()`.
 
     Parameters
     ----------
-    satellite : :class:`SatelliteLike`
+    satellite : Union[:class:`SatelliteLike`, :class:`DummyLike`]
         Satellite identifier as enum or string.
-    instrument : :class:`InstrumentLike`
+    instrument : Union[:class:`InstrumentLike`, :class:`DummyLike`]
         Instrument enumeration or string.
-    mfm : :class:`MfmLike`
+    mfm : Union[:class:`MfmLike`, :class:`DummyLike`]
         Magnetic field model enum or string.
     start_time : dt.datetime, optional
         Start time for file-based loading.

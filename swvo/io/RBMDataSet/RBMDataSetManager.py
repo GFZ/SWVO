@@ -110,7 +110,7 @@ class RBMDataSetManager:
             Satellite identifier(s) as enum or string. If a single satellite is provided, it can be a string or an enum.
         instrument : :class:`InstrumentEnum`
             Instrument enumeration, e.g., :class:`InstrumentEnum.HOPE`.
-        mfm : MfmEnum
+        mfm : :class:`MfmEnum`
             Magnetic field model enum, e.g., :class:`MfmEnum.T89`.
         folder_type : :class:`FolderTypeEnum`, optional
             Type of folder where the data is stored, by default :class:`FolderTypeEnum.DataServer`.
