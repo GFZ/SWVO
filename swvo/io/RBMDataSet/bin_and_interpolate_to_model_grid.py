@@ -12,8 +12,8 @@ from multiprocessing import Pool
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from icecream import ic
 import numpy as np
+from icecream import ic
 from matplotlib import pyplot as plt
 from numpy.typing import NDArray
 from tqdm import tqdm
@@ -47,7 +47,6 @@ def bin_and_interpolate_to_model_grid(
     # 1. interpolate to V-K
 
     if grid_R.shape[2] > 1 and grid_R.shape[3] > 1:
-
         if target_var_init.ndim == 1:
             target_var_init = target_var_init[:, np.newaxis, np.newaxis]
 
@@ -62,8 +61,7 @@ def bin_and_interpolate_to_model_grid(
             msg = "Found inconsitency in V-K interpolation. Aborting..."
             raise (ValueError(msg))
     else:
-
-        if target_var_init.ndim == 1: # plasmasphere
+        if target_var_init.ndim == 1:  # plasmasphere
             target_var_init = target_var_init[:, np.newaxis, np.newaxis]
 
         psd_interp = target_var_init
@@ -98,14 +96,15 @@ def bin_and_interpolate_to_model_grid(
                 mu_or_V,
                 debug_plot_settings,
             )
-        else: plot_debug_figures_plasmasphere(
-            self,
-            psd_binned_in_time,
-            sim_time,
-            grid_P,
-            grid_R,
-            debug_plot_settings,
-        )
+        else:
+            plot_debug_figures_plasmasphere(
+                self,
+                psd_binned_in_time,
+                sim_time,
+                grid_P,
+                grid_R,
+                debug_plot_settings,
+            )
 
     return psd_binned_in_time
 
@@ -385,10 +384,7 @@ def plot_debug_figures_plasmasphere(
     grid_R: NDArray[np.float64],
     debug_plot_settings: DebugPlotSettings,
 ):
-
     print("\tPlot debug features...")
-
-    from icecream import ic
 
     dt = sim_time[1] - sim_time[0]
 
@@ -400,8 +396,7 @@ def plot_debug_figures_plasmasphere(
     for it, sim_time_curr in enumerate(tqdm(sim_time)):
         sat_time_idx = np.argwhere(np.abs(np.asarray(data_set.datetime) - sim_time_curr) <= dt / 2)
 
-        R_idx = np.argwhere(np.abs(grid_R[0, :, 0, 0] - R_or_Lstar_arr[sat_time_idx]))
-
+        # R_idx = np.argwhere(np.abs(grid_R[0, :, 0, 0] - R_or_Lstar_arr[sat_time_idx]))
 
         ax0 = fig.add_subplot(121, projection="polar")
         ax1 = fig.add_subplot(122)
@@ -412,9 +407,15 @@ def plot_debug_figures_plasmasphere(
         # ic(data_set.P[sat_time_idx])
         # ic(R_or_Lstar_arr[sat_time_idx])
 
-        ax0.scatter(data_set.P[sat_time_idx], R_or_Lstar_arr[sat_time_idx], c=np.log10(data_set.density[sat_time_idx]), marker="D", vmin=0,
+        ax0.scatter(
+            data_set.P[sat_time_idx],
+            R_or_Lstar_arr[sat_time_idx],
+            c=np.log10(data_set.density[sat_time_idx]),
+            marker="D",
+            vmin=0,
             vmax=4,
-            cmap="jet",)
+            cmap="jet",
+        )
         ax0.set_ylim(1, 6.6)
         ax0.set_title("Orbit")
         ax0.set_rlim([0, 6.6])
@@ -449,8 +450,6 @@ def plot_debug_figures_plasmasphere(
 
         if np.any(data_set.P[sat_time_idx] < 0.1):
             ic(psd_binned[it, 0, :, :, :])
-            asdf
-
 
 
 def plot_debug_figures(

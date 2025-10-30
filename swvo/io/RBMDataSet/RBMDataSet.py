@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import datetime as dt
 import typing
-from dataclasses import replace
 from datetime import timedelta, timezone
 from pathlib import Path
 from typing import Any, Literal
@@ -239,7 +238,6 @@ class RBMDataSet:
         levenstein_info: dict[str, Any] = {"min_distance": 10, "var_name": ""}
         sat_variable = None
         for var in VariableEnum:
-            
             if name == var.var_name:
                 sat_variable = var
                 break

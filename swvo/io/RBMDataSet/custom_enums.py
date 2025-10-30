@@ -134,9 +134,11 @@ SatelliteLiteral = Literal[
 ]
 SatelliteLike: TypeAlias = SatelliteLiteral | SatelliteEnum | Satellite
 
+
 @dataclass(frozen=True)
 class Instrument:
     instrument_name: str
+
 
 class InstrumentEnum(Instrument, Enum):
     # RBSP
@@ -176,9 +178,11 @@ InstrumentLiteral = Literal[
 ]
 InstrumentLike: TypeAlias = InstrumentLiteral | InstrumentEnum | Instrument
 
+
 @dataclass(frozen=True)
 class Mfm:
     mfm_name: str
+
 
 class MfmEnum(Mfm, Enum):
     T89 = "T89"
