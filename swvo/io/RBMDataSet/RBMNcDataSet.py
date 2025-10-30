@@ -141,7 +141,7 @@ class RBMNcDataSet(RBMDataSet):
                 next_month = start_month + relativedelta(months=1, days=-1)
                 date_str = start_month.strftime("%Y%m%d") + "to" + next_month.strftime("%Y%m%d")
 
-                file_name = self._file_name_stem + date_str + "_" + self._mfm.value + ".nc"
+                file_name = self._file_name_stem + date_str + "_" + self._mfm.mfm_name + ".nc"
             else:
                 raise NotImplementedError
 
@@ -193,7 +193,7 @@ class RBMNcDataSet(RBMDataSet):
             if var_name == "datetime":
                 loaded_var_arrs[var_name] = list(loaded_var_arrs[var_name])  # type: ignore
 
-            rbm_var_name = RBMNcDataSet._get_rbm_name(var_name, self._mfm.value)
+            rbm_var_name = RBMNcDataSet._get_rbm_name(var_name, self._mfm.mfm_name)
 
             if rbm_var_name is not None:
                 setattr(self, rbm_var_name, loaded_var_arrs[var_name])

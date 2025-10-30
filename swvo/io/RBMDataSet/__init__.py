@@ -11,14 +11,14 @@ from swvo.io.RBMDataSet.custom_enums import (
     Satellite as Satellite,
     SatelliteLike as SatelliteLike,
     SatelliteEnum as SatelliteEnum,
+    Instrument as Instrument,
     InstrumentEnum as InstrumentEnum,
     InstrumentLike as InstrumentLike,
+    Mfm as Mfm,
     MfmEnum as MfmEnum,
     MfmLike as MfmLike,
     SatelliteLiteral as SatelliteLiteral,
     VariableLiteral as VariableLiteral,
-    DummyLike as DummyLike,
-    DummyEnum as DummyEnum,
 )
 from swvo.io.RBMDataSet.RBMDataSetManager import RBMDataSetManager as RBMDataSetManager
 from swvo.io.RBMDataSet.interp_functions import TargetType as TargetType

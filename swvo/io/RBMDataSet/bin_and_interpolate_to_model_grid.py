@@ -12,17 +12,18 @@ from multiprocessing import Pool
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
+from icecream import ic
 import numpy as np
 from matplotlib import pyplot as plt
 from numpy.typing import NDArray
 from tqdm import tqdm
 
 if TYPE_CHECKING:
-    from swvo.io.RBMDataSet import RBMDataSet
+    from swvo.io.RBMDataSet import RBMDataSet, RBMDataSetElPaso
 
 
 def bin_and_interpolate_to_model_grid(
-    self: RBMDataSet,
+    self: RBMDataSet | RBMDataSetElPaso,
     sim_time: list[datetime],
     grid_R: NDArray[np.float64],
     grid_mu_V: NDArray[np.float64],
@@ -41,27 +42,35 @@ def bin_and_interpolate_to_model_grid(
     if grid_K.ndim == 3:
         grid_K = grid_K[np.newaxis, ...]
 
-    # 1. interpolate to V-K
-
     target_var_init = getattr(self, target_var_name)
 
-    if target_var_init.ndim == 1:
-        target_var_init = target_var_init[:, np.newaxis, np.newaxis]
+    # 1. interpolate to V-K
 
-    mu_or_V_arr = self.InvMu if mu_or_V == "Mu" else self.InvV
-    if grid_mu_V.shape[2] > 1:
-        psd_interp = _interpolate_in_V_K(target_var_init, mu_or_V_arr, self.InvK, grid_mu_V, grid_K)
+    if grid_R.shape[2] > 1 and grid_R.shape[3] > 1:
+
+        if target_var_init.ndim == 1:
+            target_var_init = target_var_init[:, np.newaxis, np.newaxis]
+
+        mu_or_V_arr = self.InvMu if mu_or_V == "Mu" else self.InvV
+        if grid_mu_V.shape[2] > 1:
+            psd_interp = _interpolate_in_V_K(target_var_init, mu_or_V_arr, self.InvK, grid_mu_V, grid_K)
+        else:
+            psd_interp = target_var_init
+
+        # sanity check
+        if np.min(target_var_init) > np.min(psd_interp) or np.max(target_var_init) < np.max(psd_interp):
+            msg = "Found inconsitency in V-K interpolation. Aborting..."
+            raise (ValueError(msg))
     else:
-        psd_interp = target_var_init
 
-    # sanity check
-    if np.min(target_var_init) > np.min(psd_interp) or np.max(target_var_init) < np.max(psd_interp):
-        msg = "Found inconsitency in V-K interpolation. Aborting..."
-        raise (ValueError(msg))
+        if target_var_init.ndim == 1: # plasmasphere
+            target_var_init = target_var_init[:, np.newaxis, np.newaxis]
+
+        psd_interp = target_var_init
 
     # 2. Bin in space
 
-    R_or_Lstar_arr = self.R0 if grid_P else self.Lstar[:, -1]
+    R_or_Lstar_arr = self.R0 if grid_P is not None else self.Lstar[:, -1]
 
     psd_binned_in_space = _bin_in_space(psd_interp, self.P, R_or_Lstar_arr, grid_R, grid_P)
     # sanity check
@@ -77,15 +86,24 @@ def bin_and_interpolate_to_model_grid(
         raise (ValueError(msg))
 
     if debug_plot_settings:
-        plot_debug_figures(
+        if debug_plot_settings.target_K is not None:
+            plot_debug_figures(
+                self,
+                psd_binned_in_time,
+                sim_time,
+                grid_P,
+                grid_R,
+                grid_mu_V,
+                grid_K,
+                mu_or_V,
+                debug_plot_settings,
+            )
+        else: plot_debug_figures_plasmasphere(
             self,
             psd_binned_in_time,
             sim_time,
             grid_P,
             grid_R,
-            grid_mu_V,
-            grid_K,
-            mu_or_V,
             debug_plot_settings,
         )
 
@@ -141,7 +159,7 @@ def _bin_in_time(
     time_indices = _get_time_indices(data_timestamps, _get_time_bins(sim_timestamps))
 
     for i, _ in tqdm(enumerate(sim_time)):
-        psd_binned[i, ...] = np.nanmean(data_psd[time_indices == i, ...], axis=0)
+        psd_binned[i, ...] = np.power(10, np.nanmean(np.log10(data_psd[time_indices == i, ...]), axis=0))
 
     return psd_binned
 
@@ -155,7 +173,7 @@ def _bin_in_space(
 ) -> NDArray[np.float64]:
     print("\tBin in space...")
 
-    if grid_P:
+    if grid_P is not None:
         grid_P_1d = grid_P[:, 0, 0, 0]
         grid_R_1d = grid_R[0, :, 0, 0]
 
@@ -199,7 +217,7 @@ def _bin_in_space(
 
         r_idx = np.argmin(np.abs(R_data[it] - grid_R_1d))
 
-        if grid_P_1d:
+        if grid_P_1d is not None:
             raw_difference_p = np.abs(P_data[it] - grid_P_1d)
             min_difference_p = np.where(
                 raw_difference_p <= np.pi,
@@ -210,9 +228,14 @@ def _bin_in_space(
 
             number_of_observations[it, p_idx, r_idx, :, :] += np.where(np.isnan(psd_in[it, :, :]), 0, 1)
             psd_binned[it, p_idx, r_idx, :, :] += np.where(np.isnan(psd_in[it, :, :]), 0, np.log10(psd_in[it, :, :]))
+
         else:
             number_of_observations[it, 0, r_idx, :, :] += np.where(np.isnan(psd_in[it, :, :]), 0, 1)
             psd_binned[it, 0, r_idx, :, :] += np.where(np.isnan(psd_in[it, :, :]), 0, np.log10(psd_in[it, :, :]))
+
+        # # ic(number_of_observations[it, :, :, 0, 0])
+        # ic(np.power(10, np.nanmax(psd_binned[it, :, :, 0, 0])))
+        # ic(np.power(10, np.nanmax(psd_binned[it, :, :, 0, 0] / number_of_observations[it, :, :, 0, 0])))
 
     psd_binned = np.where(psd_binned == 0, np.nan, psd_binned)
 
@@ -350,15 +373,91 @@ def _parallel_func_VK(
 class DebugPlotSettings:
     folder_path: Path
     satellite_name: str
-    target_V: float
-    target_K: float
+    target_V: float | None = None
+    target_K: float | None = None
+
+
+def plot_debug_figures_plasmasphere(
+    data_set: RBMDataSet,
+    psd_binned: NDArray[np.float64],
+    sim_time: NDArray[np.object_],
+    grid_P: NDArray[np.float64] | None,
+    grid_R: NDArray[np.float64],
+    debug_plot_settings: DebugPlotSettings,
+):
+
+    print("\tPlot debug features...")
+
+    from icecream import ic
+
+    dt = sim_time[1] - sim_time[0]
+
+    fig = plt.figure(figsize=(19.20, 8))
+    plt.rcParams["axes.axisbelow"] = False
+
+    R_or_Lstar_arr = data_set.R0
+
+    for it, sim_time_curr in enumerate(tqdm(sim_time)):
+        sat_time_idx = np.argwhere(np.abs(np.asarray(data_set.datetime) - sim_time_curr) <= dt / 2)
+
+        R_idx = np.argwhere(np.abs(grid_R[0, :, 0, 0] - R_or_Lstar_arr[sat_time_idx]))
+
+
+        ax0 = fig.add_subplot(121, projection="polar")
+        ax1 = fig.add_subplot(122)
+
+        # plot satellite trajectory on PxR grid
+        # [x_sat, y_sat] = pol2cart(self.P, self.R)
+
+        # ic(data_set.P[sat_time_idx])
+        # ic(R_or_Lstar_arr[sat_time_idx])
+
+        ax0.scatter(data_set.P[sat_time_idx], R_or_Lstar_arr[sat_time_idx], c=np.log10(data_set.density[sat_time_idx]), marker="D", vmin=0,
+            vmax=4,
+            cmap="jet",)
+        ax0.set_ylim(1, 6.6)
+        ax0.set_title("Orbit")
+        ax0.set_rlim([0, 6.6])
+        ax0.set_theta_offset(np.pi)
+
+        grid_X = grid_R[:, :, 0, 0] * np.cos(grid_P[:, :, 0, 0])
+        grid_Y = grid_R[:, :, 0, 0] * np.sin(grid_P[:, :, 0, 0])
+
+        pc = ax1.pcolormesh(
+            grid_X,
+            grid_Y,
+            np.squeeze(np.log10(psd_binned[it, :, :, :, :])),
+            vmin=0,
+            vmax=4,
+            cmap="jet",
+            edgecolors="k",
+            linewidth=0.1,
+        )
+        ax1.set_title("Assimilation input")
+        ax1.set_xlim(np.max(grid_R), -np.max(grid_R))
+        ax1.set_ylim(np.max(grid_R), -np.max(grid_R))
+        ax1.set_xlabel("X")
+        ax1.set_ylabel("Y")
+
+        fig.colorbar(pc, ax=ax1)
+
+        fig.savefig(Path(debug_plot_settings.folder_path) / f"{debug_plot_settings.satellite_name}_{sim_time_curr}.png")
+
+        # ic(np.log10(psd_binned[it,:,:,V_idx,K_idx]))
+
+        fig.clf()
+
+        if np.any(data_set.P[sat_time_idx] < 0.1):
+            ic(psd_binned[it, 0, :, :, :])
+            asdf
+
 
 
 def plot_debug_figures(
     data_set: RBMDataSet,
     psd_binned: NDArray[np.float64],
     sim_time: NDArray[np.object_],
-    grid_P: NDArray[np.float64],
+    grid_P: NDArray[np.float64] | None,
     grid_R: NDArray[np.float64],
     grid_V: NDArray[np.float64],
     grid_K: NDArray[np.float64],
@@ -374,7 +473,7 @@ def plot_debug_figures(
 
     data_set_V_or_Mu = data_set.InvMu if mu_or_V == "Mu" else data_set.InvV
 
-    R_or_Lstar_arr = data_set.R0 if grid_P else data_set.Lstar[:, -1]
+    R_or_Lstar_arr = data_set.R0 if grid_P is not None else data_set.Lstar[:, -1]
 
     for it, sim_time_curr in enumerate(tqdm(sim_time)):
         sat_time_idx = np.argwhere(np.abs(np.asarray(data_set.datetime) - sim_time_curr) <= dt / 2)
@@ -383,9 +482,6 @@ def plot_debug_figures(
 
         K_idx = np.argmin(np.abs(grid_K[0, R_idx, 0, :] - debug_plot_settings.target_K))
         V_idx = np.argmin(np.abs(grid_V[0, R_idx, :, K_idx] - debug_plot_settings.target_V))
-
-        K_idx = 45
-        V_idx = 51
 
         V_lim_min = np.log10(0.9 * np.min([np.nanmin(data_set_V_or_Mu), np.min(grid_V)]))
         V_lim_max = np.log10(1.1 * np.max([np.nanmax(data_set_V_or_Mu), np.max(grid_V)]))

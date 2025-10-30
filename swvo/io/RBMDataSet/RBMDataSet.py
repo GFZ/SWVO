@@ -20,17 +20,19 @@ from swvo.io.exceptions import VariableNotFoundError
 from swvo.io.RBMDataSet import (
     FileCadenceEnum,
     FolderTypeEnum,
+    Instrument,
     InstrumentEnum,
     InstrumentLike,
+    Mfm,
     MfmEnum,
     MfmLike,
+    Satellite,
     SatelliteEnum,
     SatelliteLike,
     Variable,
     VariableEnum,
     VariableLiteral,
 )
-from swvo.io.RBMDataSet.custom_enums import DummyEnum, DummyLike
 from swvo.io.RBMDataSet.utils import (
     get_file_path_any_format,
     join_var,
@@ -120,9 +122,9 @@ class RBMDataSet:
 
     def __init__(
         self,
-        satellite: SatelliteLike | DummyLike,
-        instrument: InstrumentLike | DummyLike,
-        mfm: MfmLike | DummyLike,
+        satellite: SatelliteLike,
+        instrument: InstrumentLike,
+        mfm: MfmLike,
         start_time: dt.datetime | None = None,
         end_time: dt.datetime | None = None,
         folder_path: Path | None = None,
@@ -131,7 +133,7 @@ class RBMDataSet:
         verbose: bool = True,
         enable_dict_loading: bool = False,
     ) -> None:
-        self.ep_variables = list(VariableLiteral.__args__)
+        self.possible_variables: list[str] = list(VariableLiteral.__args__)
         # Handle satellite conversion with special cases for GOES
         if isinstance(satellite, str):
             if satellite.lower() == "goesprimary":
@@ -148,21 +150,13 @@ class RBMDataSet:
             mfm = MfmEnum[mfm.upper()]
 
         # Store the original satellite enum for properties and other attributes
-        self._satellite_enum = satellite
+        self._satellite = satellite
         self._instrument = instrument
         self._mfm = mfm
         self._verbose = verbose
 
         # For dict-based loading, modify satellite properties
         if start_time is None and end_time is None and folder_path is None:
-            # no file loading needed
-            satellite_obj = replace(
-                satellite.value,
-                folder_type=FolderTypeEnum.NoFolder,
-                file_cadence=FileCadenceEnum.NoCadence,
-            )
-            self._satellite = satellite_obj
-            self._mfm_prefix = DummyEnum.MFM.value if isinstance(mfm, DummyEnum) else MfmEnum[mfm.name].value
             self._file_loading_mode = False
         else:
             # File loading mode: need all parameters
@@ -190,7 +184,7 @@ class RBMDataSet:
             self._enable_dict_loading = enable_dict_loading
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self._satellite_enum}, {self._instrument}, {self._mfm})"
+        return f"{self.__class__.__name__}({self._satellite}, {self._instrument}, {self._mfm})"
 
     def __str__(self):
         return self.__repr__()
@@ -205,14 +199,14 @@ class RBMDataSet:
 
         # Handle computed properties for both modes
         if name == "P":
-            if not hasattr(self, "MLT") or getattr(self, "MLT") is None or not isinstance(self.MLT, np.ndarray):
+            if not hasattr(self, "MLT") or getattr(self, "MLT") is None or not isinstance(self.MLT, np.ndarray):  # type: ignore[reportUnnecessaryIsInstance]
                 raise AttributeError("Cannot compute `P` because `MLT` is missing, not loaded or is not valid array.")
             return ((self.MLT + 12) / 12 * np.pi) % (2 * np.pi)
 
         if name == "InvV":
             if not all(hasattr(self, attr) for attr in ("InvK", "InvMu")):
                 raise AttributeError("Cannot compute `InvV` because `InvK` or `InvMu` is missing.")
-            if not isinstance(self.InvK, np.ndarray) or not isinstance(self.InvMu, np.ndarray):
+            if not isinstance(self.InvK, np.ndarray) or not isinstance(self.InvMu, np.ndarray):  # type: ignore[reportUnnecessaryIsInstance]
                 raise AttributeError("Cannot compute `InvV` because required arrays are invalid or not loaded.")
             if self.InvK.ndim < 1 or self.InvMu.ndim < 2:
                 raise AttributeError("Cannot compute `InvV` because array dimensions are insufficient.")
@@ -228,7 +222,7 @@ class RBMDataSet:
             self._load_variable(sat_variable)
             return getattr(self, name)
 
-        if not self._file_loading_mode and name in self.ep_variables:
+        if not self._file_loading_mode and name in self.possible_variables:
             raise AttributeError(
                 f"Attribute '{name}' exists in `VariableLiteral` but has not been set. "
                 "Call `update_from_dict()` before accessing it."
@@ -241,35 +235,37 @@ class RBMDataSet:
 
         raise AttributeError(msg)
 
-    def find_similar_variable(self, name):
+    def find_similar_variable(self, name: str) -> tuple[None | VariableEnum, dict[str, Any]]:
         levenstein_info: dict[str, Any] = {"min_distance": 10, "var_name": ""}
         sat_variable = None
-        for var in self.ep_variables:
-            if name == var:
+        for var in VariableEnum:
+            
+            if name == var.var_name:
                 sat_variable = var
                 break
             else:
-                dist = distance.levenshtein(name, var)
-                if name.lower() in var.lower():
+                dist = distance.levenshtein(name, var.var_name)
+                if name.lower() in var.var_name.lower():
                     dist = 1
 
                 if dist < levenstein_info["min_distance"]:
                     levenstein_info["min_distance"] = dist
-                    levenstein_info["var_name"] = var
+                    levenstein_info["var_name"] = var.var_name
+
         return sat_variable, levenstein_info
 
     @property
-    def satellite(self) -> SatelliteEnum:
+    def satellite(self) -> SatelliteEnum | Satellite:
         """Returns the satellite enum."""
-        return self._satellite_enum
+        return self._satellite
 
     @property
-    def instrument(self) -> InstrumentEnum:
+    def instrument(self) -> InstrumentEnum | Instrument:
         """Returns the instrument enum."""
         return self._instrument
 
     @property
-    def mfm(self) -> MfmEnum:
+    def mfm(self) -> MfmEnum | Mfm:
         """Returns the MFM enum."""
         return self._mfm
 
@@ -299,7 +295,7 @@ class RBMDataSet:
             raise RuntimeError(msg)
         for key, value in source_dict.items():
             _, levenstein_info = self.find_similar_variable(key)
-            if key in self.ep_variables:
+            if key in self.possible_variables:
                 setattr(self, key, value)
             elif levenstein_info["min_distance"] <= 2:
                 msg = f"Key '{key}' is not a valid `VariableLiteral`. Maybe you meant '{levenstein_info['var_name']}'?"
@@ -347,13 +343,13 @@ class RBMDataSet:
         # if self._satellite == SatelliteEnum.THEMIS:
         #     pass
 
-        return self._satellite.sat_name + "_" + self._instrument.value + "_"
+        return self._satellite.sat_name + "_" + self._instrument.instrument_name + "_"
 
     def get_satellite_name(self) -> str:
         return self._satellite.sat_name
 
     def get_satellite_and_instrument_name(self) -> str:
-        return self._satellite.sat_name + "_" + self._instrument.value
+        return self._satellite.sat_name + "_" + self._instrument.instrument_name
 
     def set_file_path_stem(self, file_path_stem: Path):
         self._file_path_stem = file_path_stem
@@ -369,7 +365,7 @@ class RBMDataSet:
         return self
 
     def get_print_name(self) -> str:
-        return self._satellite.sat_name + " " + self._instrument.value
+        return self._satellite.sat_name + " " + self._instrument.instrument_name
 
     def _load_variable(self, var: Variable | VariableEnum) -> None:
         loaded_var_arrs: dict[str, NDArray[np.number]] = {}
@@ -395,7 +391,7 @@ class RBMDataSet:
                 file_name_no_format = self._file_name_stem + date_str + "_" + var.mat_file_prefix
 
                 if var.mat_has_B:
-                    file_name_no_format += "_n4_4_" + self._mfm.value
+                    file_name_no_format += "_n4_4_" + self._mfm.mfm_name
 
                 file_name_no_format += "_ver4"
             else:

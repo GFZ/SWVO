@@ -20,7 +20,6 @@ from swvo.io.RBMDataSet import (
     SatelliteLiteral,
     VariableEnum,
 )
-from swvo.io.RBMDataSet.custom_enums import DummyEnum
 
 
 @pytest.fixture
@@ -316,9 +315,9 @@ def test_enable_dict_loading_mode(mock_dataset: RBMDataSet):
 def dict_dataset():
     """Fixture for dictionary-based loading mode (no file parameters)"""
     return RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
 
@@ -639,15 +638,15 @@ def test_eq_file_loading_mode_different_mfm(mock_module_string):
 def test_eq_dict_mode_identical():
     """Test equality for identical dict mode datasets."""
     dataset1 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     dataset2 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     test_data = {
@@ -666,15 +665,15 @@ def test_eq_dict_mode_identical():
 def test_eq_dict_mode_different_variables():
     """Test inequality for dict mode datasets with different variables."""
     dataset1 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     dataset2 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     dataset1.update_from_dict({"Flux": np.array([[1.0, 2.0, 3.0]])})
@@ -686,15 +685,15 @@ def test_eq_dict_mode_different_variables():
 def test_eq_dict_mode_same_variables_different_values():
     """Test inequality for dict mode datasets with same variables but different values."""
     dataset1 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     dataset2 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     dataset1.update_from_dict({"Flux": np.array([[1.0, 2.0, 3.0]])})
@@ -725,9 +724,9 @@ def test_eq_different_modes(mock_module_string):
 
     # Dict mode dataset
     dict_dataset = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     assert file_dataset != dict_dataset
@@ -736,15 +735,15 @@ def test_eq_different_modes(mock_module_string):
 def test_eq_array_comparison_with_nan():
     """Test equality with NaN values in arrays."""
     dataset1 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     dataset2 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     test_array = np.array([[1.0, np.nan, 3.0]])
@@ -757,15 +756,15 @@ def test_eq_array_comparison_with_nan():
 def test_eq_list_comparison():
     """Test equality with list variables."""
     dataset1 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     dataset2 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     test_datetime_list = [dt.datetime(2023, 1, 15, tzinfo=timezone.utc)]
@@ -778,15 +777,15 @@ def test_eq_list_comparison():
 def test_eq_list_different_lengths():
     """Test inequality with lists of different lengths."""
     dataset1 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     dataset2 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     dataset1.datetime = [dt.datetime(2023, 1, 15, tzinfo=timezone.utc)]
@@ -801,15 +800,15 @@ def test_eq_list_different_lengths():
 def test_eq_array_different_shapes():
     """Test inequality with arrays of different shapes."""
     dataset1 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     dataset2 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     dataset1.update_from_dict({"Flux": np.array([[1.0, 2.0]])})
@@ -821,15 +820,15 @@ def test_eq_array_different_shapes():
 def test_eq_different_types():
     """Test inequality when same variable has different types."""
     dataset1 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     dataset2 = RBMDataSet(
-        satellite=DummyEnum.SATELLITE,
-        instrument=DummyEnum.INSTRUMENT,
-        mfm=DummyEnum.MFM,
+        satellite="RBSPA",
+        instrument="hope",
+        mfm="T89",
     )
 
     dataset1.time = np.array([738000.0])

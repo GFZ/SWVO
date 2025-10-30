@@ -134,8 +134,11 @@ SatelliteLiteral = Literal[
 ]
 SatelliteLike: TypeAlias = SatelliteLiteral | SatelliteEnum | Satellite
 
+@dataclass(frozen=True)
+class Instrument:
+    instrument_name: str
 
-class InstrumentEnum(Enum):
+class InstrumentEnum(Instrument, Enum):
     # RBSP
     HOPE = "hope"
     MAGEIS = "mageis"
@@ -171,10 +174,13 @@ InstrumentLiteral = Literal[
     "orbit",
     "TED-electron",
 ]
-InstrumentLike: TypeAlias = InstrumentLiteral | InstrumentEnum
+InstrumentLike: TypeAlias = InstrumentLiteral | InstrumentEnum | Instrument
 
+@dataclass(frozen=True)
+class Mfm:
+    mfm_name: str
 
-class MfmEnum(Enum):
+class MfmEnum(Mfm, Enum):
     T89 = "T89"
     T04s = "T04s"
     T96 = "T96"
@@ -184,18 +190,4 @@ class MfmEnum(Enum):
 
 
 MfmEnumLiteral = Literal["T89", "T04s", "TS04", "T96", "OP77", "T04"]
-MfmLike: TypeAlias = MfmEnumLiteral | MfmEnum
-
-
-class DummyEnum(Enum):
-    SATELLITE = Satellite(
-        sat_name="dummy",
-        mission="dummy",
-        folder_type=FolderTypeEnum.NoFolder,
-        file_cadence=FileCadenceEnum.NoCadence,
-    )
-    INSTRUMENT = "dummy instrument"
-    MFM = "dummy mfm"
-
-
-DummyLike: TypeAlias = Literal["dummy"] | DummyEnum
+MfmLike: TypeAlias = MfmEnumLiteral | MfmEnum | Mfm
