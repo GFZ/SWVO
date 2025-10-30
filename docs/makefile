@@ -3,6 +3,9 @@
 #
 
 # You can set these variables from the command line.
+ifneq (,$(wildcard $(PWD)/../.env))
+include $(PWD)/../.env
+endif
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
