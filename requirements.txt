@@ -16,4 +16,4 @@ tqdm
 pytest-mock
 netcdf4
 icecream
-
+pyright

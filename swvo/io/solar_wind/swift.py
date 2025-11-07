@@ -56,7 +56,7 @@ class SWSWIFTEnsemble:
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
-        self.data_dir = Path(data_dir)
+        self.data_dir: Path = Path(data_dir)
 
         logging.info(f"SWIFT ensemble data directory: {self.data_dir}")
 
@@ -69,7 +69,7 @@ class SWSWIFTEnsemble:
         end_time: Optional[datetime] = None,
         propagation: bool = False,
         truncate: bool = True,
-    ) -> list:
+    ) -> list[pd.DataFrame]:
         # It does not make sense to read SWIFT ensemble files from different dates
 
         """

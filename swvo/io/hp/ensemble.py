@@ -56,7 +56,7 @@ class HpEnsemble(ABC):
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
-        self.data_dir = Path(data_dir)
+        self.data_dir: Path = Path(data_dir)
 
         logging.info(f"{self.index.upper()} Ensemble data directory: {self.data_dir}")
 
@@ -64,7 +64,7 @@ class HpEnsemble(ABC):
             msg = f"Data directory {self.data_dir} does not exist! Impossible to retrive data!"
             raise FileNotFoundError(msg)
 
-        self.index_number = index[2:]
+        self.index_number: int = index[2:]
 
     def read(self, start_time: datetime, end_time: datetime) -> list[pd.DataFrame]:
         """

@@ -49,14 +49,14 @@ class KpEnsemble:
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
-        self.data_dir = Path(data_dir)
+        self.data_dir: Path = Path(data_dir)
 
         logging.info(f"Kp Ensemble data directory: {self.data_dir}")
 
         if not self.data_dir.exists():
             raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrive data!")
 
-    def read(self, start_time: datetime, end_time: datetime) -> list:
+    def read(self, start_time: datetime, end_time: datetime) -> list[pd.DataFrame]:
         """Read Kp ensemble data for the requested period.
 
         Parameters

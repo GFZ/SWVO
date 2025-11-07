@@ -57,12 +57,12 @@ class KpSWPC:
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
-        self.data_dir = Path(data_dir)
+        self.data_dir: Path = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         logging.info(f"Kp SWPC  data directory: {self.data_dir}")
 
-    def download_and_process(self, target_date: datetime, reprocess_files: bool = False):
+    def download_and_process(self, target_date: datetime, reprocess_files: bool = False) -> None:
         """
         Download and process SWPC Kp data file.
 
@@ -107,7 +107,7 @@ class KpSWPC:
         finally:
             rmtree(temporary_dir)
 
-    def read(self, start_time: datetime, end_time: datetime = None, download: bool = False) -> pd.DataFrame:
+    def read(self, start_time: datetime, end_time: Optional[datetime] = None, download: bool = False) -> pd.DataFrame:
         """
         Read Kp data for the specified time range.
 

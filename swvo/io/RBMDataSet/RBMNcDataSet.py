@@ -13,15 +13,18 @@ from dateutil.relativedelta import relativedelta
 from numpy.typing import NDArray
 
 from swvo.io.RBMDataSet import (
+    RBMDataSet,
+)
+from swvo.io.RBMDataSet.custom_enums import (
     FolderTypeEnum,
     InstrumentLike,
+    MfmEnumLiteral,
     MfmLike,
-    RBMDataSet,
     SatelliteLike,
     Variable,
     VariableEnum,
+    VariableLiteral,
 )
-from swvo.io.RBMDataSet.custom_enums import MfmEnumLiteral, VariableLiteral
 from swvo.io.RBMDataSet.utils import join_var
 
 

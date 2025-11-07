@@ -42,6 +42,9 @@ Tracker = "https://github.com/GFZ/SWVO/issues"
 [tool.setuptools.packages.find]
 include = ["swvo*"]
 
+[tool.setuptools.package-data]
+"swvo" = ["py.typed"]
+
 
 [tool.coverage.run]
 source = ["swvo"]

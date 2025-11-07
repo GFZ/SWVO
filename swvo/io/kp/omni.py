@@ -34,7 +34,7 @@ class KpOMNI(OMNILowRes):
         """
         super().__init__(data_dir=data_dir)
 
-    def read(self, start_time: datetime, end_time: datetime, *, download: bool = False) -> pd.DataFrame:
+    def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
         """
         Extract Kp data from OMNI Low Resolution files.
 

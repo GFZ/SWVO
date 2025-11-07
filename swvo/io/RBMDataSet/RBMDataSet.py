@@ -182,16 +182,16 @@ class RBMDataSet:
             self._file_loading_mode = True
             self._enable_dict_loading = enable_dict_loading
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._satellite}, {self._instrument}, {self._mfm})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.__repr__()
 
-    def __dir__(self):
+    def __dir__(self) -> list[str]:
         return list(super().__dir__()) + [var.var_name for var in VariableEnum]
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> NDArray[np.float64]:
         # Avoid recursion for internal attributes
         if name.startswith("_"):
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
@@ -303,7 +303,7 @@ class RBMDataSet:
                 raise VariableNotFoundError(msg)
         return self
 
-    def get_var(self, var: VariableEnum):
+    def get_var(self, var: VariableEnum) -> NDArray[np.float64]:
         return getattr(self, var.var_name)
 
     def _create_date_list(self) -> list[dt.datetime]:
@@ -349,15 +349,15 @@ class RBMDataSet:
     def get_satellite_and_instrument_name(self) -> str:
         return self._satellite.sat_name + "_" + self._instrument.instrument_name
 
-    def set_file_path_stem(self, file_path_stem: Path):
+    def set_file_path_stem(self, file_path_stem: Path) -> RBMDataSet:
         self._file_path_stem = file_path_stem
         return self
 
-    def set_file_name_stem(self, file_name_stem: Path):
+    def set_file_name_stem(self, file_name_stem: Path) -> RBMDataSet:
         self._file_path_stem = file_name_stem
         return self
 
-    def set_file_cadence(self, file_cadence: FileCadenceEnum):
+    def set_file_cadence(self, file_cadence: FileCadenceEnum) -> RBMDataSet:
         self._file_cadence = file_cadence
         self._date_of_files = self._create_date_list()
         return self

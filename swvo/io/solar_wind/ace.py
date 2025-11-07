@@ -62,7 +62,7 @@ class SWACE:
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)
 
-        self.data_dir = Path(data_dir)
+        self.data_dir: Path = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         logging.info(f"ACE data directory: {self.data_dir}")
