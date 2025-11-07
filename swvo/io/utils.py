@@ -4,10 +4,10 @@
 
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 
 import numpy as np
 import pandas as pd
-from git import Optional
 from scipy.ndimage import gaussian_filter1d
 
 
