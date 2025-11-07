@@ -15,7 +15,7 @@ import numpy as np
 from numpy.typing import NDArray
 from tqdm import tqdm
 
-from swvo.io.RBMDataSet.RBMDataSet import RBMDataSet
+from swvo.io.RBMDataSet import RBMDataSet
 
 
 class TargetType(Enum):

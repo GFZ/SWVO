@@ -18,7 +18,7 @@ from matplotlib import pyplot as plt
 from numpy.typing import NDArray
 from tqdm import tqdm
 
-from swvo.io.RBMDataSet.RBMDataSet import RBMDataSet
+from swvo.io.RBMDataSet import RBMDataSet
 
 
 def bin_and_interpolate_to_model_grid(
