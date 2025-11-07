@@ -10,7 +10,7 @@ from datetime import datetime
 from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 import numpy as np
 from icecream import ic
@@ -18,12 +18,11 @@ from matplotlib import pyplot as plt
 from numpy.typing import NDArray
 from tqdm import tqdm
 
-if TYPE_CHECKING:
-    from swvo.io.RBMDataSet import RBMDataSet, RBMDataSetElPaso
+from swvo.io.RBMDataSet import RBMDataSet
 
 
 def bin_and_interpolate_to_model_grid(
-    self: RBMDataSet | RBMDataSetElPaso,
+    self: RBMDataSet,
     sim_time: list[datetime],
     grid_R: NDArray[np.float64],
     grid_mu_V: NDArray[np.float64],
@@ -383,7 +382,7 @@ def plot_debug_figures_plasmasphere(
     grid_P: NDArray[np.float64] | None,
     grid_R: NDArray[np.float64],
     debug_plot_settings: DebugPlotSettings,
-):
+) -> None:
     print("\tPlot debug features...")
 
     dt = sim_time[1] - sim_time[0]
@@ -462,7 +461,7 @@ def plot_debug_figures(
     grid_K: NDArray[np.float64],
     mu_or_V: Literal["Mu", "V"],
     debug_plot_settings: DebugPlotSettings,
-):
+) -> None:
     print("\tPlot debug features...")
 
     dt = sim_time[1] - sim_time[0]

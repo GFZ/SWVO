@@ -102,7 +102,7 @@ def python2matlab(datenum: datetime) -> float:
     return mdn.toordinal() + round(frac, 6)
 
 
-def matlab2python(datenum: float | Iterable) -> Iterable[datetime] | datetime:
+def matlab2python(datenum: float | Iterable[float]) -> Iterable[datetime] | datetime:
     """Convert MATLAB datenum to Python datetime."""
     warnings.filterwarnings("ignore", message="Discarding nonzero nanoseconds in conversion")
 

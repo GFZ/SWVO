@@ -25,11 +25,9 @@ class PlasmasphereCombinedInputsReader:
         If the source of data requested is not among the available ones.
     """
 
-    def __init__(self, folder):
+    def __init__(self, folder: str):
         self.data_folder = folder
         self._check_data_folder()
-        self.file = None
-        self.requested_date = None
 
     def _check_data_folder(self) -> None:
         """Checks if the data folder exists.

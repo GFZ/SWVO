@@ -4,6 +4,7 @@
 
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -108,8 +109,8 @@ def construct_updated_data_frame(
 
 def datenum(
     date_input: datetime | int,
-    month: int = None,
-    year: int = None,
+    month: Optional[int] = None,
+    year: Optional[int] = None,
     hour: int = 0,
     minute: int = 0,
     seconds: int = 0,
@@ -124,11 +125,11 @@ def datenum(
         The month of the date. Required if date_input is an integer.
     year : int, optional
         The year of the date. Required if date_input is an integer.
-    hour : int, optional
+    hour : int
         The hour of the date, by default 0
-    minute : int, optional
+    minute : int
         The minute of the date, by default 0
-    seconds : int, optional
+    seconds : int
         The seconds of the date, by default 0
 
     Returns

@@ -10,14 +10,12 @@ from collections.abc import Iterable
 from enum import Enum
 from functools import partial
 from multiprocessing import Pool
-from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import NDArray
 from tqdm import tqdm
 
-if TYPE_CHECKING:
-    from swvo.io.RBMDataSet import RBMDataSet
+from swvo.io.RBMDataSet import RBMDataSet
 
 
 class TargetType(Enum):
@@ -222,13 +220,13 @@ def _interp_psd_parallel(
 
 
 def interp_psd(
-    self,
+    self: RBMDataSet,
     target_K: list[float],
     target_type: TargetType,
     target_mu: list[float] = None,
     target_V: list[float] = None,
-    n_threads=10,
-):
+    n_threads: int=10,
+) -> NDArray[np.float64]:
     if not isinstance(target_K, Iterable):
         target_K = [target_K]
 
