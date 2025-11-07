@@ -4,6 +4,8 @@
 
 __version__ = "1.1.0"
 
+from swvo import io as io
+
 import logging
 
 RED = "\033[91m"
