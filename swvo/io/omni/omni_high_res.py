@@ -94,16 +94,15 @@ class OMNIHighRes:
         temporary_dir = Path("./temp_omni_high_res_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
-        try:
-            file_paths, time_intervals = self._get_processed_file_list(start_time, end_time, cadence_min)
+        file_paths, time_intervals = self._get_processed_file_list(start_time, end_time, cadence_min)
 
-            for file_path, time_interval in zip(file_paths, time_intervals):
-                if file_path.exists():
-                    if reprocess_files:
-                        file_path.unlink()
-                    else:
-                        continue
+        for file_path, time_interval in zip(file_paths, time_intervals):
+            if file_path.exists() and not reprocess_files:
+                continue
 
+            tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
+
+            try:
                 data = self._get_data_from_omni(
                     start=time_interval[0],
                     end=time_interval[1],
@@ -113,10 +112,17 @@ class OMNIHighRes:
                 logging.debug("Processing file ...")
 
                 processed_df = self._process_single_year(data)
-                processed_df.to_csv(file_path, index=True, header=True)
+                processed_df.to_csv(tmp_path, index=True, header=True)
+                tmp_path.replace(file_path)
 
-        finally:
-            rmtree(temporary_dir, ignore_errors=True)
+            except Exception as e:
+                logging.error(f"Failed to process {file_path}: {e}")
+                if tmp_path.exists():
+                    tmp_path.unlink()
+                    pass
+                continue
+            finally:
+                rmtree(temporary_dir, ignore_errors=True)
 
     def read(
         self,
@@ -361,6 +367,7 @@ class OMNIHighRes:
             raise ValueError(msg)
         logging.debug(f"Fetching data from {self.URL} with payload: {payload}")
         response = requests.post(self.URL, data=payload)
+        response.raise_for_status()
         data = response.text.splitlines()
 
         if data and "Error" in data[0]:
