@@ -42,7 +42,7 @@ class KpNiemegk:
 
     ENV_VAR_NAME = "RT_KP_NIEMEGK_STREAM_DIR"
 
-    URL = "https://kp.gfz-potsdam.de/app/files/"
+    URL = "https://kp.gfz.de/app/files/"
     NAME = "Kp_ap_nowcast.txt"
 
     DAYS_TO_SAVE_EACH_FILE = 3
