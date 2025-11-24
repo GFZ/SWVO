@@ -198,17 +198,13 @@ class RBMDataSet:
 
         # Handle computed properties for both modes
         if name == "P":
-            if not hasattr(self, "MLT") or getattr(self, "MLT") is None or not isinstance(self.MLT, np.ndarray):  # type: ignore[reportUnnecessaryIsInstance]
-                raise AttributeError("Cannot compute `P` because `MLT` is missing, not loaded or is not valid array.")
+            if len(self.MLT) == 0:  # MLT not found
+                return np.asarray([])
             return ((self.MLT + 12) / 12 * np.pi) % (2 * np.pi)
 
         if name == "InvV":
-            if not all(hasattr(self, attr) for attr in ("InvK", "InvMu")):
-                raise AttributeError("Cannot compute `InvV` because `InvK` or `InvMu` is missing.")
-            if not isinstance(self.InvK, np.ndarray) or not isinstance(self.InvMu, np.ndarray):  # type: ignore[reportUnnecessaryIsInstance]
-                raise AttributeError("Cannot compute `InvV` because required arrays are invalid or not loaded.")
-            if self.InvK.ndim < 1 or self.InvMu.ndim < 2:
-                raise AttributeError("Cannot compute `InvV` because array dimensions are insufficient.")
+            if len(self.InvK) == 0 or len(self.InvMu) == 0:  # invariants not found
+                return np.asarray([])
             inv_K_repeated = np.repeat(self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1)
             return self.InvMu * (inv_K_repeated + 0.5) ** 2
 
@@ -469,29 +465,44 @@ class RBMDataSet:
         ):
             return False
 
-        self_vars = self.get_loaded_variables()
-        other_vars = other.get_loaded_variables()
-        if self_vars != other_vars:
-            return False
-        variables = self_vars
+        different_vars = self.get_different_variables(other)
 
-        for var in variables:
+        return len(different_vars) == 0
+
+    def get_different_variables(self, rbm_other: RBMDataSet) -> list[str]:
+
+        different_vars: list[str] = []
+
+        self_vars = self.get_loaded_variables()
+        other_vars = rbm_other.get_loaded_variables()
+
+        for var in set(self_vars + other_vars):
+
+            if var not in other_vars or var not in self_vars:
+                different_vars.append(var)
+                continue
+
             self_var = getattr(self, var)
-            other_var = getattr(other, var)
+            other_var = getattr(rbm_other, var)
 
             if not isinstance(other_var, type(self_var)):
-                return False
+                different_vars.append(var)
+                continue
 
             if isinstance(self_var, list):
                 if len(self_var) != len(other_var) or any(a != b for a, b in zip(self_var, other_var)):
-                    return False
+                    different_vars.append(var)
+                    continue
             elif isinstance(self_var, np.ndarray):
                 if self_var.shape != other_var.shape or not np.allclose(self_var, other_var, equal_nan=True):
-                    return False
+                    different_vars.append(var)
+                    continue
             elif self_var != other_var:
-                return False
+                different_vars.append(var)
+                continue
 
-        return True
+        return different_vars
+
 
     from .bin_and_interpolate_to_model_grid import bin_and_interpolate_to_model_grid
     from .interp_functions import interp_flux
