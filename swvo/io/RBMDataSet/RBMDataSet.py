@@ -505,4 +505,4 @@ class RBMDataSet:
 
 
     from .bin_and_interpolate_to_model_grid import bin_and_interpolate_to_model_grid
-    from .interp_functions import interp_flux
+    from .interp_functions import interp_flux, interp_psd
