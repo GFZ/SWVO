@@ -129,7 +129,7 @@ class OMNIHighRes:
         start_time: datetime,
         end_time: datetime,
         cadence_min: float = 1,
-        download: bool = True,
+        download: bool = False,
     ) -> pd.DataFrame:
         """
         Read OMNI High Resolution data for the given time range.
@@ -352,7 +352,7 @@ class OMNIHighRes:
             "start_date": start.strftime("%Y%m%d"),
             "end_date": end.strftime("%Y%m%d"),
         }
-        common_vars = {"vars": ["13", "14", "17", "18", "21", "25", "26", "27", "42"]}
+        common_vars = {"vars": ["13", "14", "17", "18", "21", "25", "26", "27", "41"]}
         if cadence == 1:
             params = {"res": "min", "spacecraft": "omni_min"}
             payload.update(params)
