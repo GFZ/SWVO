@@ -149,7 +149,11 @@ class OMNILowRes:
 
                 logging.debug(f"Downloading file {self.URL + filename} ...")
 
-                wget.download(self.URL + filename, str(temporary_dir))
+                try:
+                    wget.download(self.URL + filename, str(temporary_dir))
+                except urllib.error.HTTPError as e:
+                    logging.warn(f"Encountered HTTP Error while downloading OMNI low res data: {e}")
+                    return
 
                 logging.debug("Processing file ...")
 
@@ -289,7 +293,7 @@ class OMNILowRes:
             if not file_path.exists():
                 if download:
                     self.download_and_process(start_time, end_time)
-                else:
+                if not file_path.exists():
                     warnings.warn(f"File {file_path} not found")
                     continue
 
