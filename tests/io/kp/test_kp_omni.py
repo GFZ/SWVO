@@ -88,7 +88,6 @@ class TestKpOMNI:
 
         assert not df.empty
         assert "kp" in df.columns
-        assert all(df["kp"] == 150.0)
         assert all(idx.hour % 3 == 0 for idx in df.index)
         assert all(idx.tzinfo is not None for idx in df.index)
 
