@@ -8,6 +8,7 @@ Module for handling OMNI low resolution data.
 
 import logging
 import os
+import urllib
 import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
