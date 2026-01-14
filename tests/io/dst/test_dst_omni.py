@@ -61,7 +61,6 @@ class TestdstOMNI:
         end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
 
         dstomni.download_and_process(start_time, end_time)
-
         assert (TEST_DIR / Path("data/omni2_2020.dat")).exists()
 
     def test_read_without_download(self, dstomni):
