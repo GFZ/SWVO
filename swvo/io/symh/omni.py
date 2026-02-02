@@ -9,12 +9,10 @@ Module for handling OMNI SYM-H data.
 from __future__ import annotations
 
 import logging
-import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
 import pandas as pd
 
 from swvo.io.omni import OMNIHighRes
@@ -65,66 +63,21 @@ class SymhOMNI(OMNIHighRes):
         :class:`pandas.DataFrame`
             OMNI SYM-H data.
         """
-        assert cadence_min == 1 or cadence_min == 5, (
-            "Only 1 or 5 minute cadence can be chosen for high resolution omni data."
-        )
+        data_out = super().read(start_time, end_time, cadence_min=cadence_min, download=download)
 
         if not start_time.tzinfo:
             start_time = start_time.replace(tzinfo=timezone.utc)
-
         if not end_time.tzinfo:
             end_time = end_time.replace(tzinfo=timezone.utc)
 
-        assert start_time < end_time
+        symh_df = pd.DataFrame(index=data_out.index)
 
-        file_paths, _ = self._get_processed_file_list(start_time, end_time, cadence_min)
+        symh_df["sym-h"] = data_out["sym-h"]
+        symh_df["file_name"] = data_out["file_name"]
 
-        t = pd.date_range(
-            start=start_time,
-            end=end_time,
-            freq=timedelta(minutes=cadence_min),
-            tz=timezone.utc,
-        )
-        data_out = pd.DataFrame(index=t)
-        data_out["sym-h"] = np.array([np.nan] * len(t))
-        data_out["file_name"] = np.array([None] * len(t))
-
-        for file_path in file_paths:
-            if not file_path.exists():
-                if download:
-                    self.download_and_process(start_time, end_time, cadence_min=cadence_min)
-                else:
-                    warnings.warn(f"File {file_path} not found")
-                    continue
-
-            df_one_file = self._read_single_file(file_path)
-            data_out = df_one_file.combine_first(data_out)
-
-        data_out = data_out.truncate(
+        symh_df = symh_df.truncate(
             before=start_time - timedelta(minutes=cadence_min - 0.0000001),
             after=end_time + timedelta(minutes=cadence_min + 0.0000001),
         )
 
-        if all(data_out["sym-h"].isna()):
-            return data_out
-
-
-        return data_out
-
-    def _read_single_file(self, file_path: Path) -> pd.DataFrame:
-        """Read yearly OMNI High Resolution file and extract SYM-H data."""
-
-        df = pd.read_csv(file_path)
-
-        df = df[["timestamp", "sym-h"]].copy()
-
-
-        df["t"] = pd.to_datetime(df["timestamp"], utc=True)
-        df.index = df["t"]
-
-        df.drop(columns=["timestamp", "t"], inplace=True)
-
-        df["file_name"] = file_path
-        df.loc[df["sym-h"].isna(), "file_name"] = None
-
-        return df
+        return symh_df
