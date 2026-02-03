@@ -12,4 +12,3 @@ docutils
 imagesize
 numpydoc
 linkify-it-py
-numpy
