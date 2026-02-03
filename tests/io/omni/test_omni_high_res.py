@@ -105,8 +105,8 @@ class TestOMNIHighRes:
     def test_process_single_year_parses_data_correctly(self, omni_high_res):
         data = [
             "YYYY DOY HR MN bavg bx_gsm by_gsm bz_gsm speed proton_density temperature pdyn sym-h",
-            "2020 1 0 0 5.1 1.2 2.3 3.4 400 5.5 1000000 99 -15", 
-            "2020 1 0 1 9999.9 9999.9 9999.9 9999.9 99999.8 999.8 9999998.0 99 99999.0", 
+            "2020 1 0 0 5.1 1.2 2.3 3.4 400 5.5 1000000 99 -15",
+            "2020 1 0 1 9999.9 9999.9 9999.9 9999.9 99999.8 999.8 9999998.0 99 99999.0",
         ]
 
         df = omni_high_res._process_single_year(data)
@@ -121,7 +121,7 @@ class TestOMNIHighRes:
             "proton_density",
             "temperature",
             "pdyn",
-            "sym-h", 
+            "sym-h",
         ]
         assert list(df.columns) == expected_cols
         assert np.isnan(df.iloc[1]["bavg"])
@@ -139,7 +139,7 @@ class TestOMNIHighRes:
         assert df.iloc[0]["speed"] == 400
         assert df.iloc[0]["proton_density"] == 5.5
         assert df.iloc[0]["temperature"] == 1000000
-        assert df.iloc[0]["sym-h"] == -15 
+        assert df.iloc[0]["sym-h"] == -15
 
     def test_process_single_year_handles_missing_data_lines(self, omni_high_res):
         data = ["YYYY DOY HR MN bavg bx_gsm by_gsm bz_gsm speed proton_density temperature sym-h"]

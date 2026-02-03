@@ -470,14 +470,12 @@ class RBMDataSet:
         return len(different_vars) == 0
 
     def get_different_variables(self, rbm_other: RBMDataSet) -> list[str]:
-
         different_vars: list[str] = []
 
         self_vars = self.get_loaded_variables()
         other_vars = rbm_other.get_loaded_variables()
 
         for var in set(self_vars + other_vars):
-
             if var not in other_vars or var not in self_vars:
                 different_vars.append(var)
                 continue
@@ -503,6 +501,5 @@ class RBMDataSet:
 
         return different_vars
 
-
     from .bin_and_interpolate_to_model_grid import bin_and_interpolate_to_model_grid
-    from .interp_functions import interp_flux
+    from .interp_functions import interp_flux, interp_psd

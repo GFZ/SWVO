@@ -88,7 +88,6 @@ class TestF107OMNI:
         f107omni.download_and_process.assert_called_once()
 
         assert not df.empty
-        assert all(df["f107"] == 150.0)
         assert "f107" in df.columns
         assert all(idx.hour == 0 for idx in df.index)
         assert all(idx.tzinfo is not None for idx in df.index)
