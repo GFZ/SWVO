@@ -502,4 +502,6 @@ class RBMDataSet:
         return different_vars
 
     from .bin_and_interpolate_to_model_grid import bin_and_interpolate_to_model_grid
+    from .identify_orbits import identify_orbits
     from .interp_functions import interp_flux, interp_psd
+    from .linearize_trajectories import linearize_trajectories

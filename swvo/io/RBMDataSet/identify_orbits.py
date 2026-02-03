@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import typing
 from datetime import datetime
 from typing import Literal, NamedTuple
@@ -7,7 +9,9 @@ from numpy.typing import NDArray
 from scipy.interpolate import make_splrep  # type: ignore[reportUnknownVariableType]
 from scipy.signal import find_peaks  # type: ignore[reportUnknownVariableType]
 
-from swvo.io.RBMDataSet import RBMDataSet, RBMNcDataSet
+if typing.TYPE_CHECKING:
+    from swvo.io.RBMDataSet import RBMDataSet, RBMNcDataSet
+
 
 class Trajectory(NamedTuple):
     start: int
