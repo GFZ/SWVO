@@ -263,7 +263,7 @@ class RBMDataSet:
         """Returns the MFM enum."""
         return self._mfm
 
-    def update_from_dict(self, source_dict: dict[str, VariableLiteral]) -> RBMDataSet:
+    def update_from_dict(self, source_dict: dict[VariableLiteral, NDArray[np.floating] | list[dt.datetime]]) -> RBMDataSet:
         """Get data from data dictionary and update the object.
 
         Parameters
