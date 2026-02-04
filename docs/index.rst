@@ -22,5 +22,6 @@ User Guide
 .. toctree::
    :maxdepth: 1
 
+   Examples <examples/solar_wind_example>
    Changelog <changelog>
    Contributing Guide <CONTRIBUTING>

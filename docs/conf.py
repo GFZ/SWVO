@@ -30,6 +30,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosectionlabel",
     "myst_parser",
+    "nbsphinx",
     "sphinx_copybutton",
     "sphinx.ext.imgconverter",
     "sphinx_github_changelog",
@@ -56,6 +57,7 @@ myst_enable_extensions = [
     "tasklist",
 ]
 autosummary_generate = True
+nbsphinx_execute = "auto"
 
 autodoc_default_options = {
     "members": ("member-order,inherited-members, show-inheritance"),

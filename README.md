@@ -52,6 +52,7 @@ This package provides tools to read, process, and analyze several key solar and 
     - OMNI: `SWOMNI`
     - SWIFT: `SWSWIFTEnsemble`
     - Combined: `read_solar_wind_from_multiple_models`
+  - **Example notebook:** <a href="docs/examples/solar_wind_example.ipynb">docs/examples/solar_wind_example.ipynb</a>
 
 Each index can be accessed via these dedicated reader classes, which handle downloading and read methods. See the code in `swvo/io` or API documentation for details on each index's implementation.
 
