@@ -6,11 +6,28 @@
 [![Python version](https://img.shields.io/pypi/pyversions/swvo.svg)](https://badge.fury.io/py/swvo)
 [![Coverage Status](https://coveralls.io/repos/github/GFZ/SWVO/badge.svg?branch=main)](https://coveralls.io/github/GFZ/SWVO?branch=main)
 
-
 ## Introduction
+
 This package provides a set of tools for managing solar data in Python. It includes functionalities for reading, writing, and processing data from various sources.
 
-## Solar Indices Overview
+## Example
+
+```python
+from datetime import datetime, timezone
+from swvo.io.solar_wind import SWACE
+
+ACE_DIR = "./ace_data/" #data directory for ACE data
+
+start = datetime(2024, 11, 20, 0, 0, tzinfo=timezone.utc)
+end = datetime(2024, 11, 20, 6, 0, tzinfo=timezone.utc)
+
+#Read ACE solar wind data with downloading
+ace_df = swace.read(start, end, download=True)
+```
+
+See here for a detailed example <a href="docs/examples/solar_wind_example.ipynb">docs/examples/solar_wind_example.ipynb</a>
+
+## Space Weather Data Overview
 
 This package provides tools to read, process, and analyze several key solar and geomagnetic indices. For each index, the available data sources and the corresponding reader classes are listed below:
 
@@ -55,11 +72,12 @@ This package provides tools to read, process, and analyze several key solar and 
 
 Each index can be accessed via these dedicated reader classes, which handle downloading and read methods. See the code in `swvo/io` or API documentation for details on each index's implementation.
 
-
 ## Installation
+
 To install the package, run the following command:
 
 `uv venv`
+
 ```bash
 source .venv/bin/activate
 python -m ensurepip --upgrade
@@ -68,6 +86,7 @@ uv pip install -e .
 ```
 
 or it can be installed directly from PyPI:
+
 ```bash
 uv pip install swvo
 ```

@@ -12,3 +12,4 @@ docutils
 imagesize
 numpydoc
 linkify-it-py
+nbsphinx
