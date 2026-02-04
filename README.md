@@ -10,7 +10,24 @@
 
 This package provides a set of tools for managing solar data in Python. It includes functionalities for reading, writing, and processing data from various sources.
 
-## Solar Indices Overview
+## Example
+
+```python
+from datetime import datetime, timezone
+from swvo.io.solar_wind import SWACE
+
+ACE_DIR = "./ace_data/" #data directory for ACE data
+
+start = datetime(2024, 11, 20, 0, 0, tzinfo=timezone.utc)
+end = datetime(2024, 11, 20, 6, 0, tzinfo=timezone.utc)
+
+#Read ACE solar wind data with downloading
+ace_df = swace.read(start, end, download=True)
+```
+
+See here for a detailed example <a href="docs/examples/solar_wind_example.ipynb">docs/examples/solar_wind_example.ipynb</a>
+
+## Space Weather Data Overview
 
 This package provides tools to read, process, and analyze several key solar and geomagnetic indices. For each index, the available data sources and the corresponding reader classes are listed below:
 
@@ -75,25 +92,3 @@ uv pip install swvo
 ```
 
 All the above `uv` commands assume you have `uv` installed, if not then remove `uv` prefix from the commands and run them directly.
-
-## Example
-
-```python
-from datetime import datetime, timezone
-from swvo.io.solar_wind import SWACE
-
-ACE_DIR = "./ace_data/" #data directory for ACE data
-
-start = datetime(2024, 11, 20, 0, 0, tzinfo=timezone.utc)
-end = datetime(2024, 11, 20, 6, 0, tzinfo=timezone.utc)
-
-# Read ACE solar wind data without downloading (assuming data is already present in ACE_DIR)
-swace = SWACE(data_dir=ACE_DIR)
-ace = swace.read(start, end, download=False)
-
-
-#Read ACE solar wind data with downloading
-ace = swace.read(start, end, download=True)
-```
-
-See here for a detailed example <a href="docs/examples/solar_wind_example.ipynb">docs/examples/solar_wind_example.ipynb</a>
