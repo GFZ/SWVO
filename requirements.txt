@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 numpy
-pandas
+pandas<3
 wget
 mat73
 scipy
