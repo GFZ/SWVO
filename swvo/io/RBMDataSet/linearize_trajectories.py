@@ -19,7 +19,7 @@ def _linearize_trajectories(
     trajectories: list[Trajectory], 
 ) -> tuple[NDArray[np.floating], list[datetime]]:
     
-    dist_filled = pd.Series(distance).interpolate(method='linear').to_numpy()
+    dist_filled = pd.Series(distance).interpolate(method="linear", limit_direction="both").to_numpy()
 
     n = len(distance)
     lin_x_axis = np.full(n, np.nan)

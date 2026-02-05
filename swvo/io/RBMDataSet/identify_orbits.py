@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Literal, NamedTuple
 
 import numpy as np
+import pandas as pd
 from numpy.typing import NDArray
 from scipy.interpolate import make_splrep  # type: ignore[reportUnknownVariableType]
 from scipy.signal import find_peaks  # type: ignore[reportUnknownVariableType]
@@ -25,17 +26,19 @@ def _identify_orbits(
         *,
         apply_smoothing: bool) -> list[Trajectory]:
 
+    distance_filled = pd.Series(distance).interpolate(method="linear", limit_direction="both").to_numpy()
+
     if apply_smoothing:
         timestamps = [t.timestamp() for t in time]
-        distance = make_splrep(timestamps, distance, s=0)(timestamps)  # type: ignore[reportUnknownVariableType]
-        distance = typing.cast("NDArray[np.floating]", distance)
+        distance_filled = make_splrep(timestamps, distance_filled, s=0)(timestamps)  # type: ignore[reportUnknownVariableType]
+        distance_filled = typing.cast("NDArray[np.floating]", distance_filled)
 
-    peaks, _ = find_peaks(distance, distance=minimal_distance)  # type: ignore[reportUnknownVariableType]
-    troughs, _ = find_peaks(-distance, distance=minimal_distance)  # type: ignore[reportUnknownVariableType]
+    peaks, _ = find_peaks(distance_filled, distance=minimal_distance)  # type: ignore[reportUnknownVariableType]
+    troughs, _ = find_peaks(-distance_filled, distance=minimal_distance)  # type: ignore[reportUnknownVariableType]
     extrema = np.sort(np.concatenate((peaks, troughs)))  # type: ignore[reportUnknownVariableType]
     extrema = typing.cast("NDArray[np.int32]", extrema)
 
-    diffs = np.diff(distance)
+    diffs = np.diff(distance_filled)
     in_out_bound_label = "inbound" if np.median(diffs[0:extrema[0]]) < 0 else "outbound"
     orbits: list[Trajectory] = [Trajectory(0, int(extrema[0]), in_out_bound_label)]
 
