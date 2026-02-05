@@ -266,7 +266,7 @@ def _read_historical_model(
         continuous_df = pd.DataFrame(index=continuous_index)
         continuous_df.index.name = data_one_model.index.name
         for col in data_one_model.columns:
-            if data_one_model[col].dtype == "object":
+            if data_one_model[col].dtype in ["object", "str"]:
                 continuous_df[col] = None
             else:
                 continuous_df[col] = np.nan
@@ -402,7 +402,7 @@ def _interpolate_to_common_indices(
         df_common_index.index.name = data[ie].index.name
 
         for colname, col in data[ie].items():
-            if col.dtype == "object":
+            if col.dtype in ["object", "str"]:
                 # this is the filename column
                 df_common_index[colname] = col.iloc[0]
             else:
@@ -572,7 +572,7 @@ def _ensure_continuous_dataframe(
         continuous_df.index.name = df.index.name
 
         for col in df.columns:
-            if df[col].dtype == "object":
+            if df[col].dtype in ["object", "str"]:
                 continuous_df[col] = None
             else:
                 continuous_df[col] = np.nan

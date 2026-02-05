@@ -11,15 +11,15 @@ def test_identify_orbits_clean_abs_sin():
     x = np.arange(0, 3 * np.pi, 3 * np.pi / 100)
     distance = np.abs(np.sin(x))
     time = [datetime(2026, 1, 1) + timedelta(seconds=i) for i in range(len(x))]
-    
+
     orbits = _identify_orbits(time, distance, minimal_distance=3, apply_smoothing=False)
 
     assert len(orbits) == 6
-    
+
     assert orbits[0].start == 0
     assert orbits[0].end == 17
     assert orbits[0].direction == "outbound"
-    
+
     assert orbits[1].start == 18
     assert orbits[1].end == 33
     assert orbits[1].direction == "inbound"
@@ -40,6 +40,7 @@ def test_identify_orbits_clean_abs_sin():
     assert orbits[5].end == 99
     assert orbits[5].direction == "inbound"
 
+
 def test_identify_orbits_noisy_all_extrema() -> None:
     np.random.seed(42)
     x = np.arange(0, 3 * np.pi, 3 * np.pi / 100)
@@ -47,5 +48,5 @@ def test_identify_orbits_noisy_all_extrema() -> None:
     time = [datetime(2026, 1, 1) + timedelta(seconds=i) for i in range(100)]
 
     orbits = _identify_orbits(time, distance, 20, apply_smoothing=True)
-    
+
     assert len(orbits) == 6

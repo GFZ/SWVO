@@ -14,34 +14,33 @@ if TYPE_CHECKING:
 
 
 def _linearize_trajectories(
-    time: list[datetime], 
+    time: list[datetime],
     distance: np.ndarray,
-    trajectories: list[Trajectory], 
+    trajectories: list[Trajectory],
 ) -> tuple[NDArray[np.floating], list[datetime]]:
-    
     dist_filled = pd.Series(distance).interpolate(method="linear", limit_direction="both").to_numpy()
 
     n = len(distance)
     lin_x_axis = np.full(n, np.nan)
     bend_time_axis = np.full(n, np.nan)
-    
+
     max_r_global = np.nanmax(distance)
     min_r_global = np.nanmin(distance)
-    
+
     # Convert datetime to timestamps for interpolation
     time_ts = np.array([t.timestamp() for t in time])
 
     for it, traj in enumerate(trajectories):
         idx = slice(traj.start, traj.end + 1)
         traj_r = dist_filled[idx]
-        
+
         if len(traj_r) == 0:
             continue
 
         # Local Min/Max
         max_r_traj = np.max(traj_r) if (it != 0 and it != len(trajectories) - 1) else max_r_global
         min_r_traj = np.min(traj_r) if (it != 0 and it != len(trajectories) - 1) else min_r_global
-        
+
         r_range = max_r_traj - min_r_traj if max_r_traj != min_r_traj else 1.0
 
         # Calculate offset
@@ -73,12 +72,12 @@ def _linearize_trajectories(
 
     return lin_x_axis, [datetime.fromtimestamp(ts) for ts in bend_time_axis]
 
-def linearize_trajectories(
-        self: RBMDataSet | RBMNcDataSet, 
-        trajectories: list[Trajectory],
-        orbit_type: Literal["R", "L*"] = "R",
-) -> tuple[NDArray[np.floating], list[datetime]]:
 
+def linearize_trajectories(
+    self: RBMDataSet | RBMNcDataSet,
+    trajectories: list[Trajectory],
+    orbit_type: Literal["R", "L*"] = "R",
+) -> tuple[NDArray[np.floating], list[datetime]]:
     dist = self.R0 if orbit_type == "R" else self.Lstar[:, -1]
 
     return _linearize_trajectories(self.datetime, dist, trajectories)

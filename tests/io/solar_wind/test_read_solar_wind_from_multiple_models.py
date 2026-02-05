@@ -249,7 +249,7 @@ class TestReadSolarWindFromMultipleModels:
         )
 
         data_t0 = pd.DataFrame(
-            {"value": [np.nan] * n, "file_name": [np.nan] * n, "model": [np.nan] * n},
+            {"value": [np.nan] * n, "file_name": [None] * n, "model": [None] * n},
             index=pd.date_range(t0, periods=n, freq="1min", tz="UTC"),
         )
 

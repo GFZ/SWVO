@@ -1,19 +1,18 @@
-# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
 #
+# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
 # SPDX-License-Identifier: Apache-2.0
 
-numpy
-pandas<3
-wget
-mat73
-scipy
-pytest
-matplotlib
-requests
-wget
-distance
-tqdm
-pytest-mock
-netcdf4
-icecream
-pyright
+distance>=0.1.3
+icecream>=2.1.10
+mat73>=0.65
+matplotlib>=3.10.8
+netcdf4>=1.7.4
+numpy>=2.4.2
+pandas>=2.3
+pyright>=1.1.408
+pytest>=9.0.2
+pytest-mock>=3.15.1
+requests>=2.32.5
+scipy>=1.17.0
+tqdm>=4.67.3
+wget>=3.2

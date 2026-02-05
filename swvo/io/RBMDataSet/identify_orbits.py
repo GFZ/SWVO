@@ -19,13 +19,10 @@ class Trajectory(NamedTuple):
     end: int
     direction: Literal["inbound", "outbound"]
 
-def _identify_orbits(
-        time: list[datetime],
-        distance: NDArray[np.floating],
-        minimal_distance: int,
-        *,
-        apply_smoothing: bool) -> list[Trajectory]:
 
+def _identify_orbits(
+    time: list[datetime], distance: NDArray[np.floating], minimal_distance: int, *, apply_smoothing: bool
+) -> list[Trajectory]:
     distance_filled = pd.Series(distance).interpolate(method="linear", limit_direction="both").to_numpy()
 
     if apply_smoothing:
@@ -39,30 +36,28 @@ def _identify_orbits(
     extrema = typing.cast("NDArray[np.int32]", extrema)
 
     diffs = np.diff(distance_filled)
-    in_out_bound_label = "inbound" if np.median(diffs[0:extrema[0]]) < 0 else "outbound"
+    in_out_bound_label = "inbound" if np.median(diffs[0 : extrema[0]]) < 0 else "outbound"
     orbits: list[Trajectory] = [Trajectory(0, int(extrema[0]), in_out_bound_label)]
 
     for i in range(1, len(extrema)):
-
         # print(diffs[extrema[i - 1]:extrema[i]])
-        in_out_bound_label = "inbound" if np.median(diffs[extrema[i - 1]:extrema[i]]) < 0 else "outbound"
+        in_out_bound_label = "inbound" if np.median(diffs[extrema[i - 1] : extrema[i]]) < 0 else "outbound"
 
-        orbits.append(
-            Trajectory(extrema[i - 1] + 1, extrema[i], in_out_bound_label)
-        )
+        orbits.append(Trajectory(extrema[i - 1] + 1, extrema[i], in_out_bound_label))
 
-    in_out_bound_label = "inbound" if np.median(diffs[extrema[-1]:]) < 0 else "outbound"
+    in_out_bound_label = "inbound" if np.median(diffs[extrema[-1] :]) < 0 else "outbound"
     orbits.append(Trajectory(extrema[-1] + 1, len(distance) - 1, in_out_bound_label))
 
     return orbits
 
-def identify_orbits(
-        self: RBMDataSet | RBMNcDataSet,
-        orbit_type: Literal["R", "L*"] = "R",
-        minimal_distance: int = 10,
-        *,
-        apply_smoothing: bool = True) -> list[Trajectory]:
 
+def identify_orbits(
+    self: RBMDataSet | RBMNcDataSet,
+    orbit_type: Literal["R", "L*"] = "R",
+    minimal_distance: int = 60,
+    *,
+    apply_smoothing: bool = True,
+) -> list[Trajectory]:
     dist = self.R0 if orbit_type == "R" else self.Lstar[:, -1]
 
     return _identify_orbits(self.datetime, dist, minimal_distance, apply_smoothing=apply_smoothing)
