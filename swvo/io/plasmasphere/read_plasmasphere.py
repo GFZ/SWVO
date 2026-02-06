@@ -100,7 +100,7 @@ class PlasmaspherePredictionReader:
 
         if source == "gfz_plasma":
             requested_date = requested_date.replace(minute=0, second=0, microsecond=0)
-            return self._read_single_file(os.path.join(self.data_folder, "output"), requested_date)
+            return self._read_single_file(self.data_folder, requested_date)
         else:
             msg = f"Source {source} requested for reading plasmasphere prediction not available..."
             logging.error(msg)
