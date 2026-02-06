@@ -39,6 +39,12 @@ def main(args):
         level=logging.INFO,
     )
 
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s,%(msecs)d - %(levelname)s - %(message)s", datefmt="%H:%M:%S")
+    console_handler.setFormatter(formatter)
+    logging.getLogger().addHandler(console_handler)
+
     date_yesterday_start = time_now.replace(hour=0, minute=0, second=1) - timedelta(days=1)
     # date_yesterday_end = date_yesterday_start.replace(hour=23, minute=59, second=59)
 
