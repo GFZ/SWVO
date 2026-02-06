@@ -58,10 +58,11 @@ class PlasmaspherePredictionReader:
         pd.DataFrame | None
             pandas.DataFrame with the data read from the file, or None if the file does not exist.
         """
-        file_name = f"plasmasphere_density_{date.year}-{str(date.month).zfill(2)}-{str(date.day).zfill(2)}-{str(date.hour).zfill(2)}-{str(date.minute).zfill(2)}.csv"
+
+        file_name = f"plasmasphere_density_{date.year}{str(date.month).zfill(2)}{str(date.day).zfill(2)}T{str(date.hour).zfill(2)}00.csv"
 
         file_path = os.path.join(folder, file_name)
-
+        logging.info(f"Looking for file {file_path} for date {date}")
         if not os.path.isfile(file_path):
             msg = f"No suitable files found in the folder {folder} for the requested date {date}"
             logging.warning(msg)
@@ -99,7 +100,7 @@ class PlasmaspherePredictionReader:
 
         if source == "gfz_plasma":
             requested_date = requested_date.replace(minute=0, second=0, microsecond=0)
-            return self._read_single_file(self.data_folder, requested_date)
+            return self._read_single_file(os.path.join(self.data_folder, "output"), requested_date)
         else:
             msg = f"Source {source} requested for reading plasmasphere prediction not available..."
             logging.error(msg)
