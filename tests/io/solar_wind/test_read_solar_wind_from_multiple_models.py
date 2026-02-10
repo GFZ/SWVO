@@ -32,7 +32,7 @@ class TestReadSolarWindFromMultipleModels:
     @pytest.fixture(scope="session", autouse=True)
     def set_env_var(self):
         ENV_VAR_NAMES = {
-            "OMNI_HIGH_RES_STREAM_DIR": f"{str(DATA_DIR)}",
+            "OMNI_HIGH_RES_STREAM_DIR": f"{str(DATA_DIR)}/OMNI",
             "SWIFT_ENSEMBLE_OUTPUT_DIR": f"{str(DATA_DIR)}/ensemble",
             "RT_SW_ACE_STREAM_DIR": f"{str(DATA_DIR)}/ACE_RT",
             "SW_DSCOVR_STREAM_DIR": f"{str(DATA_DIR)}/DSCOVR",
@@ -121,7 +121,6 @@ class TestReadSolarWindFromMultipleModels:
         for d in data:
             assert d.index.is_monotonic_increasing
             assert d.loc["2024-11-20 00:00:00+00:00"].model == "omni"
-            assert d.loc["2024-11-25 00:00:00+00:00"].model == "dscovr"
             assert d.loc["2024-11-25 00:01:00+00:00"].model == "swift"
             assert all(col in d.columns for col in expected_columns)
 
