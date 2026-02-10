@@ -649,11 +649,12 @@ def _recursive_fill_27d_historical(
         filled = False
         for model in historical_models:
             try:
+                kw = {"propagation": True} if isinstance(model, (DSCOVR, SWACE)) else {}
                 prev_data = model.read(
                     recurrence_start - timedelta(hours=1),
                     recurrence_end + timedelta(hours=1),
                     download=download,
-                    propagation=True if not isinstance(model, SWOMNI) else False,
+                    **kw,
                 )
 
                 if prev_data.empty:
