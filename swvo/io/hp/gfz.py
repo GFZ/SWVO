@@ -15,6 +15,8 @@ import numpy as np
 import pandas as pd
 import wget
 
+logger = logging.getLogger(__name__)
+
 
 class HpGFZ:
     """This is a base class for HpGFZ data.
@@ -60,7 +62,7 @@ class HpGFZ:
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.index_number: int = index[2:]
 
-        logging.info(f"{self.index.upper()} GFZ data directory: {self.data_dir}")
+        logger.info(f"{self.index.upper()} GFZ data directory: {self.data_dir}")
 
         (self.data_dir / str(self.index)).mkdir(exist_ok=True)
 
@@ -104,11 +106,11 @@ class HpGFZ:
                     )
 
                 for filename_download in filenames_download:
-                    logging.debug(f"Downloading file {self.URL + filename_download} ...")
+                    logger.debug(f"Downloading file {self.URL + filename_download} ...")
 
                     wget.download(self.URL + filename_download, str(temporary_dir))
 
-                    logging.debug("Processing file ...")
+                    logger.debug("Processing file ...")
 
                     if file_path.exists():
                         if reprocess_files:
@@ -147,7 +149,7 @@ class HpGFZ:
             end_time = end_time.replace(tzinfo=timezone.utc)
 
         if start_time < datetime(self.START_YEAR, 1, 1, tzinfo=timezone.utc):
-            logging.warning(
+            logger.warning(
                 "Start date chosen falls behind the mission starting year. Moving start date to first"
                 " available mission files..."
             )
@@ -176,14 +178,14 @@ class HpGFZ:
         data_out[self.index] = np.array([np.nan] * len(t))
 
         for file_path, _ in zip(file_paths, time_intervals):
-            logging.info(f"Processing file {file_path} ...")
+            logger.info(f"Processing file {file_path} ...")
 
             if not file_path.expanduser().exists() and download:
                 self.download_and_process(start_time, end_time)
 
             # if we request a date in the future, the file will still not be found here
             if not file_path.expanduser().exists():
-                logging.warning(f"File {file_path} not found, filling with NaNs")
+                logger.warning(f"File {file_path} not found, filling with NaNs")
                 continue
             df_one_file = self._read_single_file(file_path)
 

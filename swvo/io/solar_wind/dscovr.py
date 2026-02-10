@@ -20,6 +20,8 @@ import wget
 
 from swvo.io.utils import sw_mag_propagation
 
+logger = logging.getLogger(__name__)
+
 logging.captureWarnings(True)
 
 
@@ -63,7 +65,7 @@ class DSCOVR:
         self.data_dir: Path = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-        logging.info(f"DSCOVR data directory: {self.data_dir}")
+        logger.info(f"DSCOVR data directory: {self.data_dir}")
 
     def download_and_process(self, request_time: datetime) -> None:
         """
@@ -89,7 +91,7 @@ class DSCOVR:
         assert request_time < current_time, "Request time cannot be in the future!"
 
         if current_time - request_time > timedelta(hours=24):
-            logging.debug("We can only download DSCOVR data for the last 23 hours and a hour in past!")
+            logger.debug("We can only download DSCOVR data for the last 23 hours and a hour in past!")
             return
 
         temporary_dir = Path("./temp_sw_dscovr_wget")
@@ -99,7 +101,7 @@ class DSCOVR:
             self._download_file(temporary_dir, self.NAME_MAG)
             self._download_file(temporary_dir, self.NAME_SWEPAM)
 
-            logging.debug("Processing file ...")
+            logger.debug("Processing file ...")
             processed_df = self._process_single_file(temporary_dir)
 
             unique_dates = np.unique(processed_df.index.date)
@@ -113,20 +115,20 @@ class DSCOVR:
                 day_data = processed_df[(processed_df.index >= day_start) & (processed_df.index <= day_end)]
 
                 if file_path.exists():
-                    logging.debug(f"Found previous file for {date}. Loading and combining ...")
+                    logger.debug(f"Found previous file for {date}. Loading and combining ...")
                     previous_df = self._read_single_file(file_path)
 
                     previous_df.drop("file_name", axis=1, inplace=True)
                     day_data = day_data.combine_first(previous_df)
 
-                logging.debug(f"Saving processed file for {date}")
+                logger.debug(f"Saving processed file for {date}")
                 day_data.to_csv(file_path, index=True, header=True)
 
         finally:
             rmtree(temporary_dir)
 
     def _download_file(self, temporary_dir: Path, file_name: str) -> None:
-        logging.debug(f"Downloading file {self.URL + file_name} ...")
+        logger.debug(f"Downloading file {self.URL + file_name} ...")
         wget.download(self.URL + file_name, str(temporary_dir))
 
         if os.stat(str(temporary_dir / file_name)).st_size == 0:
@@ -169,7 +171,7 @@ class DSCOVR:
         assert start_time < end_time, "Start time must be before end time!"
 
         if propagation:
-            logging.info("Shiting start day by -1 day to account for propagation")
+            logger.info("Shiting start day by -1 day to account for propagation")
             start_time = start_time - timedelta(days=1)
 
         file_paths, _ = self._get_processed_file_list(start_time, end_time)

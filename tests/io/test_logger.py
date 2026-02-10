@@ -10,10 +10,14 @@ def test_import_is_quiet(capsys):
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err == ""
+
+
 def test_logger_has_null_handler():
     from swvo.logger import logger
 
     assert any(isinstance(h, logging.NullHandler) for h in logger.handlers)
+
+
 def test_setup_logging_adds_stream_handler():
     from swvo.logger import logger, setup_logging
 
@@ -23,6 +27,8 @@ def test_setup_logging_adds_stream_handler():
     setup_logging()
 
     assert any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
+
+
 def test_child_logger_emits_after_setup(caplog):
     from swvo.logger import setup_logging
 

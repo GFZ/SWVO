@@ -18,6 +18,8 @@ from swvo.io.exceptions import ModelError
 from swvo.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ
 from swvo.io.utils import any_nans, construct_updated_data_frame
 
+logger = logging.getLogger(__name__)
+
 HpModel = Hp30Ensemble | Hp30GFZ | Hp60Ensemble | Hp60GFZ
 
 logging.captureWarnings(True)
@@ -67,7 +69,7 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     hp_index = hp_index.lower()
 
     if model_order is None:
-        logging.warning("No model order specified, using default order: GFZ, Ensemble")
+        logger.warning("No model order specified, using default order: GFZ, Ensemble")
         if hp_index == "hp30":
             model_order = [Hp30GFZ(), Hp30Ensemble()]
         elif hp_index == "hp60":
@@ -174,13 +176,13 @@ def _read_historical_model(
         msg = "Encountered invalide model type in read historical model!"
         raise TypeError(msg)
 
-    logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
+    logger.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
 
     data_one_model = model.read(start_time, end_time, download=download)
 
     # set nan for 'future' values
     data_one_model.loc[historical_data_cutoff_time:end_time, hp_index] = np.nan
-    logging.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
+    logger.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
 
     return data_one_model
 
@@ -232,7 +234,7 @@ def _read_latest_ensemble_files(
             target_time -= timedelta(hours=1)
             continue
 
-    logging.info(f"Reading PAGER Hp ensemble from {target_time} to {end_time}")
+    logger.info(f"Reading PAGER Hp ensemble from {target_time} to {end_time}")
 
     return data_one_model
 

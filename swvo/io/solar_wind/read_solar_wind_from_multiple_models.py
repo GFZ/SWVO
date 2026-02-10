@@ -19,6 +19,8 @@ from swvo.io.exceptions import ModelError
 from swvo.io.solar_wind import DSCOVR, SWACE, SWOMNI, SWSWIFTEnsemble
 from swvo.io.utils import any_nans, construct_updated_data_frame
 
+logger = logging.getLogger(__name__)
+
 SWModel = DSCOVR | SWACE | SWOMNI | SWSWIFTEnsemble
 
 logging.captureWarnings(True)
@@ -86,7 +88,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
 
     if model_order is None:
         model_order = [SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble()]
-        logging.warning("No model order specified, using default order: OMNI, ACE, SWIFT ensemble")
+        logger.warning("No model order specified, using default order: OMNI, ACE, SWIFT ensemble")
 
     data_out = [pd.DataFrame()]
     swift_data_available = True
@@ -110,7 +112,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
                 isinstance(data_one_model, pd.DataFrame) and data_one_model.empty
             ):
                 swift_data_available = False
-                logging.info("SWIFT ensemble data not available for future dates")
+                logger.info("SWIFT ensemble data not available for future dates")
             else:
                 # Check if SWIFT data is all NaN
                 swift_has_valid_data = False
@@ -128,7 +130,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
 
                 if not swift_has_valid_data:
                     swift_data_available = False
-                    logging.info("SWIFT ensemble data contains only NaN values for future dates")
+                    logger.info("SWIFT ensemble data contains only NaN values for future dates")
 
         data_out = construct_updated_data_frame(data_out, data_one_model, model.LABEL)
         if not any_nans(data_out):
@@ -253,7 +255,7 @@ def _read_historical_model(
         If the provided model is not an instance of DSCOVR, SWACE or SWOMNI.
 
     """
-    logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
+    logger.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
     if isinstance(model, SWOMNI):
         data_one_model = model.read(start_time, end_time, download=download)
     else:
@@ -283,13 +285,13 @@ def _read_historical_model(
             if do_interpolation:
                 interpolated_historical = _interpolate_short_gaps(historical_data, max_gap_minutes=180)
                 data_one_model.loc[:historical_data_cutoff_time] = interpolated_historical
-                logging.info(
+                logger.info(
                     f"Applied spline interpolation to short gaps (<= 3 hours) in {model.LABEL} historical data",
                 )
 
         if historical_data_cutoff_time < end_time:
             data_one_model.loc[historical_data_cutoff_time + timedelta(minutes=1) : end_time] = np.nan
-            logging.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
+            logger.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
 
     return data_one_model
 
@@ -330,7 +332,7 @@ def _read_latest_ensemble_files(
         try:
             data_one_model = model.read(target_time, end_time)
         except Exception as e:
-            logging.warning(f"Failed to read SWIFT ensemble for {target_time}: {e}")
+            logger.warning(f"Failed to read SWIFT ensemble for {target_time}: {e}")
             target_time -= timedelta(days=1)
             continue
 
@@ -344,9 +346,9 @@ def _read_latest_ensemble_files(
         break
 
     if len(data_one_model) > 0:
-        logging.info(f"Reading SWIFT ensemble from {target_time} to {end_time}")
+        logger.info(f"Reading SWIFT ensemble from {target_time} to {end_time}")
     else:
-        logging.info("No SWIFT ensemble data available for the requested time range")
+        logger.info("No SWIFT ensemble data available for the requested time range")
 
     return data_one_model
 
@@ -496,7 +498,7 @@ def _interpolate_short_gaps(df: pd.DataFrame, max_gap_minutes: int = 180) -> pd.
                             interpolated_indices.update(df_interpolated.index[nan_mask])
 
                         except Exception as e:
-                            logging.warning(f"Spline interpolation failed for column {col}: {e}")
+                            logger.warning(f"Spline interpolation failed for column {col}: {e}")
                             interpolated_mask = df_interpolated[col].isna() & nan_mask
                             df_interpolated.loc[interpolated_mask, col] = df_interpolated[col].interpolate(
                                 method="linear"
@@ -556,7 +558,7 @@ def _ensure_continuous_dataframe(
     # Determine actual end time based on SWIFT availability
     if (not swift_data_available or swift_data_all_nan) and historical_data_cutoff_time < end_time:
         actual_end_time = historical_data_cutoff_time
-        logging.info(
+        logger.info(
             f"Since SWIFT is not available for future dates, final dataframe truncated to {historical_data_cutoff_time}"
         )
     else:
@@ -695,15 +697,15 @@ def _recursive_fill_27d_historical(
                         df.loc[current_idx, "file_name"] = f"{original_fname}_recurrence_27d"
 
                 filled = True
-                logging.info(f"Filled missing block {block_start} to {block_end} using {model.LABEL} 27d recurrence")
+                logger.info(f"Filled missing block {block_start} to {block_end} using {model.LABEL} 27d recurrence")
                 break
 
             except Exception as e:
-                logging.warning(f"Failed to read {model.LABEL} for 27d recurrence block {block_start}-{block_end}: {e}")
+                logger.warning(f"Failed to read {model.LABEL} for 27d recurrence block {block_start}-{block_end}: {e}")
                 continue
 
         if not filled:
-            logging.warning(f"Could not fill missing block {block_start} to {block_end} with 27d recurrence")
+            logger.warning(f"Could not fill missing block {block_start} to {block_end} with 27d recurrence")
 
     return df
 

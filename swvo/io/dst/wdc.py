@@ -19,6 +19,8 @@ import numpy as np
 import pandas as pd
 import wget
 
+logger = logging.getLogger(__name__)
+
 logging.captureWarnings(True)
 
 
@@ -56,7 +58,7 @@ class DSTWDC:
         self.data_dir: Path = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-        logging.info(f"WDC Dst data directory: {self.data_dir}")
+        logger.info(f"WDC Dst data directory: {self.data_dir}")
 
     def download_and_process(self, start_time: datetime, end_time: datetime, reprocess_files: bool = False) -> None:
         """Download and process WDC Dst data files.
@@ -94,11 +96,11 @@ class DSTWDC:
                     else:
                         continue
 
-                logging.debug(f"Downloading file {URL + filename} ...")
+                logger.debug(f"Downloading file {URL + filename} ...")
 
                 wget.download(URL + filename, str(temporary_dir))
 
-                logging.debug("Processing file ...")
+                logger.debug("Processing file ...")
 
                 processed_df = self._process_single_file(
                     temporary_dir / filename,

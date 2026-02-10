@@ -16,6 +16,8 @@ from typing import Iterable, Optional
 import numpy as np
 import pandas as pd
 
+logger = logging.getLogger(__name__)
+
 logging.captureWarnings(True)
 
 
@@ -51,7 +53,7 @@ class KpEnsemble:
 
         self.data_dir: Path = Path(data_dir)
 
-        logging.info(f"Kp Ensemble data directory: {self.data_dir}")
+        logger.info(f"Kp Ensemble data directory: {self.data_dir}")
 
         if not self.data_dir.exists():
             raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrive data!")

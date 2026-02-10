@@ -6,6 +6,8 @@
 import logging
 import sys
 
+logger = logging.getLogger(__name__)
+
 logger = logging.getLogger("swvo")
 logger.addHandler(logging.NullHandler())
 

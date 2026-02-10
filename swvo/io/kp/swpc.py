@@ -19,6 +19,8 @@ import numpy as np
 import pandas as pd
 import wget
 
+logger = logging.getLogger(__name__)
+
 logging.captureWarnings(True)
 
 
@@ -60,7 +62,7 @@ class KpSWPC:
         self.data_dir: Path = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-        logging.info(f"Kp SWPC  data directory: {self.data_dir}")
+        logger.info(f"Kp SWPC  data directory: {self.data_dir}")
 
     def download_and_process(self, target_date: datetime, reprocess_files: bool = False) -> None:
         """
@@ -93,16 +95,16 @@ class KpSWPC:
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
         try:
-            logging.debug(f"Downloading file {self.URL + self.NAME} ...")
+            logger.debug(f"Downloading file {self.URL + self.NAME} ...")
 
             wget.download(self.URL + self.NAME, str(temporary_dir))
 
-            logging.debug("Processing file ...")
+            logger.debug("Processing file ...")
             processed_df = self._process_single_file(temporary_dir)
 
             processed_df.to_csv(file_path, index=False, header=False)
 
-            logging.debug(f"Saving processed file {file_path}")
+            logger.debug(f"Saving processed file {file_path}")
 
         finally:
             rmtree(temporary_dir)
@@ -140,7 +142,7 @@ class KpSWPC:
 
         if (end_time - start_time).days > 3:
             msg = "The difference between `end_time` and `start_time` should be less than 3 days. We can only read 3 days at a time of Kp SWPC!"
-            logging.error(msg)
+            logger.error(msg)
             raise ValueError(msg)
 
         t = pd.date_range(

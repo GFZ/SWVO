@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
+logger = logging.getLogger(__name__)
+
 
 class PlasmasphereCombinedInputsReader:
     """Reads one of the available combined inputs for plasmasphere density prediction.
@@ -39,7 +41,7 @@ class PlasmasphereCombinedInputsReader:
         """
         if not os.path.exists(self.data_folder):
             msg = f"Data folder {self.data_folder} for WP3 plasma output not found...impossible to retrieve data."
-            logging.error(msg)
+            logger.error(msg)
             raise FileNotFoundError(msg)
 
     @staticmethod
@@ -72,11 +74,11 @@ class PlasmasphereCombinedInputsReader:
 
         file_path = os.path.join(folder, file_name)
 
-        logging.info(f"Looking for file {file_path} for source {source} and date {date}")
+        logger.info(f"Looking for file {file_path} for source {source} and date {date}")
 
         if not os.path.isfile(file_path):
             msg = f"No suitable files found in the folder {folder} for the requested date {date}"
-            logging.warning(msg)
+            logger.warning(msg)
             return None
 
         if source == "solar_wind":
@@ -121,5 +123,5 @@ class PlasmasphereCombinedInputsReader:
             )
         else:
             msg = f"Combined input {source} requested not available..."
-            logging.error(msg)
+            logger.error(msg)
             raise RuntimeError(msg)

@@ -17,6 +17,8 @@ from typing import List, Optional, Tuple
 import pandas as pd
 import requests
 
+logger = logging.getLogger(__name__)
+
 
 class OMNIHighRes:
     """This is a class for the OMNI High Resolution data.
@@ -54,7 +56,7 @@ class OMNIHighRes:
         self.data_dir: Path = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-        logging.info(f"OMNI high resolution data directory: {self.data_dir}")
+        logger.info(f"OMNI high resolution data directory: {self.data_dir}")
 
     def download_and_process(
         self,
@@ -108,14 +110,14 @@ class OMNIHighRes:
                     cadence=cadence_min,
                 )
 
-                logging.debug("Processing file ...")
+                logger.debug("Processing file ...")
 
                 processed_df = self._process_single_month(data)
                 processed_df.to_csv(tmp_path, index=True, header=True)
                 tmp_path.replace(file_path)
 
             except Exception as e:
-                logging.error(f"Failed to process {file_path}: {e}")
+                logger.error(f"Failed to process {file_path}: {e}")
                 if tmp_path.exists():
                     tmp_path.unlink()
                     pass
@@ -163,7 +165,7 @@ class OMNIHighRes:
             end_time = end_time.replace(tzinfo=timezone.utc)
 
         if start_time < datetime(self.START_YEAR, 1, 1, tzinfo=timezone.utc):
-            logging.warning(
+            logger.warning(
                 "Start date chosen falls behind the existing data. Moving start date to first"
                 " available mission files..."
             )
@@ -180,7 +182,7 @@ class OMNIHighRes:
                 if download:
                     self.download_and_process(start_time, end_time, cadence_min=cadence_min)
                 else:
-                    logging.warning(f"File {file_path} not found")
+                    logger.warning(f"File {file_path} not found")
                     continue
 
             dfs.append(self._read_single_file(file_path))
@@ -293,7 +295,7 @@ class OMNIHighRes:
 
         if not data_lines:
             msg = "DataFrame is empty."
-            logging.error(msg)
+            logger.error(msg)
             raise ValueError(msg)
 
         df = pd.DataFrame([line.split() for line in data_lines], columns=columns)
@@ -327,7 +329,7 @@ class OMNIHighRes:
 
         if df.empty:
             msg = "DataFrame is empty after processing the month."
-            logging.error(msg)
+            logger.error(msg)
             raise ValueError(msg)
 
         return df
@@ -383,15 +385,15 @@ class OMNIHighRes:
 
         else:
             msg = f"Invalid cadence: {cadence}. Only 1 or 5 minutes are supported."
-            logging.error(msg)
+            logger.error(msg)
             raise ValueError(msg)
-        logging.debug(f"Fetching data from {self.URL} with payload: {payload}")
+        logger.debug(f"Fetching data from {self.URL} with payload: {payload}")
         response = requests.post(self.URL, data=payload)
         response.raise_for_status()
         data = response.text.splitlines()
 
         if data and "Error" in data[0]:
-            logging.warning("Received an error response from the server.")
+            logger.warning("Received an error response from the server.")
 
             for line in data:
                 if "correct range" in line:
@@ -401,13 +403,13 @@ class OMNIHighRes:
                         new_end_date_str = match.group(1)
                         new_end_date = datetime.strptime(new_end_date_str, "%Y%m%d")
 
-                        logging.warning(
+                        logger.warning(
                             f"Invalid date range detected. Found suggested end date: {new_end_date.strftime('%Y-%m-%d')}"
                         )
 
                         # Recursively call the function with the original start date and the new end date
                         return self._get_data_from_omni(start=start, end=new_end_date, cadence=cadence)
             msg = f"An unspecified error occurred: {data}"
-            logging.error(msg)
+            logger.error(msg)
             raise ValueError(msg)
         return data

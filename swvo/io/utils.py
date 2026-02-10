@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 from scipy.ndimage import gaussian_filter1d
 
+logger = logging.getLogger(__name__)
+
 
 def any_nans(data: list[pd.DataFrame] | pd.DataFrame) -> bool:
     """Calculate if a list of data frames contains any nans.
@@ -49,7 +51,7 @@ def nan_percentage(data: pd.DataFrame) -> float:
     """
     float_columns = data.select_dtypes(include=["float64", "float32"]).columns
     nan_percentage = (data[float_columns].isna().sum().sum() / (data.shape[0])) * 100
-    logging.info(f"Percentage of NaNs in data frame: {nan_percentage:.2f}%")
+    logger.info(f"Percentage of NaNs in data frame: {nan_percentage:.2f}%")
 
     return nan_percentage
 

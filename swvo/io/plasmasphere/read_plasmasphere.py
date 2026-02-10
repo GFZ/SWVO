@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
+logger = logging.getLogger(__name__)
+
 
 class PlasmaspherePredictionReader:
     """Reads one of the available PAGER plasmasphere density prediction.
@@ -39,7 +41,7 @@ class PlasmaspherePredictionReader:
         """
         if not os.path.exists(self.data_folder):
             msg = f"Data folder {self.data_folder} for WP3 plasma output not found...impossible to retrieve data."
-            logging.error(msg)
+            logger.error(msg)
             raise FileNotFoundError(msg)
 
     @staticmethod
@@ -62,10 +64,10 @@ class PlasmaspherePredictionReader:
         file_name = f"plasmasphere_density_{date.year}{str(date.month).zfill(2)}{str(date.day).zfill(2)}T{str(date.hour).zfill(2)}00.csv"
 
         file_path = os.path.join(folder, file_name)
-        logging.info(f"Looking for file {file_path} for date {date}")
+        logger.info(f"Looking for file {file_path} for date {date}")
         if not os.path.isfile(file_path):
             msg = f"No suitable files found in the folder {folder} for the requested date {date}"
-            logging.warning(msg)
+            logger.warning(msg)
             return None
 
         data = pd.read_csv(file_path, parse_dates=["date"])
@@ -103,5 +105,5 @@ class PlasmaspherePredictionReader:
             return self._read_single_file(self.data_folder, requested_date)
         else:
             msg = f"Source {source} requested for reading plasmasphere prediction not available..."
-            logging.error(msg)
+            logger.error(msg)
             raise RuntimeError(msg)

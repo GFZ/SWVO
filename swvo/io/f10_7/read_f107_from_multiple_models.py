@@ -15,6 +15,8 @@ from swvo.io.exceptions import ModelError
 from swvo.io.f10_7 import F107OMNI, F107SWPC
 from swvo.io.utils import any_nans, construct_updated_data_frame
 
+logger = logging.getLogger(__name__)
+
 F107Model = F107OMNI | F107SWPC
 
 logging.captureWarnings(True)
@@ -61,7 +63,7 @@ def read_f107_from_multiple_models(
 
     if model_order is None:
         model_order = [F107OMNI(), F107SWPC()]
-        logging.warning("No model order specified, using default order: OMNI, SWPC")
+        logger.warning("No model order specified, using default order: OMNI, SWPC")
 
     data_out = pd.DataFrame()
 
@@ -69,7 +71,7 @@ def read_f107_from_multiple_models(
         if not isinstance(model, F107Model):
             raise ModelError(f"Unknown or incompatible model: {type(model).__name__}")
         if isinstance(model, F107OMNI):
-            logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
+            logger.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
             data_one_model = model.read(start_time, end_time, download=download)
 
             index_range = pd.date_range(start=historical_data_cutoff_time, end=end_time, freq="d")
@@ -77,10 +79,10 @@ def read_f107_from_multiple_models(
 
             data_one_model.loc[historical_data_cutoff_time:end_time, "f107"] = np.nan
             data_one_model = data_one_model.fillna({"file_name": np.nan})
-            logging.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
+            logger.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
 
         if isinstance(model, F107SWPC):
-            logging.info(
+            logger.info(
                 f"Reading swpc from {historical_data_cutoff_time.replace(hour=0, minute=0, second=0)} to {end_time}"
             )
             data_one_model = model.read(

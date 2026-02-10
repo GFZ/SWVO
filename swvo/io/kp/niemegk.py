@@ -18,6 +18,8 @@ import numpy as np
 import pandas as pd
 import wget
 
+logger = logging.getLogger(__name__)
+
 logging.captureWarnings(True)
 
 
@@ -58,7 +60,7 @@ class KpNiemegk:
         self.data_dir: Path = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-        logging.info(f"Kp Niemegk  data directory: {self.data_dir}")
+        logger.info(f"Kp Niemegk  data directory: {self.data_dir}")
 
     def download_and_process(self, start_time: datetime, end_time: datetime, reprocess_files: bool = False) -> None:
         """Download and process Niemegk Kp data file.
@@ -78,14 +80,14 @@ class KpNiemegk:
             Raise `FileNotFoundError` if the file is not downloaded successfully.
         """
         if start_time < datetime.now(timezone.utc) - timedelta(days=30):
-            logging.info("We can only download and process a Kp Niemegk file from the last 30 days!")
+            logger.info("We can only download and process a Kp Niemegk file from the last 30 days!")
             return
 
         temporary_dir = Path("./temp_kp_niemegk_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
         try:
-            logging.debug(f"Downloading file {self.URL + self.NAME} ...")
+            logger.debug(f"Downloading file {self.URL + self.NAME} ...")
 
             wget.download(self.URL + self.NAME, str(temporary_dir))
 
@@ -93,7 +95,7 @@ class KpNiemegk:
             if os.stat(str(temporary_dir / self.NAME)).st_size == 0:
                 raise FileNotFoundError(f"Error while downloading file: {self.URL + self.NAME}!")
 
-            logging.debug("Processing file ...")
+            logger.debug("Processing file ...")
             processed_df = self._process_single_file(temporary_dir)
 
             file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
@@ -114,7 +116,7 @@ class KpNiemegk:
 
                 data_single_file.to_csv(file_path, index=True, header=False)
 
-                logging.debug(f"Saving processed file {file_path}")
+                logger.debug(f"Saving processed file {file_path}")
 
         finally:
             rmtree(temporary_dir)

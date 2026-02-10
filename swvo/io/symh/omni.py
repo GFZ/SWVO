@@ -17,6 +17,8 @@ import pandas as pd
 
 from swvo.io.omni import OMNIHighRes
 
+logger = logging.getLogger(__name__)
+
 logging.captureWarnings(True)
 
 

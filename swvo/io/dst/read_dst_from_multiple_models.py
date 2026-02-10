@@ -15,6 +15,8 @@ from swvo.io.dst import DSTOMNI, DSTWDC
 from swvo.io.exceptions import ModelError
 from swvo.io.utils import any_nans, construct_updated_data_frame
 
+logger = logging.getLogger(__name__)
+
 DSTModel = DSTOMNI | DSTWDC
 
 logging.captureWarnings(True)
@@ -60,14 +62,14 @@ def read_dst_from_multiple_models(
 
     if model_order is None:
         model_order = [DSTOMNI(), DSTWDC()]
-        logging.warning("No model order specified, using default order: OMNI, WDC")
+        logger.warning("No model order specified, using default order: OMNI, WDC")
 
     data_out = pd.DataFrame()
 
     for model in model_order:
         if not isinstance(model, DSTModel):
             raise ModelError(f"Unknown or incompatible model: {type(model).__name__}")
-        logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
+        logger.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
         data_one_model = model.read(start_time, end_time, download=download)
 
         index_range = pd.date_range(start=historical_data_cutoff_time, end=end_time, freq="h")
@@ -75,7 +77,7 @@ def read_dst_from_multiple_models(
 
         data_one_model.loc[data_one_model.index > historical_data_cutoff_time, "dst"] = np.nan
         data_one_model = data_one_model.fillna({"file_name": np.nan})
-        logging.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
+        logger.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
 
         data_out = construct_updated_data_frame(data_out, data_one_model, model.LABEL)
 

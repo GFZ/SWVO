@@ -15,6 +15,8 @@ from typing import Iterable, Optional, TypeVar
 import numpy as np
 import pandas as pd
 
+logger = logging.getLogger(__name__)
+
 Number = TypeVar("Number", int, float)
 
 
@@ -58,7 +60,7 @@ class HpEnsemble(ABC):
 
         self.data_dir: Path = Path(data_dir)
 
-        logging.info(f"{self.index.upper()} Ensemble data directory: {self.data_dir}")
+        logger.info(f"{self.index.upper()} Ensemble data directory: {self.data_dir}")
 
         if not self.data_dir.exists():
             msg = f"Data directory {self.data_dir} does not exist! Impossible to retrive data!"
@@ -106,7 +108,7 @@ class HpEnsemble(ABC):
 
         if len(file_list) == 0:
             msg = f"No {self.index} ensemble file found for requested date {start_date}"
-            logging.error(msg)
+            logger.error(msg)
             raise FileNotFoundError(msg)
 
         for file in file_list:
@@ -224,7 +226,7 @@ class HpEnsemble(ABC):
 
         if len(ensemble_dfs) == 0:
             msg = f"No ensemble data found for the requested period {start_time} to {end_time} and horizon {horizon} hours. Check the data directory {self.data_dir} for available data."
-            logging.error(msg)
+            logger.error(msg)
             raise FileNotFoundError(msg)
 
         return ensemble_dfs

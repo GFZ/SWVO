@@ -20,6 +20,8 @@ import numpy as np
 import pandas as pd
 import wget
 
+logger = logging.getLogger(__name__)
+
 logging.captureWarnings(True)
 
 
@@ -58,7 +60,7 @@ class F107SWPC:
         self.data_dir: Path = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-        logging.info(f"SWPC F10.7 data directory: {self.data_dir}")
+        logger.info(f"SWPC F10.7 data directory: {self.data_dir}")
 
     def _get_processed_file_list(
         self, start_time: datetime, end_time: datetime
@@ -94,7 +96,7 @@ class F107SWPC:
         temp_dir.mkdir(exist_ok=True)
 
         try:
-            logging.debug("Downloading F10.7 data...")
+            logger.debug("Downloading F10.7 data...")
 
             wget.download(self.URL + self.NAME_F107, str(temp_dir))
 
@@ -102,7 +104,7 @@ class F107SWPC:
                 msg = f"Error downloading file: {self.URL + self.NAME_F107}"
                 raise FileNotFoundError(msg)
 
-            logging.debug("Processing F10.7 data...")
+            logger.debug("Processing F10.7 data...")
 
             new_data = self._process_single_file(temp_dir / self.NAME_F107)
 
@@ -110,7 +112,7 @@ class F107SWPC:
                 file_path = self.data_dir / f"SWPC_F107_{year}.csv"
 
                 if file_path.expanduser().exists():
-                    logging.debug(f"Updating {file_path}...")
+                    logger.debug(f"Updating {file_path}...")
 
                     existing_data = pd.read_csv(file_path, parse_dates=["date"])
                     existing_data["date"] = pd.to_datetime(existing_data["date"]).dt.tz_localize(None)
@@ -120,9 +122,9 @@ class F107SWPC:
                     combined_data = combined_data.sort_values("date")
 
                     new_records = len(combined_data) - len(existing_data)
-                    logging.debug(f"Added {new_records} new records to {year}")
+                    logger.debug(f"Added {new_records} new records to {year}")
                 else:
-                    logging.debug(f"Creating new file for {year}")
+                    logger.debug(f"Creating new file for {year}")
                     combined_data = year_data
 
                 combined_data.to_csv(file_path, index=False)

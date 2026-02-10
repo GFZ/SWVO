@@ -19,6 +19,8 @@ import numpy as np
 import pandas as pd
 import wget
 
+logger = logging.getLogger(__name__)
+
 logging.captureWarnings(True)
 
 
@@ -114,7 +116,7 @@ class OMNILowRes:
         self.data_dir: Path = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-        logging.info(f"OMNI Low Res  data directory: {self.data_dir}")
+        logger.info(f"OMNI Low Res  data directory: {self.data_dir}")
 
     def download_and_process(self, start_time: datetime, end_time: datetime, reprocess_files: bool = False) -> None:
         """Download and process OMNI Low Resolution data files.
@@ -148,7 +150,7 @@ class OMNILowRes:
                     else:
                         continue
 
-                logging.debug(f"Downloading file {self.URL + filename} ...")
+                logger.debug(f"Downloading file {self.URL + filename} ...")
 
                 try:
                     wget.download(self.URL + filename, str(temporary_dir))
@@ -156,7 +158,7 @@ class OMNILowRes:
                     logging.warn(f"Encountered HTTP Error while downloading OMNI low res data: {e}")
                     return
 
-                logging.debug("Processing file ...")
+                logger.debug("Processing file ...")
 
                 processed_df = self._process_single_file(temporary_dir / filename)
                 processed_df.to_csv(file_path, index=True, header=True)
@@ -269,7 +271,7 @@ class OMNILowRes:
             end_time = end_time.replace(tzinfo=timezone.utc)
 
         if start_time < datetime(START_YEAR, 1, 1).replace(tzinfo=timezone.utc):
-            logging.warning(
+            logger.warning(
                 "Start date chosen falls behind the existing data. Moving start date to first"
                 " available mission files..."
             )

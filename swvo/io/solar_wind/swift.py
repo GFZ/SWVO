@@ -20,6 +20,8 @@ import pandas as pd
 
 from swvo.io.utils import sw_mag_propagation
 
+logger = logging.getLogger(__name__)
+
 logging.captureWarnings(True)
 
 
@@ -58,7 +60,7 @@ class SWSWIFTEnsemble:
 
         self.data_dir: Path = Path(data_dir)
 
-        logging.info(f"SWIFT ensemble data directory: {self.data_dir}")
+        logger.info(f"SWIFT ensemble data directory: {self.data_dir}")
 
         if not self.data_dir.exists():
             raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrieve data!")
@@ -107,7 +109,7 @@ class SWSWIFTEnsemble:
             end_time = start_time.replace(tzinfo=timezone.utc) + timedelta(days=3)
 
         if propagation:
-            logging.info("Shifting start day by -1 day to account for propagation")
+            logger.info("Shifting start day by -1 day to account for propagation")
             start_time = start_time - timedelta(days=1)
 
         str_date = start_time.strftime("%Y%m%dt0000")
@@ -117,7 +119,7 @@ class SWSWIFTEnsemble:
             key=lambda x: int(x.stem.split("task")[-1]),
         )
 
-        logging.info(f"Found {len(ensemble_folders)} SWIFT tasks folders...")
+        logger.info(f"Found {len(ensemble_folders)} SWIFT tasks folders...")
         gsm_s = []
 
         if len(ensemble_folders) == 0:

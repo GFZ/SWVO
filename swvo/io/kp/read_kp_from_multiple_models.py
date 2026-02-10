@@ -19,6 +19,8 @@ from swvo.io.exceptions import ModelError
 from swvo.io.kp import KpEnsemble, KpNiemegk, KpOMNI, KpSWPC
 from swvo.io.utils import any_nans, construct_updated_data_frame
 
+logger = logging.getLogger(__name__)
+
 KpModel = KpEnsemble | KpNiemegk | KpOMNI | KpSWPC
 
 logging.captureWarnings(True)
@@ -77,7 +79,7 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
 
     if model_order is None:
         model_order = [KpOMNI(), KpNiemegk(), KpEnsemble(), KpSWPC()]
-        logging.warning("No model order specified, using default order: OMNI, Niemegk, Ensemble, SWPC")
+        logger.warning("No model order specified, using default order: OMNI, Niemegk, Ensemble, SWPC")
 
     data_out = [pd.DataFrame()]
 
@@ -153,7 +155,7 @@ def _read_from_model(  # noqa: PLR0913
 
     # Forecasting models are called with synthetic now time
     if isinstance(model, KpSWPC):
-        logging.info(
+        logger.info(
             f"Reading swpc from {historical_data_cutoff_time.replace(hour=0, minute=0, second=0)} to {end_time}\noriginal historical_data_cutoff_time: {historical_data_cutoff_time}"
         )
         data_one_model = [
@@ -213,12 +215,12 @@ def _read_historical_model(
         msg = "Encountered invalide model type in read historical model!"
         raise TypeError(msg)
 
-    logging.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
+    logger.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
 
     data_one_model = model.read(start_time, end_time, download=download)
     # set nan for 'future' values
     data_one_model.loc[historical_data_cutoff_time + timedelta(hours=3) : end_time] = np.nan
-    logging.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time + timedelta(hours=3)} to {end_time}")
+    logger.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time + timedelta(hours=3)} to {end_time}")
 
     return data_one_model
 
@@ -266,7 +268,7 @@ def _read_latest_ensemble_files(
                 target_time -= timedelta(hours=1)
                 continue
 
-    logging.info(f"Read PAGER Kp ensemble from {target_time} to {end_time}")
+    logger.info(f"Read PAGER Kp ensemble from {target_time} to {end_time}")
 
     # Ensure the last index of every DataFrame is the next higher multiple of 3 hours than target_time
     adjusted_data = []
