@@ -102,13 +102,15 @@ def construct_updated_data_frame(
         else:
             data_one_model[i]["model"] = model_label
             data_one_model[i].loc[data_one_model[i].isna().any(axis=1), "model"] = None
-        data_one_model[i].loc[data_one_model[i]["file_name"].notna(), "model"] = model_label
-        data_one_model[i].loc[data_one_model[i]["file_name"].isna(), "model"] = None
+        if "file_name" in data_one_model[i].columns:
+            data_one_model[i].loc[data_one_model[i]["file_name"].notna(), "model"] = model_label
+            data_one_model[i].loc[data_one_model[i]["file_name"].isna(), "model"] = None
         if data[i].empty:
             data[i] = data_one_model[i]
-        mask_empty_rows = data[i].isna().all(axis=1)
-        data[i].loc[mask_empty_rows] = (
-            data[i].loc[mask_empty_rows].combine_first(data_one_model[i].loc[mask_empty_rows])
+        empty_idx = data[i].index[data[i].isna().all(axis=1)]
+
+        data[i].loc[empty_idx] = (
+            data[i].loc[empty_idx].combine_first(data_one_model[i].reindex(data[i].index).loc[empty_idx])
         )
 
     return data
