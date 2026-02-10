@@ -75,8 +75,8 @@ class TestReadSolarWindFromMultipleModels:
 
         assert isinstance(data, pd.DataFrame)
         assert all(col in data.columns for col in expected_columns)
+        assert data.loc["2024-11-20 13:23:00+00:00"].model == "dscovr"
         assert data.loc["2024-11-22 18:00:00+00:00"].model == "omni"
-        assert data.loc["2024-11-23 00:00:00+00:00"].model == "dscovr"
         # no ace since dscovr and ace files are same in the test data and dscovr is before ace in the model_order
         assert not data["file_name"].isna().all()
 
