@@ -185,9 +185,6 @@ class OMNIHighRes:
 
             dfs.append(self._read_single_file(file_path))
 
-        if not dfs:
-            return pd.DataFrame()
-
         data_out = pd.concat(dfs, ignore_index=False)
 
         if not data_out.empty:
@@ -248,11 +245,11 @@ class OMNIHighRes:
             year = current_date.year
             month = current_date.month
 
-            # directory: YYYY/MM/
-            month_dir = self.data_dir / f"{year:04d}" / f"{month:02d}"
+            # directory: YYYY/
+            year_dir = self.data_dir / f"{year:04d}"
 
             # Create file path
-            file_path = month_dir / f"OMNI_HIGH_RES_{cadence_min}min_{year:04d}{month:02d}.csv"
+            file_path = year_dir / f"OMNI_HIGH_RES_{cadence_min}min_{year:04d}{month:02d}.csv"
             file_paths.append(file_path)
 
             # Create time interval for current month
@@ -292,26 +289,12 @@ class OMNIHighRes:
         header_line = next(line for line in data if line.strip().startswith("YYYY"))
         columns = header_line.split()
 
-        data_lines = [line for line in data if line.strip().startswith("20")]
+        data_lines = [line for line in data if line.strip().startswith(("19", "20"))]
 
         if not data_lines:
-            logging.warning("No data lines found for the specified month.")
-            # Return empty datafram
-            empty_df = pd.DataFrame(
-                columns=[
-                    "bavg",
-                    "bx_gsm",
-                    "by_gsm",
-                    "bz_gsm",
-                    "speed",
-                    "proton_density",
-                    "temperature",
-                    "pdyn",
-                    "sym-h",
-                ]
-            )
-            empty_df.index.name = "timestamp"
-            return empty_df
+            msg = "DataFrame is empty."
+            logging.error(msg)
+            raise ValueError(msg)
 
         df = pd.DataFrame([line.split() for line in data_lines], columns=columns)
         df = df.apply(pd.to_numeric)
