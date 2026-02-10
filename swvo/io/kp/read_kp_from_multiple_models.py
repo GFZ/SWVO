@@ -217,7 +217,7 @@ def _read_historical_model(
 
     data_one_model = model.read(start_time, end_time, download=download)
     # set nan for 'future' values
-    data_one_model.loc[historical_data_cutoff_time + timedelta(hours=3) : end_time, "kp"] = np.nan
+    data_one_model.loc[historical_data_cutoff_time + timedelta(hours=3) : end_time] = np.nan
     logging.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time + timedelta(hours=3)} to {end_time}")
 
     return data_one_model
