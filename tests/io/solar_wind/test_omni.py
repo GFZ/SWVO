@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -13,7 +14,7 @@ import pytest
 from swvo.io.solar_wind import SWOMNI
 
 TEST_DIR = os.path.dirname(__file__)
-DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
+DATA_DIR = Path(os.path.join(TEST_DIR, "data/OMNI"))
 
 
 class TestSWOMNI:
@@ -41,7 +42,8 @@ class TestSWOMNI:
         # download this file without mocking
         swomni.download_and_process(start_time, end_time)
 
-        assert (TEST_DIR / Path("data/OMNI_HIGH_RES_1min_2020.csv")).exists()
+        for file in (DATA_DIR / "OMNI").glob("OMNI_HIGH_RES_1min_2020*.csv"):
+            assert file.exists()
 
     def test_read_without_download(self, swomni, mocker):
         start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)
@@ -53,20 +55,13 @@ class TestSWOMNI:
 
     def test_read_with_download(self, swomni, mocker):
         mocker.patch.object(swomni, "download_and_process")
-        mocker.patch.object(
-            swomni,
-            "_read_single_file",
-            return_value=pd.DataFrame(
-                index=pd.date_range(
-                    start=datetime(2022, 1, 1, tzinfo=timezone.utc),
-                    end=datetime(2022, 12, 31, tzinfo=timezone.utc),
-                )
-            ),
-        )
-        start_time = datetime(2022, 1, 1)
-        end_time = datetime(2022, 12, 31)
+        mocker.patch.object(swomni, "_read_single_file", return_value=pd.DataFrame())
+        start_time = datetime(2022, 1, 1, tzinfo=timezone.utc)
+        end_time = datetime(2022, 12, 31, tzinfo=timezone.utc)
         swomni.read(start_time, end_time, download=True)
-        swomni.download_and_process.assert_called_once()
+        assert swomni.download_and_process.call_count == 12, (
+            "Expected download_and_process to be called 12 times for each month of the year."
+        )
 
     def test_invalid_cadence(self, swomni):
         start_time = datetime(2022, 1, 1, tzinfo=timezone.utc)
@@ -100,4 +95,5 @@ class TestSWOMNI:
             assert len(dfs) == 0, "Expected dfs list to be empty since no files are found."
 
     def test_remove_processed_file(self):
-        os.remove(Path(TEST_DIR) / "data/OMNI_HIGH_RES_1min_2020.csv")
+        shutil.rmtree(Path(TEST_DIR) / "data/OMNI/2020", ignore_errors=True)
+        shutil.rmtree(Path(TEST_DIR) / "data/OMNI/2022", ignore_errors=True)
