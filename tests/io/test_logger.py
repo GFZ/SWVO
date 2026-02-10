@@ -1,33 +1,36 @@
-# SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
-#
-# SPDX-License-Identifier: Apache-2.0
-
 import importlib
 import logging
 import sys
 
-import pytest
 
+def test_import_is_quiet(capsys):
+    sys.modules.pop("swvo", None)
+    importlib.import_module("swvo")
 
-@pytest.mark.parametrize("module_name", ["swvo", "swvo.io"])
-class TestLogger:
-    def test_logger_warning_printed(self, capsys, module_name):
-        root_logger = logging.getLogger()
-        for h in root_logger.handlers[:]:
-            root_logger.removeHandler(h)
-        sys.modules.pop(module_name)
-        importlib.import_module(module_name)
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
+def test_logger_has_null_handler():
+    from swvo.logger import logger
 
-        captured = capsys.readouterr()
-        assert "Logger not instantiated." in captured.out
+    assert any(isinstance(h, logging.NullHandler) for h in logger.handlers)
+def test_setup_logging_adds_stream_handler():
+    from swvo.logger import logger, setup_logging
 
-        sys.modules.pop(module_name)
+    # Remove existing non-null handlers (for clean test runs)
+    logger.handlers = [h for h in logger.handlers if isinstance(h, logging.NullHandler)]
 
-    def test_logger_warning_not_printed_when_handlers_present(self, capsys, module_name):
-        logging.basicConfig(level=logging.INFO)
+    setup_logging()
 
-        importlib.import_module(module_name)
+    assert any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
+def test_child_logger_emits_after_setup(caplog):
+    from swvo.logger import setup_logging
 
-        captured = capsys.readouterr()
-        assert "Logger not instantiated." not in captured.out
-        sys.modules.pop(module_name)
+    setup_logging()
+
+    caplog.set_level(logging.WARNING)
+
+    child_logger = logging.getLogger("swvo.io")
+    child_logger.warning("Child warning")
+
+    assert "Child warning" in caplog.text
