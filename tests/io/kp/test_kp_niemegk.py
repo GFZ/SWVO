@@ -116,7 +116,7 @@ class TestKpNiemegk:
         end_time = current_time + timedelta(days=1)
 
         if DATA_DIR.exists():
-            for file in DATA_DIR.glob("NIEMEGK_KP_NOWCAST_*.csv"):
+            for file in DATA_DIR.glob("**/NIEMEGK_KP_NOWCAST_*.csv"):
                 file.unlink()
 
         data = kp_niemegk_instance.read(current_time, end_time, download=False)

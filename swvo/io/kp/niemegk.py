@@ -114,6 +114,7 @@ class KpNiemegk:
                 if len(data_single_file.index) == 0:
                     continue
 
+                file_path.parent.mkdir(parents=True, exist_ok=True)
                 data_single_file.to_csv(file_path, index=True, header=False)
 
                 logger.debug(f"Saving processed file {file_path}")
@@ -204,7 +205,11 @@ class KpNiemegk:
         )
 
         while current_time <= end_time:
-            file_path = self.data_dir / f"NIEMEGK_KP_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"
+            file_path = (
+                self.data_dir
+                / current_time.strftime("%Y/%m")
+                / f"NIEMEGK_KP_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"
+            )
             file_paths.append(file_path)
 
             interval_start = current_time - timedelta(days=self.DAYS_TO_SAVE_EACH_FILE - 1)

@@ -53,7 +53,12 @@ class TestKpSWPC:
 
         kp_swpc_instance.download_and_process(current_date, reprocess_files=True)
 
-        expected_file = kp_swpc_instance.data_dir / f"SWPC_KP_FORECAST_{current_date.strftime('%Y%m%d')}.csv"
+        yyyy = current_date.strftime("%Y")
+        mm = current_date.strftime("%m")
+
+        expected_file = (
+            kp_swpc_instance.data_dir / yyyy / mm / f"SWPC_KP_FORECAST_{current_date.strftime('%Y%m%d')}.csv"
+        )
         assert expected_file.exists()
 
         df = pd.read_csv(expected_file, names=["t", "kp"])
@@ -101,7 +106,12 @@ class TestKpSWPC:
         current_time = datetime.now(timezone.utc)
         end_time = current_time + timedelta(days=1)
 
-        expected_file = kp_swpc_instance.data_dir / f"SWPC_KP_FORECAST_{current_time.strftime('%Y%m%d')}.csv"
+        yyyy = current_time.strftime("%Y")
+        mm = current_time.strftime("%m")
+
+        expected_file = (
+            kp_swpc_instance.data_dir / yyyy / mm / f"SWPC_KP_FORECAST_{current_time.strftime('%Y%m%d')}.csv"
+        )
         if expected_file.exists():
             expected_file.unlink()
 
@@ -110,7 +120,9 @@ class TestKpSWPC:
 
     def test_reprocess_files_flag(self, kp_swpc_instance):
         current_time = datetime.now(timezone.utc)
-        file_path = kp_swpc_instance.data_dir / f"SWPC_KP_FORECAST_{current_time.strftime('%Y%m%d')}.csv"
+        yyyy = current_time.strftime("%Y")
+        mm = current_time.strftime("%m")
+        file_path = kp_swpc_instance.data_dir / yyyy / mm / f"SWPC_KP_FORECAST_{current_time.strftime('%Y%m%d')}.csv"
 
         kp_swpc_instance.download_and_process(current_time, reprocess_files=True)
         assert file_path.exists()

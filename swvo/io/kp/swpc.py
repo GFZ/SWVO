@@ -83,7 +83,9 @@ class KpSWPC:
         if target_date.date() < datetime.now(timezone.utc).date():
             raise ValueError("We can only download and progress a Kp SWPC file for the current day!")
 
-        file_path = self.data_dir / f"SWPC_KP_FORECAST_{target_date.strftime('%Y%m%d')}.csv"
+        file_path = (
+            self.data_dir / target_date.strftime("%Y/%m") / f"SWPC_KP_FORECAST_{target_date.strftime('%Y%m%d')}.csv"
+        )
 
         if file_path.exists():
             if reprocess_files:
@@ -102,6 +104,7 @@ class KpSWPC:
             logger.debug("Processing file ...")
             processed_df = self._process_single_file(temporary_dir)
 
+            file_path.parent.mkdir(parents=True, exist_ok=True)
             processed_df.to_csv(file_path, index=False, header=False)
 
             logger.debug(f"Saving processed file {file_path}")
@@ -156,7 +159,12 @@ class KpSWPC:
         data_out["file_name"] = np.array([np.nan] * len(t))
 
         file_name_time = start_time
-        file_path = self.data_dir / f"SWPC_KP_FORECAST_{file_name_time.strftime('%Y%m%d')}.csv"
+        file_path = (
+            self.data_dir
+            / file_name_time.strftime("%Y/%m")
+            / f"SWPC_KP_FORECAST_{file_name_time.strftime('%Y%m%d')}.csv"
+        )
+        logger.info(f"Reading from {file_path}")
         if not file_path.exists() and download:
             self.download_and_process(start_time)
         if file_path.exists():
