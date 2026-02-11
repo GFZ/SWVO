@@ -17,7 +17,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-import wget
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -87,30 +87,56 @@ class KpSWPC:
             self.data_dir / target_date.strftime("%Y/%m") / f"SWPC_KP_FORECAST_{target_date.strftime('%Y%m%d')}.csv"
         )
 
-        if file_path.exists():
-            if reprocess_files:
-                file_path.unlink()
-            else:
-                return
+        if file_path.exists() and not reprocess_files:
+            return
+
+        tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
 
         temporary_dir = Path("./temp_kp_swpc_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
         try:
             logger.debug(f"Downloading file {self.URL + self.NAME} ...")
-
-            wget.download(self.URL + self.NAME, str(temporary_dir))
+            self._download(temporary_dir, self.NAME)
 
             logger.debug("Processing file ...")
             processed_df = self._process_single_file(temporary_dir)
 
             file_path.parent.mkdir(parents=True, exist_ok=True)
-            processed_df.to_csv(file_path, index=False, header=False)
+            processed_df.to_csv(tmp_path, index=False, header=False)
+            tmp_path.replace(file_path)
 
             logger.debug(f"Saving processed file {file_path}")
 
+        except Exception as e:
+            logger.error(f"Failed to download and process {file_path}: {e}")
+            if tmp_path.exists():
+                tmp_path.unlink()
+            raise
+
         finally:
-            rmtree(temporary_dir)
+            rmtree(temporary_dir, ignore_errors=True)
+
+    def _download(self, temporary_dir: Path, filename: str) -> None:
+        """Download a file from SWPC server.
+
+        Parameters
+        ----------
+        temporary_dir : Path
+            Temporary directory to store the downloaded file.
+        filename : str
+            Name of the file to download.
+
+        Raises
+        ------
+        requests.HTTPError
+            If the HTTP request fails.
+        """
+        response = requests.get(self.URL + filename)
+        response.raise_for_status()
+
+        with open(temporary_dir / filename, "wb") as f:
+            f.write(response.content)
 
     def read(self, start_time: datetime, end_time: Optional[datetime] = None, download: bool = False) -> pd.DataFrame:
         """

@@ -129,7 +129,10 @@ class TestHpGFZ:
         start_time = datetime(2020, 1, 1)  # noqa: DTZ001
         end_time = datetime(2020, 12, 31)  # noqa: DTZ001
 
-        mocked = mocker.patch("wget.download")
+        mock_response = mocker.Mock()
+        mock_response.content = b"test content"
+        mock_response.raise_for_status = mocker.Mock()
+        mocked = mocker.patch("requests.get", return_value=mock_response)
         mocker.patch("shutil.rmtree")
         mocker.patch.object(hp30gfz, "_process_single_file", return_value=pd.DataFrame())
 
