@@ -137,8 +137,7 @@ class SWACE:
                     tmp_path.unlink()
                 continue
 
-            finally:
-                rmtree(temporary_dir, ignore_errors=True)
+        rmtree(temporary_dir, ignore_errors=True)
 
     def _download(self, temporary_dir: Path, file_name: str) -> None:
         """Download a file from ACE server.

@@ -119,14 +119,12 @@ class KpNiemegk:
                 logger.error(f"Failed to process {file_path}: {e}")
                 if tmp_path.exists():
                     tmp_path.unlink()
-                    pass
                 continue
 
-            finally:
-                rmtree(temporary_dir, ignore_errors=True)
+        rmtree(temporary_dir, ignore_errors=True)
 
     def _download(self, temporary_dir):
-        response = requests.get(self.URL + self.NAME, str(temporary_dir))
+        response = requests.get(self.URL + self.NAME)
         response.raise_for_status()
 
         with open(temporary_dir / self.NAME, "w") as f:

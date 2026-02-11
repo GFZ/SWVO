@@ -168,17 +168,15 @@ class OMNILowRes:
                 logger.error(f"Failed to process {file_path}: {e}")
                 if tmp_path.exists():
                     tmp_path.unlink()
-                    pass
                 continue
-            finally:
-                rmtree(temporary_dir, ignore_errors=True)
+        rmtree(temporary_dir, ignore_errors=True)
 
     def _download(self, temporary_dir: Path, filename: str):
-        repsonse = requests.get(self.URL + filename)
-        repsonse.raise_for_status()
+        response = requests.get(self.URL + filename)
+        response.raise_for_status()
 
         with open(temporary_dir / filename, "wb") as f:
-            f.write(repsonse.content)
+            f.write(response.content)
 
     def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
         """Get list of file paths and their corresponding time intervals.

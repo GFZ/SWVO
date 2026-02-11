@@ -127,8 +127,7 @@ class HpGFZ:
                     tmp_path.unlink()
                 continue
 
-            finally:
-                rmtree(temporary_dir, ignore_errors=True)
+        rmtree(temporary_dir, ignore_errors=True)
 
     def _download(self, temporary_dir: Path, filename: str) -> None:
         """Download a file from the GFZ server.

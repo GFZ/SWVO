@@ -132,8 +132,7 @@ class F107SWPC:
                     tmp_path.unlink()
                 continue
 
-            finally:
-                shutil.rmtree(temp_dir, ignore_errors=True)
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
     def _download(self, temp_dir: Path, filename: str) -> None:
         """Download a file from SWPC server.

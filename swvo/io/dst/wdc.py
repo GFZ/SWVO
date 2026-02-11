@@ -119,11 +119,9 @@ class DSTWDC:
                 logger.error(f"Failed to process {file_path}: {e}")
                 if tmp_path.exists():
                     tmp_path.unlink()
-                    pass
                 continue
 
-            finally:
-                rmtree(temporary_dir, ignore_errors=True)
+        rmtree(temporary_dir, ignore_errors=True)
 
     def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
         """Get list of file paths and their corresponding time intervals.
