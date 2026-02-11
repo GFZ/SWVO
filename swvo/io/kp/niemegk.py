@@ -16,7 +16,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-import wget
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -86,26 +86,22 @@ class KpNiemegk:
         temporary_dir = Path("./temp_kp_niemegk_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
-        try:
-            logger.debug(f"Downloading file {self.URL + self.NAME} ...")
+        logger.debug(f"Downloading file {self.URL + self.NAME} ...")
 
-            wget.download(self.URL + self.NAME, str(temporary_dir))
+        file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
+        for file_path, time_interval in zip(file_paths, time_intervals):
+            if file_path.exists() and not reprocess_files:
+                continue
+            tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
+            try:
+                self._download(temporary_dir)
 
-            # check if download was successfull
-            if os.stat(str(temporary_dir / self.NAME)).st_size == 0:
-                raise FileNotFoundError(f"Error while downloading file: {self.URL + self.NAME}!")
+                # check if download was successfull
+                if os.stat(str(temporary_dir / self.NAME)).st_size == 0:
+                    raise FileNotFoundError(f"Error while downloading file: {self.URL + self.NAME}!")
 
-            logger.debug("Processing file ...")
-            processed_df = self._process_single_file(temporary_dir)
-
-            file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
-
-            for file_path, time_interval in zip(file_paths, time_intervals):
-                if file_path.exists():
-                    if reprocess_files:
-                        file_path.unlink()
-                    else:
-                        continue
+                logger.debug("Processing file ...")
+                processed_df = self._process_single_file(temporary_dir)
 
                 data_single_file = processed_df[
                     (processed_df.index >= time_interval[0]) & (processed_df.index <= time_interval[1])
@@ -115,12 +111,24 @@ class KpNiemegk:
                     continue
 
                 file_path.parent.mkdir(parents=True, exist_ok=True)
-                data_single_file.to_csv(file_path, index=True, header=False)
+                data_single_file.to_csv(tmp_path, index=True, header=False)
+                tmp_path.replace(file_path)
 
                 logger.debug(f"Saving processed file {file_path}")
+            except Exception as e:
+                logger.error(f"Failed to process {file_path}: {e}")
+                if tmp_path.exists():
+                    tmp_path.unlink()
+                continue
 
-        finally:
-            rmtree(temporary_dir)
+        rmtree(temporary_dir, ignore_errors=True)
+
+    def _download(self, temporary_dir):
+        response = requests.get(self.URL + self.NAME)
+        response.raise_for_status()
+
+        with open(temporary_dir / self.NAME, "w") as f:
+            f.write(response.text)
 
     def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
         """Read Niemegk Kp data for the specified time range.

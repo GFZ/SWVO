@@ -16,7 +16,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-import wget
+import requests
 
 from swvo.io.utils import sw_mag_propagation
 
@@ -97,18 +97,19 @@ class DSCOVR:
         temporary_dir = Path("./temp_sw_dscovr_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
-        try:
-            self._download_file(temporary_dir, self.NAME_MAG)
-            self._download_file(temporary_dir, self.NAME_SWEPAM)
+        self._download(temporary_dir, self.NAME_MAG)
+        self._download(temporary_dir, self.NAME_SWEPAM)
 
-            logger.debug("Processing file ...")
-            processed_df = self._process_single_file(temporary_dir)
+        logger.debug("Processing file ...")
+        processed_df = self._process_single_file(temporary_dir)
 
-            unique_dates = np.unique(processed_df.index.date)
+        unique_dates = np.unique(processed_df.index.date)
 
-            for date in unique_dates:
-                file_path = self.data_dir / date.strftime("%Y/%m") / f"DSCOVR_SW_NOWCAST_{date.strftime('%Y%m%d')}.csv"
+        for date in unique_dates:
+            file_path = self.data_dir / date.strftime("%Y/%m") / f"DSCOVR_SW_NOWCAST_{date.strftime('%Y%m%d')}.csv"
+            tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
 
+            try:
                 day_start = datetime.combine(date, datetime.min.time()).replace(tzinfo=timezone.utc)
                 day_end = datetime.combine(date, datetime.max.time()).replace(tzinfo=timezone.utc)
 
@@ -123,16 +124,42 @@ class DSCOVR:
 
                 logger.debug(f"Saving processed file for {date}")
                 file_path.parent.mkdir(parents=True, exist_ok=True)
-                day_data.to_csv(file_path, index=True, header=True)
+                day_data.to_csv(tmp_path, index=True, header=True)
+                tmp_path.replace(file_path)
 
-        finally:
-            rmtree(temporary_dir)
+            except Exception as e:
+                logger.error(f"Failed to process file for {date}: {e}")
+                if tmp_path.exists():
+                    tmp_path.unlink()
+                continue
 
-    def _download_file(self, temporary_dir: Path, file_name: str) -> None:
+        rmtree(temporary_dir, ignore_errors=True)
+
+    def _download(self, temporary_dir: Path, file_name: str) -> None:
+        """Download a file from DSCOVR server.
+
+        Parameters
+        ----------
+        temporary_dir : Path
+            Temporary directory to store the downloaded file.
+        file_name : str
+            Name of the file to download.
+
+        Raises
+        ------
+        requests.HTTPError
+            If the HTTP request fails.
+        FileNotFoundError
+            If the downloaded file is empty.
+        """
         logger.debug(f"Downloading file {self.URL + file_name} ...")
-        wget.download(self.URL + file_name, str(temporary_dir))
+        response = requests.get(self.URL + file_name)
+        response.raise_for_status()
 
-        if os.stat(str(temporary_dir / file_name)).st_size == 0:
+        with open(temporary_dir / file_name, "wb") as f:
+            f.write(response.content)
+
+        if (temporary_dir / file_name).stat().st_size == 0:
             raise FileNotFoundError(f"Error while downloading file: {self.URL + file_name}!")
 
     def read(

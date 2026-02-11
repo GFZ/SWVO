@@ -37,7 +37,10 @@ class TestOMNILowRes:
             OMNILowRes()
 
     def test_download_and_process(self, omni_low_res, mocker):
-        mocker.patch("wget.download")
+        mock_response = mocker.Mock()
+        mock_response.content = b"test content"
+        mock_response.raise_for_status = mocker.Mock()
+        mocker.patch("requests.get", return_value=mock_response)
         mocker.patch.object(
             omni_low_res,
             "_process_single_file",

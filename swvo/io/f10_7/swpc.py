@@ -18,7 +18,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-import wget
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -95,22 +95,18 @@ class F107SWPC:
         temp_dir = Path("./temp_f107")
         temp_dir.mkdir(exist_ok=True)
 
-        try:
-            logger.debug("Downloading F10.7 data...")
+        logger.debug("Downloading F10.7 data...")
+        self._download(temp_dir, self.NAME_F107)
 
-            wget.download(self.URL + self.NAME_F107, str(temp_dir))
+        logger.debug("Processing F10.7 data...")
 
-            if Path(temp_dir / self.NAME_F107).stat().st_size == 0:
-                msg = f"Error downloading file: {self.URL + self.NAME_F107}"
-                raise FileNotFoundError(msg)
+        new_data = self._process_single_file(temp_dir / self.NAME_F107)
 
-            logger.debug("Processing F10.7 data...")
+        for year, year_data in new_data.groupby(new_data.date.dt.year):
+            file_path = self.data_dir / f"SWPC_F107_{year}.csv"
+            tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
 
-            new_data = self._process_single_file(temp_dir / self.NAME_F107)
-
-            for year, year_data in new_data.groupby(new_data.date.dt.year):
-                file_path = self.data_dir / f"SWPC_F107_{year}.csv"
-
+            try:
                 if file_path.expanduser().exists():
                     logger.debug(f"Updating {file_path}...")
 
@@ -127,11 +123,43 @@ class F107SWPC:
                     logger.debug(f"Creating new file for {year}")
                     combined_data = year_data
 
-                combined_data.to_csv(file_path, index=False)
+                combined_data.to_csv(tmp_path, index=False)
+                tmp_path.replace(file_path)
 
-        finally:
-            # ...
-            shutil.rmtree(temp_dir, ignore_errors=True)
+            except Exception as e:
+                logger.error(f"Failed to process file for year {year}: {e}")
+                if tmp_path.exists():
+                    tmp_path.unlink()
+                continue
+
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def _download(self, temp_dir: Path, filename: str) -> None:
+        """Download a file from SWPC server.
+
+        Parameters
+        ----------
+        temp_dir : Path
+            Temporary directory to store the downloaded file.
+        filename : str
+            Name of the file to download.
+
+        Raises
+        ------
+        requests.HTTPError
+            If the HTTP request fails.
+        FileNotFoundError
+            If the downloaded file is empty.
+        """
+        response = requests.get(self.URL + filename)
+        response.raise_for_status()
+
+        with open(temp_dir / filename, "wb") as f:
+            f.write(response.content)
+
+        if (temp_dir / filename).stat().st_size == 0:
+            msg = f"Error downloading file: {self.URL + filename}"
+            raise FileNotFoundError(msg)
 
     def _process_single_file(self, file_path: Path) -> pd.DataFrame:
         """Read and process the F10.7 data file.

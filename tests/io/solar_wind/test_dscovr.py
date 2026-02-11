@@ -11,7 +11,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 import pytest
-import wget
+import requests
 
 from swvo.io.solar_wind import DSCOVR
 
@@ -81,7 +81,10 @@ class TestDSCOVR:
         test_file = DATA_DIR / DSCOVR.NAME_MAG
         test_file.parent.mkdir(exist_ok=True)
 
-        wget.download(DSCOVR.URL + DSCOVR.NAME_MAG, str(test_file))
+        response = requests.get(DSCOVR.URL + DSCOVR.NAME_MAG)
+        response.raise_for_status()
+        with open(test_file, "wb") as f:
+            f.write(response.content)
 
         data = swace_instance._process_mag_file(DATA_DIR)
 
@@ -92,7 +95,10 @@ class TestDSCOVR:
         test_file = DATA_DIR / DSCOVR.NAME_SWEPAM
         test_file.parent.mkdir(exist_ok=True)
 
-        wget.download(DSCOVR.URL + DSCOVR.NAME_SWEPAM, str(test_file))
+        response = requests.get(DSCOVR.URL + DSCOVR.NAME_SWEPAM)
+        response.raise_for_status()
+        with open(test_file, "wb") as f:
+            f.write(response.content)
 
         data = swace_instance._process_swepam_file(DATA_DIR)
 

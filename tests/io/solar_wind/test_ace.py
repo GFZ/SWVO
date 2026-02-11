@@ -6,7 +6,7 @@ import os
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pandas as pd
@@ -183,8 +183,17 @@ class TestSWACE:
         assert len(data) == 1440
         assert all(col in data.columns for col in SWACE.MAG_FIELDS + SWACE.SWEPAM_FIELDS)
 
-    def test_cleanup_after_download(self, swace_instance, mock_download_response):
-        with patch("wget.download", side_effect=mock_download_response):
+    def test_cleanup_after_download(self, swace_instance, sample_mag_data, sample_swepam_data):
+        def mock_get(url):
+            mock_response = Mock()
+            if SWACE.NAME_MAG in url:
+                mock_response.content = sample_mag_data.encode()
+            else:
+                mock_response.content = sample_swepam_data.encode()
+            mock_response.raise_for_status = Mock()
+            return mock_response
+
+        with patch("requests.get", side_effect=mock_get):
             current_time = datetime.now(timezone.utc)
             swace_instance.download_and_process(current_time)
 

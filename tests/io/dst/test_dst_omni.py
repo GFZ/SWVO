@@ -50,7 +50,10 @@ class TestdstOMNI:
             DSTOMNI()
 
     def test_download_and_process(self, dstomni, mocker):
-        mocker.patch("wget.download")
+        mock_response = mocker.Mock()
+        mock_response.content = b"test content"
+        mock_response.raise_for_status = mocker.Mock()
+        mocker.patch("requests.get", return_value=mock_response)
         mocker.patch.object(
             dstomni,
             "_process_single_file",
