@@ -50,16 +50,6 @@ DAY
 </pre>
     """
 
-    @pytest.fixture
-    def mock_download_response(self, sample_dst_data):
-        def mock_download(output):
-            mock_file_path = Path(output) / DSTWDC.NAME_dst
-            mock_file_path.parent.mkdir(exist_ok=True)
-            with open(mock_file_path, "w") as f:
-                f.write(sample_dst_data)
-
-        return mock_download
-
     def test_initialization_with_env_var(self):
         with patch.dict("os.environ", {DSTWDC.ENV_VAR_NAME: str(MOCK_DATA_PATH)}):
             dst = DSTWDC()
@@ -85,7 +75,7 @@ DAY
     def test_download_and_process(self, dst_instance):
         dst_instance.download_and_process(datetime(2025, 8, 1), datetime(2025, 9, 1))
 
-        expected_files = list(MOCK_DATA_PATH.glob("WDC_DST_*.csv"))
+        expected_files = list(MOCK_DATA_PATH.glob("**/WDC_DST_*.csv"))
 
         assert 1 <= len(expected_files) & len(expected_files) <= 2
 

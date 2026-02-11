@@ -131,7 +131,11 @@ class DSTWDC:
             end_time = datetime(end_time.year, end_time.month + 1, 1)
 
         while current_time < end_time:
-            file_path = self.data_dir / f"WDC_DST_{current_time.strftime('%Y%m')}.csv"
+            # Create yearly subdirectory
+            year_dir = self.data_dir / str(current_time.year)
+            year_dir.mkdir(parents=True, exist_ok=True)
+
+            file_path = year_dir / f"WDC_DST_{current_time.strftime('%Y%m')}.csv"
             file_paths.append(file_path)
 
             file_time = current_time
