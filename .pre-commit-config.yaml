@@ -8,12 +8,3 @@ repos:
         args: [--fix]
       # Run the formatter.
       - id: ruff-format
-
-  # - repo: local
-  #   hooks:
-  #     - id: pyright-verifytypes
-  #       name: pyright verifytypes
-  #       entry: bash -c 'pip install . >/dev/null && pyright --verifytypes swvo --ignoreexternal'
-  #       language: system
-  #       types: [python]
-  #       pass_filenames: false
