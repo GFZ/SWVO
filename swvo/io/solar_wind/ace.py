@@ -111,7 +111,7 @@ class SWACE:
             unique_dates = np.unique(processed_df.index.date)
 
             for date in unique_dates:
-                file_path = self.data_dir / f"ACE_SW_NOWCAST_{date.strftime('%Y%m%d')}.csv"
+                file_path = self.data_dir / date.strftime("%Y/%m") / f"ACE_SW_NOWCAST_{date.strftime('%Y%m%d')}.csv"
 
                 day_start = datetime.combine(date, datetime.min.time()).replace(tzinfo=timezone.utc)
                 day_end = datetime.combine(date, datetime.max.time()).replace(tzinfo=timezone.utc)
@@ -126,6 +126,7 @@ class SWACE:
                     day_data = day_data.combine_first(previous_df)
 
                 logger.debug(f"Saving processed file for {date}")
+                file_path.parent.mkdir(parents=True, exist_ok=True)
                 day_data.to_csv(file_path, index=True, header=True)
 
         finally:
@@ -243,7 +244,9 @@ class SWACE:
         end_time = datetime(end_time.year, end_time.month, end_time.day, 0, 0, 0)  # + timedelta(days=1)
 
         while current_time <= end_time:
-            file_path = self.data_dir / f"ACE_SW_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"
+            file_path = (
+                self.data_dir / current_time.strftime("%Y/%m") / f"ACE_SW_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"
+            )
             file_paths.append(file_path)
 
             interval_start = current_time

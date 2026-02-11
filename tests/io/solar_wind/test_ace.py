@@ -100,7 +100,9 @@ class TestSWACE:
         current_time = datetime.now(timezone.utc)
         swace_instance.download_and_process(current_time)
 
-        expected_file = DATA_DIR / f"ACE_SW_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"
+        expected_file = (
+            DATA_DIR / current_time.strftime("%Y/%m") / f"ACE_SW_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"
+        )
         assert expected_file.exists()
 
         data = pd.read_csv(expected_file)
