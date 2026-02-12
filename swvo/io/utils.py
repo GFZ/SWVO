@@ -212,7 +212,7 @@ def sw_mag_propagation(sw_data: pd.DataFrame) -> pd.DataFrame:
         Data frame with propagated solar wind data, indexed by time.
     """
 
-    sw_data["t"] = [t.timestamp() for t in sw_data.index.to_pydatetime()]
+    sw_data["t"] = [t.timestamp() for t in sw_data.index.to_pydatetime()]  # ty: ignore[possibly-missing-attribute]
     sw_data = sw_data.dropna(how="any")
 
     distance = 1.5e6

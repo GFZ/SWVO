@@ -26,7 +26,16 @@ We use [Ruff](https://docs.astral.sh/ruff/) for linting, formatting, and import 
     pip install pre-commit
     pre-commit install
     ```
-    This ensures Ruff runs automatically on changed files before each commit.
+    This ensures Ruff runs automatically on changed files before each commit (this wall also run Ty type checking, see below)
+
+## Type Checking
+We use [Ty](https://ty.sh/) for type checking.
+1.  To check your code for type issues:
+    ```bash
+    ty check .
+    ```
+2.  Address any type errors reported by Ty.
+3.  [Optional] Ty is also integrated with `pre-commit`. If you have set up `pre-commit` as described above, Ty will run automatically on changed files before each commit.
     
 ## Running Tests
 We use `pytest` for testing.

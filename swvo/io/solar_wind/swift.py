@@ -56,7 +56,7 @@ class SWSWIFTEnsemble:
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
-            data_dir = os.environ.get(self.ENV_VAR_NAME)
+            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
 
         self.data_dir: Path = Path(data_dir)
 
@@ -249,7 +249,7 @@ class SWSWIFTEnsemble:
 
         file_date_str = Path(row["file_name"]).stem.split("_")[-1]
         file_date = pd.to_datetime(file_date_str, format="%Y-%m-%dt0000").date()
-        index_date = row.name.date()
+        index_date = row.name.date()  # ty: ignore[unresolved-attribute]
         return "propagated from previous SWIFT FORECAST file" if file_date != index_date else row["file_name"]
 
     def _nan_dataframe(self, start_time, end_time):

@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from ftplib import FTP
 from pathlib import Path
 from shutil import rmtree
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
@@ -56,7 +56,7 @@ class HpGFZ:
                 msg = f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
                 raise ValueError(msg)
 
-            data_dir = os.environ.get(self.ENV_VAR_NAME)
+            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
 
         self.data_dir: Path = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -263,15 +263,15 @@ class HpGFZ:
 
         return file_paths, time_intervals
 
-    def _process_single_file(self, temp_dir: str, filenames: str) -> pd.DataFrame:
+    def _process_single_file(self, temp_dir: Path, filenames: List[str]) -> pd.DataFrame:
         """Process HpGFZ file to a DataFrame.
 
         Parameters
         ----------
-        temp_dir : str
+        temp_dir : Path
             Temporary directory to store the file.
-        file_path : Path
-            Path to the file.
+        filenames : List[str]
+            List of filenames to process.
 
         Returns
         -------

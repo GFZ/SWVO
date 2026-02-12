@@ -55,7 +55,7 @@ class KpNiemegk:
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
-            data_dir = os.environ.get(self.ENV_VAR_NAME)
+            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
 
         self.data_dir: Path = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -163,7 +163,7 @@ class KpNiemegk:
             freq=timedelta(hours=3),
         )
         data_out = pd.DataFrame(index=t)
-        data_out.index = data_out.index.tz_localize(timezone.utc)
+        data_out.index = data_out.index.tz_localize(timezone.utc)  # ty: ignore[possibly-missing-attribute]
         data_out["kp"] = np.array([np.nan] * len(t))
         data_out["file_name"] = np.array([None] * len(t))
 
@@ -254,8 +254,8 @@ class KpNiemegk:
         df["t"] = pd.to_datetime(df["t"])
         df.index = df["t"]
         df.drop(labels=["t"], axis=1, inplace=True)
-        if not df.index.tzinfo:
-            df.index = df.index.tz_localize(timezone.utc)
+        if not df.index.tzinfo:  # ty: ignore[possibly-missing-attribute]
+            df.index = df.index.tz_localize(timezone.utc)  # ty: ignore[possibly-missing-attribute]
 
         df["file_name"] = file_path
         df.loc[df["kp"].isna(), "file_name"] = None
@@ -302,7 +302,7 @@ class KpNiemegk:
         )
         data.index.rename("t", inplace=True)
         data.index = data["t"]
-        data.index = data.index.tz_localize(timezone.utc)
+        data.index = data.index.tz_localize(timezone.utc)  # ty: ignore[possibly-missing-attribute]
         data.drop(labels=["t"], axis=1, inplace=True)
         data.dropna(inplace=True)
         data = data[data["kp"] != -1.0]

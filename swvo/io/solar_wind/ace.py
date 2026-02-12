@@ -62,7 +62,7 @@ class SWACE:
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
-            data_dir = os.environ.get(self.ENV_VAR_NAME)
+            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
 
         self.data_dir: Path = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -107,7 +107,7 @@ class SWACE:
         logger.debug("Processing file ...")
         processed_df = self._process_single_file(temporary_dir)
 
-        unique_dates = np.unique(processed_df.index.date)
+        unique_dates = np.unique(processed_df.index.date)  # ty: ignore[possibly-missing-attribute]
 
         for date in unique_dates:
             file_path = self.data_dir / date.strftime("%Y/%m") / f"ACE_SW_NOWCAST_{date.strftime('%Y%m%d')}.csv"
@@ -301,7 +301,7 @@ class SWACE:
 
         file_date_str = Path(row["file_name"]).stem.split("_")[-1]
         file_date = pd.to_datetime(file_date_str, format="%Y%m%d").date()
-        index_date = row.name.date()
+        index_date = row.name.date()  # ty: ignore[unresolved-attribute]
         return "propagated from previous ACE NOWCAST file" if file_date != index_date else row["file_name"]
 
     def _read_single_file(self, file_path) -> pd.DataFrame:

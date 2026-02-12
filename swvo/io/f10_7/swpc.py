@@ -55,12 +55,29 @@ class F107SWPC:
             if self.ENV_VAR_NAME not in os.environ:
                 msg = f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
                 raise ValueError(msg)
-            data_dir = os.environ.get(self.ENV_VAR_NAME)
+            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
 
         self.data_dir: Path = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"SWPC F10.7 data directory: {self.data_dir}")
+
+    def _is_within_download_range(self, target_date: datetime) -> bool:
+        """Check if a date is within the last 30 days.
+
+        Parameters
+        ----------
+        target_date : datetime
+            Date to check.
+
+        Returns
+        -------
+        bool
+            True if the date is within the last 30 days, False otherwise.
+        """
+        now = datetime.now(timezone.utc)
+        thirty_days_ago = now - timedelta(days=30)
+        return target_date >= thirty_days_ago
 
     def _get_processed_file_list(
         self, start_time: datetime, end_time: datetime
@@ -111,8 +128,7 @@ class F107SWPC:
                     logger.debug(f"Updating {file_path}...")
 
                     existing_data = pd.read_csv(file_path, parse_dates=["date"])
-                    existing_data["date"] = pd.to_datetime(existing_data["date"]).dt.tz_localize(None)
-
+                    existing_data["date"] = pd.to_datetime(existing_data["date"]).dt.tz_localize(None)  # ty: ignore[unresolved-attribute]
                     combined_data = pd.concat([existing_data, year_data])
                     combined_data = combined_data.drop_duplicates(subset=["date"], keep="last")
                     combined_data = combined_data.sort_values("date")
@@ -238,6 +254,15 @@ class F107SWPC:
         for file_path in file_paths:
             if not file_path.exists():
                 if download:
+                    year = int(file_path.stem.split("_")[-1])
+                    year_end = datetime(year, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+                    if not self._is_within_download_range(year_end):
+                        logger.warning(
+                            f"Cannot download data for year {year}. "
+                            f"Only data from the last 30 days can be downloaded from SWPC."
+                        )
+                        continue
+
                     self.download_and_process()
                 else:
                     warnings.warn(f"File {file_path} not found")
@@ -247,8 +272,8 @@ class F107SWPC:
             data_out = df_one_file.combine_first(data_out)
 
         if not data_out.empty:
-            if data_out.index.tzinfo is None:
-                data_out.index = data_out.index.tz_localize("UTC")
+            if data_out.index.tzinfo is None:  # ty: ignore[possibly-missing-attribute]
+                data_out.index = data_out.index.tz_localize("UTC")  # ty: ignore[possibly-missing-attribute]
         data_out.drop("date", axis=1, inplace=True)
         data_out = data_out.truncate(
             before=start_time - timedelta(hours=23.9999),

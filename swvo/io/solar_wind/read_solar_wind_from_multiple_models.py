@@ -101,7 +101,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
             start_time,
             end_time,
             historical_data_cutoff_time,
-            reduce_ensemble,
+            reduce_ensemble,  # ty: ignore[invalid-argument-type]
             download=download,
             do_interpolation=do_interpolation,
         )
@@ -213,7 +213,7 @@ def _read_from_model(  # noqa: PLR0913
         num_ens_members = len(data_one_model)
 
         if num_ens_members > 0 and reduce_ensemble is not None:
-            data_one_model = _reduce_ensembles(data_one_model, reduce_ensemble)
+            data_one_model = _reduce_ensembles(data_one_model, reduce_ensemble)  # ty: ignore[invalid-argument-type]
 
     return data_one_model
 

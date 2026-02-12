@@ -43,7 +43,7 @@ class SymhOMNI(OMNIHighRes):
         self,
         start_time: datetime,
         end_time: datetime,
-        cadence_min: float = 1,
+        cadence_min: int = 1,
         download: bool = True,
     ) -> pd.DataFrame:
         """
@@ -55,7 +55,7 @@ class SymhOMNI(OMNIHighRes):
             Start time of the data to read. Must be timezone-aware.
         end_time : datetime
             End time of the data to read. Must be timezone-aware.
-        cadence_min : float, optional
+        cadence_min : int, optional
             Cadence of the data in minutes, defaults to 1
         download : bool, optional
             Download data on the go, defaults to True.
