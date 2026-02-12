@@ -87,7 +87,7 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
             start_time,
             end_time,
             historical_data_cutoff_time,
-            reduce_ensemble,  # ty: ignore [invalid-argument-type]
+            reduce_ensemble,  # ty: ignore[invalid-argument-type]
             download=download,
         )
 
