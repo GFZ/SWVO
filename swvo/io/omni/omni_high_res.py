@@ -62,7 +62,7 @@ class OMNIHighRes:
         self,
         start_time: datetime,
         end_time: datetime,
-        cadence_min: float = 1,
+        cadence_min: int = 1,
         reprocess_files: bool = False,
     ) -> None:
         """Download and process OMNI High Resolution data files.
@@ -73,7 +73,7 @@ class OMNIHighRes:
             Start time for data download.
         end_time : datetime
             End time for data download.
-        cadence_min : float, optional
+        cadence_min : int, optional
             Cadence of the data in minutes, defaults to 1
         reprocess_files : bool, optional
             Downloads and processes the files again, defaults to False, by default False
@@ -127,7 +127,7 @@ class OMNIHighRes:
         self,
         start_time: datetime,
         end_time: datetime,
-        cadence_min: float = 1,
+        cadence_min: int = 1,
         download: bool = False,
     ) -> pd.DataFrame:
         """
@@ -139,7 +139,7 @@ class OMNIHighRes:
             Start time for reading data.
         end_time : datetime
             End time for reading data.
-        cadence_min : float, optional
+        cadence_min : int, optional
             Cadence of the data in minutes, defaults to 1
         download : bool, optional
             Download data on the go, defaults to False.
