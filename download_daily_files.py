@@ -4,8 +4,8 @@
 
 # flake8: ignore=E722
 
-import argparse
 import logging
+import os
 import traceback
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -16,116 +16,115 @@ from swvo.io.hp import Hp30GFZ, Hp60GFZ
 from swvo.io.kp import KpNiemegk, KpSWPC
 from swvo.io.omni import OMNIHighRes, OMNILowRes
 from swvo.io.solar_wind import DSCOVR, SWACE
+from swvo.logger import setup_logging
+
+setup_logging()
 
 
-def get_parser():
-    parser = argparse.ArgumentParser(description="Download and process daily external data files.")
-    parser.add_argument("--logs", action="store", default=None, type=str, help="Absolute path to the log folder")
-    return parser
+LOGS_DIR = os.environ.get("DAILY_DOWNLOAD_LOGS_DIR", "./logs")
+
+time_now = datetime.now(timezone.utc)
+
+log_dir = Path(LOGS_DIR) / f"{time_now.year}" / f"{time_now.month}"
+
+log_dir.mkdir(parents=True, exist_ok=True)
+
+log_file = log_dir / f"daily_downloads_log_{time_now.strftime('%Y%m%d_T%H0000')}.log"
+
+file_handler = logging.FileHandler(log_file, mode="w")
+file_handler.setLevel(logging.INFO)
+
+file_formatter = logging.Formatter(
+    "[%(levelname)-8s] %(asctime)s - %(name)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+file_handler.setFormatter(file_formatter)
+
+logger = logging.getLogger("swvo")
+
+logger.addHandler(file_handler)
 
 
-def main(args):
-    time_now = datetime.now(timezone.utc)
-
-    log_dir = Path(args.logs) / f"{time_now.year}" / f"{time_now.month}"
-
-    log_dir.mkdir(parents=True, exist_ok=True)
-
-    logging.basicConfig(
-        filename=str(log_dir / f"daily_downloads_log_{time_now.strftime('%Y%m%d_T%H0000')}.log"),
-        filemode="w",
-        format="%(asctime)s,%(msecs)d - %(levelname)s - %(message)s",
-        datefmt="%H:%M:%S",
-        level=logging.INFO,
-    )
-
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    formatter = logging.Formatter("%(asctime)s,%(msecs)d - %(levelname)s - %(message)s", datefmt="%H:%M:%S")
-    console_handler.setFormatter(formatter)
-    logging.getLogger().addHandler(console_handler)
-
+def main():
     date_yesterday_start = time_now.replace(hour=0, minute=0, second=1) - timedelta(days=1)
     # date_yesterday_end = date_yesterday_start.replace(hour=23, minute=59, second=59)
 
-    logging.info(f"Target time from {date_yesterday_start} to {time_now}")
+    logger.info(f"Target time from {date_yesterday_start} to {time_now}")
 
-    logging.info("Starting downloading and processing...")
+    logger.info("Starting downloading and processing...")
 
-    logging.info("Kp Niemegk...")
+    logger.info("Kp Niemegk...")
     try:
         KpNiemegk().download_and_process(date_yesterday_start, time_now, reprocess_files=True)
     except Exception:
-        logging.error("Encountered error while downloading Niemegk Kp. Traceback:")
-        logging.error(traceback.format_exc())
+        logger.error("Encountered error while downloading Niemegk Kp. Traceback:")
+        logger.error(traceback.format_exc())
 
-    logging.info("Kp SWPC...")
+    logger.info("Kp SWPC...")
     try:
         KpSWPC().download_and_process(time_now, reprocess_files=True)
     except Exception:
-        logging.error("Encountered error while downloading SWPC Kp. Traceback:")
-        logging.error(traceback.format_exc())
+        logger.error("Encountered error while downloading SWPC Kp. Traceback:")
+        logger.error(traceback.format_exc())
 
-    logging.info("OMNI low resolution...\n")
+    logger.info("OMNI low resolution...\n")
     try:
         OMNILowRes().download_and_process(date_yesterday_start, time_now, reprocess_files=True)
     except Exception:
-        logging.error("Encountered error while downloading OMNI low res. Traceback:")
-        logging.error(traceback.format_exc())
+        logger.error("Encountered error while downloading OMNI low res. Traceback:")
+        logger.error(traceback.format_exc())
 
-    logging.info("OMNI high resolution...\n")
+    logger.info("OMNI high resolution...\n")
     try:
         OMNIHighRes().download_and_process(date_yesterday_start, time_now, reprocess_files=True)
     except Exception:
-        logging.error("Encountered error while downloading OMNI high res. Traceback:")
-        logging.error(traceback.format_exc())
+        logger.error("Encountered error while downloading OMNI high res. Traceback:")
+        logger.error(traceback.format_exc())
 
-    logging.info("Hp30 GFZ...")
+    logger.info("Hp30 GFZ...")
     try:
         Hp30GFZ().download_and_process(date_yesterday_start, time_now, reprocess_files=True)
     except Exception:
-        logging.error("Encountered error while downloading Hp30. Traceback:")
-        logging.error(traceback.format_exc())
+        logger.error("Encountered error while downloading Hp30. Traceback:")
+        logger.error(traceback.format_exc())
 
-    logging.info("Hp60 GFZ...")
+    logger.info("Hp60 GFZ...")
     try:
         Hp60GFZ().download_and_process(date_yesterday_start, time_now, reprocess_files=True)
     except Exception:
-        logging.error("Encountered error while downloading Hp30. Traceback:")
-        logging.error(traceback.format_exc())
+        logger.error("Encountered error while downloading Hp30. Traceback:")
+        logger.error(traceback.format_exc())
 
-    logging.info("SW ACE RT...")
+    logger.info("SW ACE RT...")
     try:
         SWACE().download_and_process(time_now)
     except Exception:
-        logging.error("Encountered error while downloading ACE RT solar wind. Traceback:")
-        logging.error(traceback.format_exc())
+        logger.error("Encountered error while downloading ACE RT solar wind. Traceback:")
+        logger.error(traceback.format_exc())
 
-    logging.info("F10.7 SWPC RT...")
+    logger.info("F10.7 SWPC RT...")
     try:
         F107SWPC().download_and_process()
     except Exception:
-        logging.error("Encountered error while downloading F10.7cm solar wind. Traceback:")
-        logging.error(traceback.format_exc())
+        logger.error("Encountered error while downloading F10.7cm solar wind. Traceback:")
+        logger.error(traceback.format_exc())
 
-    logging.info("SW DSCOVR...")
+    logger.info("SW DSCOVR...")
     try:
         DSCOVR().download_and_process(time_now)
     except Exception:
-        logging.error("Encountered error while downloading DSCOVR solar wind. Traceback:")
-        logging.error(traceback.format_exc())
+        logger.error("Encountered error while downloading DSCOVR solar wind. Traceback:")
+        logger.error(traceback.format_exc())
 
-    logging.info("DST WDC...")
+    logger.info("DST WDC...")
     try:
         DSTWDC().download_and_process(date_yesterday_start, time_now, reprocess_files=True)
     except Exception:
-        logging.error("Encountered error while downloading WDC Dst data. Traceback:")
-        logging.error(traceback.format_exc())
+        logger.error("Encountered error while downloading WDC Dst data. Traceback:")
+        logger.error(traceback.format_exc())
 
-    logging.info("Finished downloading and processing!")
+    logger.info("Finished downloading and processing!")
 
 
 if __name__ == "__main__":
-    parser = get_parser()
-    args = parser.parse_args()
-    main(args)
+    main()
