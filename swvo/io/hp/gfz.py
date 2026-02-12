@@ -7,13 +7,13 @@ from __future__ import annotations
 import logging
 import os
 from datetime import datetime, timedelta, timezone
+from ftplib import FTP
 from pathlib import Path
 from shutil import rmtree
 from typing import Optional
 
 import numpy as np
 import pandas as pd
-import requests
 
 logger = logging.getLogger(__name__)
 
@@ -141,18 +141,27 @@ class HpGFZ:
 
         Raises
         ------
-        requests.HTTPError
-            If the HTTP request fails.
+        Exception
+            If the FTP download fails.
         """
         logger.debug(f"Downloading file {self.URL + filename} ...")
 
-        response = requests.get(self.URL + filename)
-        response.raise_for_status()
-
         # Extract just the filename from the path
         filename_only = filename.split("/")[-1]
-        with open(temporary_dir / filename_only, "wb") as f:
-            f.write(response.content)
+        local_path = temporary_dir / filename_only
+
+        try:
+            ftp = FTP("ftp.gfz-potsdam.de")
+            ftp.login()
+            ftp.cwd("/pub/home/obs/Hpo/")
+
+            with open(local_path, "wb") as f:
+                ftp.retrbinary(f"RETR {filename}", f.write)
+
+            ftp.quit()
+        except Exception as e:
+            logger.error(f"FTP download failed: {e}")
+            raise
 
     def read(self, start_time: datetime, end_time: datetime, *, download: bool = False) -> pd.DataFrame:
         """Read HpGFZ data for the given time range.
