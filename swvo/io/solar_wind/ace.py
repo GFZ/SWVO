@@ -301,7 +301,7 @@ class SWACE:
 
         file_date_str = Path(row["file_name"]).stem.split("_")[-1]
         file_date = pd.to_datetime(file_date_str, format="%Y%m%d").date()
-        index_date = row.name.date()  # ty : ignore[unresolved-attribute]
+        index_date = row.name.date()  # ty: ignore[unresolved-attribute]
         return "propagated from previous ACE NOWCAST file" if file_date != index_date else row["file_name"]
 
     def _read_single_file(self, file_path) -> pd.DataFrame:
