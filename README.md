@@ -3,7 +3,6 @@
 [![PyPI version](https://badge.fury.io/py/swvo.svg)](https://badge.fury.io/py/swvo)
 [![Build Sphinx HTML](https://app.readthedocs.org/projects/swvo/badge/?version=latest)](https://swvo.readthedocs.io/en/latest/)
 [![SWVO Tests](https://github.com/GFZ/SWVO/actions/workflows/tests.yml/badge.svg)](https://github.com/GFZ/SWVO/actions/workflows/tests.yml)
-[![Pyright](https://github.com/GFZ/SWVO/actions/workflows/pyright.yml/badge.svg)](https://github.com/GFZ/SWVO/actions/workflows/pyright.yml)
 [![Python version](https://img.shields.io/pypi/pyversions/swvo.svg)](https://badge.fury.io/py/swvo)
 [![Coverage Status](https://coveralls.io/repos/github/GFZ/SWVO/badge.svg?branch=main)](https://coveralls.io/github/GFZ/SWVO?branch=main)
 

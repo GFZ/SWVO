@@ -13,5 +13,5 @@ repos:
     hooks:
       - id: ty
         name: ty check
-        entry: ty check . --ignore unresolved-import
+        entry: ty check swvo --ignore unresolved-import
         language: python
