@@ -57,7 +57,7 @@ class KpSWPC:
             if self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
-            data_dir = os.environ.get(self.ENV_VAR_NAME)
+            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
 
         self.data_dir: Path = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
