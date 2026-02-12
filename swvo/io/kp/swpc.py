@@ -180,7 +180,7 @@ class KpSWPC:
             freq=timedelta(hours=3),
         )
         data_out = pd.DataFrame(index=t)
-        data_out.index = data_out.index.tz_localize(timezone.utc)
+        data_out.index = data_out.index.tz_localize(timezone.utc)  # ty: ignore[possibly-missing-attribute]
         data_out["kp"] = np.array([np.nan] * len(t))
         data_out["file_name"] = np.array([np.nan] * len(t))
 
@@ -252,7 +252,7 @@ class KpSWPC:
             lines = f.readlines()
             for line in lines:
                 if ":Issued:" in line:
-                    year = int(re.search(r"(\d{4})", line).group(1))
+                    year = int(re.search(r"(\d{4})", line).group(1))  # ty: ignore[possibly-missing-attribute]
                     break
 
             for i, line in enumerate(lines):
@@ -260,19 +260,19 @@ class KpSWPC:
                     first_line = i + 2
                     break
 
-            headers = lines[first_line].split()
+            headers = lines[first_line].split()  # ty: ignore[invalid-argument-type]
             headers = [headers[i] + " " + headers[i + 1] for i in range(0, len(headers), 2)]
             for d in headers:
                 try:
                     if any("Dec" in month for month in headers) and "Jan" in d:
-                        parsed_date = self._parse_date(d, year + 1)
+                        parsed_date = self._parse_date(d, year + 1)  # ty: ignore[unsupported-operator]
                     else:
                         parsed_date = self._parse_date(d, year)
                     dates.append(parsed_date)
                 except ValueError:
                     raise
 
-            for line in lines[first_line + 1 : first_line + 9]:
+            for line in lines[first_line + 1 : first_line + 9]:  # ty: ignore[unsupported-operator]
                 values = [float(val) for val in line.split()[1:] if re.match(r"^\d+\.\d+$", val)]
 
                 kp_data.append(values)

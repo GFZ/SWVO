@@ -108,7 +108,7 @@ class KpEnsemble:
                 freq=timedelta(hours=3),
             )
             data_out = pd.DataFrame(index=t)
-            data_out.index = data_out.index.tz_localize(timezone.utc)
+            data_out.index = data_out.index.tz_localize(timezone.utc)  # ty: ignore[possibly-missing-attribute]
             data_out["kp"] = np.array([np.nan] * len(t))
             data_out = data_out.truncate(
                 before=start_time - timedelta(hours=2.9999),
@@ -129,7 +129,7 @@ class KpEnsemble:
                 df["file_name"] = file
                 df.loc[df["kp"].isna(), "file_name"] = None
 
-                df.index = df.index.tz_localize("UTC")
+                df.index = df.index.tz_localize("UTC")  # ty: ignore[possibly-missing-attribute]
 
                 df = df.truncate(
                     before=start_time - timedelta(hours=2.9999),
