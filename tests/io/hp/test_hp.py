@@ -129,16 +129,19 @@ class TestHpGFZ:
         start_time = datetime(2020, 1, 1)  # noqa: DTZ001
         end_time = datetime(2020, 12, 31)  # noqa: DTZ001
 
-        mock_response = mocker.Mock()
-        mock_response.content = b"test content"
-        mock_response.raise_for_status = mocker.Mock()
-        mocked = mocker.patch("requests.get", return_value=mock_response)
+        # Mock FTP operations
+        mock_ftp = mocker.Mock()
+        mock_ftp.retrbinary = mocker.Mock()
+        mocker.patch("swvo.io.hp.gfz.FTP", return_value=mock_ftp)
+
         mocker.patch("shutil.rmtree")
         mocker.patch.object(hp30gfz, "_process_single_file", return_value=pd.DataFrame())
 
         hp30gfz.download_and_process(start_time, end_time)
 
-        mocked.assert_called()
+        mock_ftp.login.assert_called()
+        mock_ftp.retrbinary.assert_called()
+        mock_ftp.quit.assert_called()
 
     @pytest.fixture
     def sample_csv_data(self):
