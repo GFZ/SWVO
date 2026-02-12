@@ -270,8 +270,8 @@ class HpGFZ:
         ----------
         temp_dir : Path
             Temporary directory to store the file.
-        filenames : Path
-            Names of the file to process.
+        filenames : List[str]
+            List of filenames to process.
 
         Returns
         -------
