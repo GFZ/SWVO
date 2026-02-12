@@ -128,7 +128,7 @@ def _read_from_model(  # noqa: PLR0913
         num_ens_members = len(data_one_model)
 
         if num_ens_members > 0 and reduce_ensemble is not None:
-            data_one_model = _reduce_ensembles(data_one_model, reduce_ensemble, model.index)  # ty: ignore [invalid-argument-type]
+            data_one_model = _reduce_ensembles(data_one_model, reduce_ensemble, model.index)  # ty: ignore[invalid-argument-type]
 
     return data_one_model
 
