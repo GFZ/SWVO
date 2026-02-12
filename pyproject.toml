@@ -95,3 +95,9 @@ push = true
 [tool.ty.src]
 include = ["swvo"]
 exclude = ["tests", "swvo/io/RBMDataSet"]
+
+[[tool.ty.overrides]]
+include = ["swvo"]
+
+[tool.ty.overrides.rules]
+invalid-return-type = "ignore"
