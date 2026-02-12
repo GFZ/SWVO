@@ -178,7 +178,7 @@ class HpEnsemble(ABC):
         if end_time is not None and not end_time.tzinfo:
             end_time = end_time.replace(tzinfo=timezone.utc)
 
-        if not (0 <= horizon <= 72):
+        if not (0 <= horizon <= 72):  # ty: ignore[unsupported-operator]
             raise ValueError("Horizon must be between 0 and 72 hours")
 
         if self.index == "hp30":
@@ -187,7 +187,7 @@ class HpEnsemble(ABC):
                 raise ValueError("Horizon for hp30 must be in 0.5 hour increments")
         elif self.index == "hp60":
             freq = "1h"
-            if horizon % 1 != 0:
+            if horizon % 1 != 0:  # ty: ignore[unsupported-operator]
                 raise ValueError("Horizon for hp60 must be in 1 hour increments")
 
         align_start_to_hp_hr = start_time.replace(hour=start_time.hour, minute=0, second=0, microsecond=0)
