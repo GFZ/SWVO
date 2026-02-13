@@ -40,7 +40,7 @@ jobs:
           pip install coveralls coverage pytest-cov
 
       - name: Run tests
-        run: python -m coverage run --source swvo -m pytest tests/io
+        run: python -m coverage run --source swvo -m pytest -rf tests/io
 
       - name: Run Coveralls
         if: ${{ success() && matrix.python-version == '3.11' }}
