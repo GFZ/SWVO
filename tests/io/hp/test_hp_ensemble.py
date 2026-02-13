@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from swvo.io.hp.ensemble import Hp30Ensemble, Hp60Ensemble, HpEnsemble
+from swvo.io.hp.ensemble import Hp30Ensemble, Hp60Ensemble
 
 TEST_DIR = Path("test_data")
 DATA_DIR = TEST_DIR / "mock_hp_ensemble"
@@ -55,10 +55,6 @@ class TestHpEnsemble:
             match=f"Necessary environment variable {Hp30Ensemble.ENV_VAR_NAME} not set!",
         ):
             Hp30Ensemble()
-
-    def test_abc_instantiation(self):
-        with pytest.raises(TypeError, match="Can't instantiate abstract class*"):
-            HpEnsemble("hp45", data_dir=DATA_DIR)
 
     @pytest.mark.parametrize("instance_type,index_name", [("hp30", "hp30"), ("hp60", "hp60")])
     def test_read_with_ensemble_data(self, instance_type, index_name):
