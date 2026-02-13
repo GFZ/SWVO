@@ -18,9 +18,6 @@ from swvo.io.omni import OMNIHighRes, OMNILowRes
 from swvo.io.solar_wind import DSCOVR, SWACE
 from swvo.logger import setup_logging
 
-setup_logging()
-
-
 LOGS_DIR = os.environ.get("DAILY_DOWNLOAD_LOGS_DIR", "./logs")
 
 time_now = datetime.now(timezone.utc)
@@ -31,18 +28,10 @@ log_dir.mkdir(parents=True, exist_ok=True)
 
 log_file = log_dir / f"daily_downloads_log_{time_now.strftime('%Y%m%d_T%H0000')}.log"
 
-file_handler = logging.FileHandler(log_file, mode="w")
-file_handler.setLevel(logging.INFO)
+setup_logging(log_file=log_file)
 
-file_formatter = logging.Formatter(
-    "[%(levelname)-8s] %(asctime)s - %(name)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-file_handler.setFormatter(file_formatter)
 
-logger = logging.getLogger("swvo")
-
-logger.addHandler(file_handler)
+logger = logging.getLogger(__name__)
 
 
 def main():
