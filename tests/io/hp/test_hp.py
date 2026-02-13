@@ -64,8 +64,8 @@ class TestHpGFZ:
             Hp30GFZ()
 
     def test_read_with_download(self, hp30gfz, mocker, mock_hp_data):
-        end_time = datetime(2020, 12, 31)  # noqa: DTZ001
-        start_time = datetime(2020, 1, 1)  # noqa: DTZ001
+        end_time = datetime(2020, 12, 31)
+        start_time = datetime(2020, 1, 1)
 
         mocker.patch("pathlib.Path.exists", return_value=False)
         mocker.patch.object(hp30gfz, "download_and_process")
@@ -78,8 +78,8 @@ class TestHpGFZ:
         assert "hp30" in df.columns
 
     def test_start_year_behind(self, hp30gfz, mocker, mock_hp_data):
-        start_time = datetime(1980, 1, 1)  # noqa: DTZ001
-        end_time = datetime(2020, 12, 31)  # noqa: DTZ001
+        start_time = datetime(1980, 1, 1)
+        end_time = datetime(2020, 12, 31)
 
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch.object(hp30gfz, "_read_single_file", return_value=mock_hp_data)
@@ -112,8 +112,8 @@ class TestHpGFZ:
         assert "Hp30" in df.columns
 
     def test_get_processed_file_list(self, hp30gfz):
-        start_time = datetime(2020, 1, 1)  # noqa: DTZ001
-        end_time = datetime(2021, 12, 31)  # noqa: DTZ001
+        start_time = datetime(2020, 1, 1)
+        end_time = datetime(2021, 12, 31)
 
         file_paths, time_intervals = hp30gfz._get_processed_file_list(start_time, end_time)
 
@@ -124,29 +124,27 @@ class TestHpGFZ:
         assert time_intervals[1][0].year == 2021
 
     def test_invalid_time_range(self, hp30gfz):
-        end_time = datetime(2020, 1, 1)  # noqa: DTZ001
-        start_time = datetime(2020, 12, 31)  # noqa: DTZ001
+        end_time = datetime(2020, 1, 1)
+        start_time = datetime(2020, 12, 31)
 
         with pytest.raises(AssertionError):
             hp30gfz.read(start_time, end_time)
 
     def test_download_and_process(self, hp30gfz, mocker):
-        start_time = datetime(2020, 1, 1)  # noqa: DTZ001
-        end_time = datetime(2020, 12, 31)  # noqa: DTZ001
+        start_time = datetime(2020, 1, 1)
+        end_time = datetime(2020, 12, 31)
 
         # Mock requests operations
         mock_response = Mock()
         mock_response.json.return_value = {"datetime": ["2020-01-01T00:00:00Z"], "Hp30": [15.0]}
         mock_response.raise_for_status = Mock()
-        mocker.patch("swvo.io.hp.gfz.requests.get", return_value=mock_response)
+        mock_get = mocker.patch("swvo.io.hp.gfz.requests.get", return_value=mock_response)
 
-        mocker.patch("shutil.rmtree")
+        mocker.patch("swvo.io.hp.gfz.rmtree")
         mocker.patch.object(hp30gfz, "_process_single_file", return_value=pd.DataFrame())
 
         hp30gfz.download_and_process(start_time, end_time)
-
-        # Verify the API was called with requests
-        assert mocker.patch("swvo.io.hp.gfz.requests.get").called or True
+        mock_get.assert_called()
 
     def test_download_api_url_construction(self, hp30gfz, tmp_path, mocker):
         start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
