@@ -4,16 +4,17 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from datetime import datetime, timedelta, timezone
-from ftplib import FTP
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 import pandas as pd
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ class HpGFZ:
     ENV_VAR_NAME = "RT_HP_GFZ_STREAM_DIR"
 
     START_YEAR = 1985
-    URL = "ftp://ftp.gfz-potsdam.de/pub/home/obs/Hpo/"
+    API_URL = "https://kp.gfz.de/app/json/"
     LABEL = "gfz"
 
     def __init__(self, index: str, data_dir: Optional[Path] = None) -> None:
@@ -99,23 +100,12 @@ class HpGFZ:
 
             tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
 
-            filenames_download = [
-                f"Hp{self.index_number}/Hp{self.index_number}_ap{self.index_number}_{time_interval[0].year!s}.txt"
-            ]
-
-            # there is a separate nowcast file
-            if time_interval[0].year == datetime.now(timezone.utc).year:
-                filenames_download.append(
-                    f"Hp{self.index_number}/Hp{self.index_number}_ap{self.index_number}_nowcast.txt"
-                )
-
             try:
-                for filename_download in filenames_download:
-                    self._download(temporary_dir, filename_download)
+                # Download data for this time interval
+                self._download(temporary_dir, time_interval[0], time_interval[1])
 
-                filenames_download = [x.split("/")[-1] for x in filenames_download]  # strip folder from filename
-
-                processed_df = self._process_single_file(temporary_dir, filenames_download)
+                # Process the downloaded data
+                processed_df = self._process_single_file(temporary_dir, time_interval[0])
 
                 file_path.parent.mkdir(parents=True, exist_ok=True)
                 processed_df.to_csv(tmp_path, index=True, header=False)
@@ -129,38 +119,48 @@ class HpGFZ:
 
         rmtree(temporary_dir, ignore_errors=True)
 
-    def _download(self, temporary_dir: Path, filename: str) -> None:
-        """Download a file from the GFZ server.
+    def _download(self, temporary_dir: Path, start_time: datetime, end_time: datetime) -> None:
+        """Download data from the GFZ API.
 
         Parameters
         ----------
         temporary_dir : Path
             Temporary directory to store the downloaded file.
-        filename : str
-            Full path of the file to download (including folder).
+        start_time : datetime
+            Start time for the data request.
+        end_time : datetime
+            End time for the data request.
 
         Raises
         ------
         Exception
-            If the FTP download fails.
+            If the API request fails.
         """
-        logger.debug(f"Downloading file {self.URL + filename} ...")
+        # Format datetime to ISO format with Z timezone
+        start_str = start_time.isoformat().replace("+00:00", "Z")
+        end_str = end_time.isoformat().replace("+00:00", "Z")
 
-        # Extract just the filename from the path
-        filename_only = filename.split("/")[-1]
-        local_path = temporary_dir / filename_only
+        # Determine the index parameter for the API
+        index_param = f"Hp{self.index_number}"
+
+        url = f"{self.API_URL}?start={start_str}&end={end_str}&index={index_param}&status=def"
+
+        logger.debug(f"Downloading data from {url} ...")
 
         try:
-            ftp = FTP("ftp.gfz-potsdam.de")
-            ftp.login()
-            ftp.cwd("/pub/home/obs/Hpo/")
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
 
-            with open(local_path, "wb") as f:
-                ftp.retrbinary(f"RETR {filename}", f.write)
+            data = response.json()
+            logger.debug(f"Downloaded data: {len(data)} records")
 
-            ftp.quit()
-        except Exception as e:
-            logger.error(f"FTP download failed: {e}")
+            # Save the JSON response to a temporary file for processing
+            output_file = temporary_dir / f"hp_data_{start_time.year}.json"
+            with open(output_file, "w") as f:
+                json.dump(data, f)
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"API request failed: {e}")
             raise
 
     def read(self, start_time: datetime, end_time: datetime, *, download: bool = False) -> pd.DataFrame:
@@ -263,15 +263,15 @@ class HpGFZ:
 
         return file_paths, time_intervals
 
-    def _process_single_file(self, temp_dir: Path, filenames: List[str]) -> pd.DataFrame:
-        """Process HpGFZ file to a DataFrame.
+    def _process_single_file(self, temp_dir: Path, start_time: datetime) -> pd.DataFrame:
+        """Process HpGFZ data from JSON response to a DataFrame.
 
         Parameters
         ----------
         temp_dir : Path
-            Temporary directory to store the file.
-        filenames : List[str]
-            List of filenames to process.
+            Temporary directory containing the JSON file.
+        start_time : datetime
+            Start time to identify the correct JSON file.
 
         Returns
         -------
@@ -280,48 +280,20 @@ class HpGFZ:
         """
 
         data_total = pd.DataFrame()
+        json_file = temp_dir / f"hp_data_{start_time.year}.json"
 
-        # combine nowcast and yearly file
-        for filename in filenames:
-            data = {self.index: [], "timestamp": []}
+        if not json_file.exists():
+            logger.warning(f"JSON file {json_file} not found")
+            return data_total
 
-            with open(temp_dir / filename) as f:  # noqa: PTH123
-                for line in f:
-                    if line[0] == "#":
-                        continue
-                    line = line.split(" ")
-                    line = [x for x in line if x != ""]
+        with open(json_file) as f:
+            json_data = json.load(f)
 
-                    year = line[0]
-                    month = line[1]
-                    day = line[2]
-                    hour = line[3][0:2]
-
-                    if int(line[3][3:4]) == 0:
-                        minute = 0
-                    elif int(line[3][3:4]) == 5:
-                        minute = 30
-                    else:
-                        msg = "Value for minute not expected"
-                        raise ValueError(msg)
-                    data["timestamp"] += [
-                        datetime(
-                            int(year),
-                            int(month),
-                            int(day),
-                            int(hour),
-                            minute,
-                            tzinfo=timezone.utc,
-                        )
-                    ]
-                    data[self.index] += [float(line[7])]
-
-            data = pd.DataFrame(data)
-            data.index = data["timestamp"]
-            data = data.drop(labels=["timestamp"], axis=1)
-            data.loc[data[self.index] == -1, self.index] = np.nan
-
-            data_total = data_total.combine_first(data)
+        data_total = pd.DataFrame(
+            {f"Hp{self.index_number}": json_data[f"Hp{self.index_number}"]},
+            index=pd.to_datetime(json_data["datetime"], utc=True),
+        )
+        data_total.index = data_total.index.tz_convert("UTC")
 
         return data_total
 
