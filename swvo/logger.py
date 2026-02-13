@@ -5,9 +5,10 @@
 
 import logging
 import sys
+from pathlib import Path
+from typing import Optional
 
-logger = logging.getLogger(__name__)
-
+# Get the package logger
 logger = logging.getLogger("swvo")
 logger.addHandler(logging.NullHandler())
 
@@ -28,16 +29,39 @@ class _ColorFormatter(logging.Formatter):
         return f"{color}{msg}{self.RESET}"
 
 
-def setup_logging(level=logging.INFO):
-    if any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
-        return
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(
-        _ColorFormatter(
-            "[%(levelname)-8s] %(asctime)s - %(name)s - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
-    )
+def setup_logging(level: str = "INFO", log_file: Optional[Path] = None, file_mode: str = "w"):
+    """Setup logging for the swvo package and root logger.
 
-    logger.setLevel(level)
-    logger.addHandler(handler)
+    Parameters
+    ----------
+    level : str, optional
+        Logging level, by default is INFO
+    log_file : Path, optional
+        Path to log file. If None, only console logging is enabled.If provided, logs will be written to both console and file., by default None
+    """
+    try:
+        level = getattr(logging, level.upper())
+    except AttributeError:
+        raise ValueError(f"Invalid logging level: {level}. Use one of DEBUG, INFO, WARNING, ERROR, CRITICAL.")
+
+    # Configure root logger so all loggers inherit the formatting
+    root_logger = logging.getLogger()
+
+    # Check if already configured
+    if any(isinstance(h, logging.StreamHandler) for h in root_logger.handlers):
+        return
+
+    # Console handler with colors
+    log_format = "[%(levelname)-8s] %(asctime)s - %(name)s:%(lineno)d - %(message)s"
+    datefmt = "%Y-%m-%d %H:%M:%S"
+
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(_ColorFormatter(log_format, datefmt=datefmt))
+
+    root_logger.setLevel(level)
+    root_logger.addHandler(console_handler)
+
+    if log_file:
+        file_handler = logging.FileHandler(log_file, mode=file_mode)
+        file_handler.setFormatter(logging.Formatter(log_format, datefmt=datefmt))
+        root_logger.addHandler(file_handler)
