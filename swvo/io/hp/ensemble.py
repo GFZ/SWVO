@@ -7,7 +7,6 @@ from __future__ import annotations
 import logging
 import os
 import warnings
-from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable, Optional, TypeVar
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 Number = TypeVar("Number", int, float)
 
 
-class HpEnsemble(ABC):
+class HpEnsemble:
     """This is a base class for Hp ensemble data.
 
     Parameters
@@ -173,7 +172,6 @@ class HpEnsemble(ABC):
 
         return file_list
 
-    @abstractmethod
     def read_with_horizon(self, start_time: datetime, end_time: datetime, horizon: Number) -> list[pd.DataFrame]:
         if start_time is not None:
             start_time = enforce_utc_timezone(start_time)
