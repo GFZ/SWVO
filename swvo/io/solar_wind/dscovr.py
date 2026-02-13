@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from swvo.io.utils import sw_mag_propagation
+from swvo.io.utils import enforce_utc_timezone, sw_mag_propagation
 
 logger = logging.getLogger(__name__)
 
@@ -110,8 +110,8 @@ class DSCOVR:
             tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
 
             try:
-                day_start = datetime.combine(date, datetime.min.time()).replace(tzinfo=timezone.utc)
-                day_end = datetime.combine(date, datetime.max.time()).replace(tzinfo=timezone.utc)
+                day_start = enforce_utc_timezone(datetime.combine(date, datetime.min.time()))
+                day_end = enforce_utc_timezone(datetime.combine(date, datetime.max.time()))
 
                 day_data = processed_df[(processed_df.index >= day_start) & (processed_df.index <= day_end)]
 
@@ -227,7 +227,7 @@ class DSCOVR:
 
         for file_path in file_paths:
             if not file_path.exists() and download:
-                file_date = datetime.strptime(file_path.stem.split("_")[-1], "%Y%m%d").replace(tzinfo=timezone.utc)
+                file_date = enforce_utc_timezone(datetime.strptime(file_path.stem.split("_")[-1], "%Y%m%d"))
                 self.download_and_process(file_date)
 
             if not file_path.exists():
@@ -345,7 +345,7 @@ class DSCOVR:
         data_mag = data_mag.iloc[1:].reset_index(drop=True)
         data_mag["t"] = pd.to_datetime(data_mag["time_tag"])
         data_mag.index = data_mag["t"]
-        data_mag.index = data_mag.index.tz_localize("UTC")
+        data_mag.index = enforce_utc_timezone(data_mag.index)
         data_mag.drop(
             ["lon_gsm", "lat_gsm", "time_tag", "t"],
             axis=1,
@@ -373,7 +373,7 @@ class DSCOVR:
         data_plasma = data_plasma.iloc[1:].reset_index(drop=True)
         data_plasma["t"] = data_plasma["time_tag"]
         data_plasma.index = pd.to_datetime(data_plasma["t"])
-        data_plasma.index = data_plasma.index.tz_localize("UTC")
+        data_plasma.index = enforce_utc_timezone(data_plasma.index)
         data_plasma.drop(
             ["time_tag", "t"],
             axis=1,

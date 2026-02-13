@@ -16,6 +16,8 @@ import numpy as np
 import pandas as pd
 import requests
 
+from swvo.io.utils import enforce_utc_timezone
+
 logger = logging.getLogger(__name__)
 
 
@@ -159,7 +161,7 @@ class HpGFZ:
             with open(output_file, "w") as f:
                 json.dump(data, f)
 
-        except requests.exceptions.RequestException as e:
+        except requests.exceptions.RequestException as e:  # ty: ignore[unresolved-attribute]
             logger.error(f"API request failed: {e}")
             raise
 
@@ -180,10 +182,8 @@ class HpGFZ:
         :class:`pandas.DataFrame`
             HpGFZ data for the given time range.
         """
-        if not start_time.tzinfo:
-            start_time = start_time.replace(tzinfo=timezone.utc)
-        if not end_time.tzinfo:
-            end_time = end_time.replace(tzinfo=timezone.utc)
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
 
         if start_time < datetime(self.START_YEAR, 1, 1, tzinfo=timezone.utc):
             logger.warning(
@@ -293,7 +293,7 @@ class HpGFZ:
             {f"Hp{self.index_number}": json_data[f"Hp{self.index_number}"]},
             index=pd.to_datetime(json_data["datetime"], utc=True),
         )
-        data_total.index = data_total.index.tz_convert("UTC")
+        data_total.index = enforce_utc_timezone(data_total.index)  # ty: ignore[no-matching-overload]
 
         return data_total
 

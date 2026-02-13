@@ -8,7 +8,7 @@ Module for handling F10.7 data from OMNI low resolution files.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from swvo.io.omni import OMNILowRes
+from swvo.io.utils import enforce_utc_timezone
 
 
 class F107OMNI(OMNILowRes):
@@ -57,10 +58,8 @@ class F107OMNI(OMNILowRes):
 
         data_out = super().read(start_time, end_time, download=download)
 
-        if not start_time.tzinfo:
-            start_time = start_time.replace(tzinfo=timezone.utc)
-        if not end_time.tzinfo:
-            end_time = end_time.replace(tzinfo=timezone.utc)
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
 
         f107_df = pd.DataFrame(index=data_out.index)
 

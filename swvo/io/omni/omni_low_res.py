@@ -18,6 +18,8 @@ import numpy as np
 import pandas as pd
 import requests
 
+from swvo.io.utils import enforce_utc_timezone
+
 logger = logging.getLogger(__name__)
 
 logging.captureWarnings(True)
@@ -276,13 +278,10 @@ class OMNILowRes:
         """
         START_YEAR = 1963
 
-        if not start_time.tzinfo:
-            start_time = start_time.replace(tzinfo=timezone.utc)
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
 
-        if not end_time.tzinfo:
-            end_time = end_time.replace(tzinfo=timezone.utc)
-
-        if start_time < datetime(START_YEAR, 1, 1).replace(tzinfo=timezone.utc):
+        if start_time < datetime(START_YEAR, 1, 1, tzinfo=timezone.utc):
             logger.warning(
                 "Start date chosen falls behind the existing data. Moving start date to first"
                 " available mission files..."

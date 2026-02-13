@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from swvo.io.utils import sw_mag_propagation
+from swvo.io.utils import enforce_utc_timezone, sw_mag_propagation
 
 logger = logging.getLogger(__name__)
 
@@ -114,8 +114,8 @@ class SWACE:
             tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
 
             try:
-                day_start = datetime.combine(date, datetime.min.time()).replace(tzinfo=timezone.utc)
-                day_end = datetime.combine(date, datetime.max.time()).replace(tzinfo=timezone.utc)
+                day_start = enforce_utc_timezone(datetime.combine(date, datetime.min.time()))
+                day_end = enforce_utc_timezone(datetime.combine(date, datetime.max.time()))
 
                 day_data = processed_df[(processed_df.index >= day_start) & (processed_df.index <= day_end)]
 
@@ -228,7 +228,7 @@ class SWACE:
 
         for file_path in file_paths:
             if not file_path.exists() and download:
-                file_date = datetime.strptime(file_path.stem.split("_")[-1], "%Y%m%d").replace(tzinfo=timezone.utc)
+                file_date = enforce_utc_timezone(datetime.strptime(file_path.stem.split("_")[-1], "%Y%m%d"))
                 hour_now = datetime.now(timezone.utc).hour
                 file_date = file_date.replace(hour=hour_now, minute=0, second=0, microsecond=0)
                 self.download_and_process(file_date)

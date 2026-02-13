@@ -18,6 +18,8 @@ from mat73 import loadmat
 from numpy.typing import NDArray
 from scipy.io import loadmat as sci_loadmat
 
+from swvo.io.utils import enforce_utc_timezone
+
 
 def join_var(var1: NDArray[np.generic], var2: NDArray[np.generic]) -> NDArray[np.generic]:
     """Join two variables along the first axis."""
@@ -110,10 +112,10 @@ def matlab2python(datenum: float | Iterable[float]) -> Iterable[datetime] | date
     datenum = pd.to_datetime(datenum - 719529, unit="D", origin=pd.Timestamp("1970-01-01")).to_pydatetime()
 
     if isinstance(datenum, Iterable):
-        datenum = [x.replace(tzinfo=timezone.utc) for x in datenum]
+        datenum = enforce_utc_timezone(list(datenum))
         datenum = [round_seconds(x) for x in datenum]
     else:
-        datenum = round_seconds(datenum.replace(tzinfo=timezone.utc))
+        datenum = round_seconds(enforce_utc_timezone(datenum))
 
     return datenum
 

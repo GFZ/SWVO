@@ -4,7 +4,7 @@
 
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, overload
 
 import numpy as np
 import pandas as pd
@@ -156,16 +156,18 @@ def datenum(
     MATLAB_EPOCH = datetime.toordinal(datetime(1970, 1, 1, tzinfo=timezone.utc)) + 366
 
     if isinstance(date_input, datetime):
-        dt = date_input.replace(tzinfo=timezone.utc)
+        dt = enforce_utc_timezone(date_input)
     elif month is not None and year is not None:
-        dt = datetime(
-            year=year,
-            month=month,
-            day=date_input,
-            hour=hour,
-            minute=minute,
-            second=seconds,
-        ).replace(tzinfo=timezone.utc)
+        dt = enforce_utc_timezone(
+            datetime(
+                year=year,
+                month=month,
+                day=date_input,
+                hour=hour,
+                minute=minute,
+                second=seconds,
+            )
+        )
     else:
         raise ValueError("Invalid input. Provide either a datetime object or year, month, and day.")
 
@@ -249,3 +251,99 @@ def sw_mag_propagation(sw_data: pd.DataFrame) -> pd.DataFrame:
     sw_data = sw_data.drop(columns=["t"])
 
     return sw_data
+
+
+@overload
+def enforce_utc_timezone(time: datetime) -> datetime: ...
+
+
+@overload
+def enforce_utc_timezone(time: list[datetime]) -> list[datetime]: ...
+
+
+@overload
+def enforce_utc_timezone(time: pd.Timestamp) -> pd.Timestamp: ...
+
+
+@overload
+def enforce_utc_timezone(time: pd.Series) -> pd.Series: ...
+
+
+@overload
+def enforce_utc_timezone(time: pd.DatetimeIndex) -> pd.DatetimeIndex: ...
+
+
+def enforce_utc_timezone(time: datetime | list[datetime] | pd.Timestamp | pd.Series | pd.DatetimeIndex):
+    """
+    Ensure datetime object(s) have UTC timezone information.
+
+    If the provided datetime object(s) are naive (lack timezone info),
+    UTC timezone is assigned. If they already have a timezone, they are
+    converted to UTC.
+
+    Parameters
+    ----------
+    time : datetime, Iterable[datetime], pd.Timestamp, pd.Series, or pd.DatetimeIndex
+        The datetime object(s) to process. Can be:
+        - Single datetime.datetime object
+        - List of datetime.datetime objects
+        - Single pandas.Timestamp object
+        - pandas.Series with datetime64 dtype
+        - pandas.DatetimeIndex
+
+    Returns
+    -------
+    datetime, list of datetime, pd.Timestamp, pd.Series, or pd.DatetimeIndex
+        The datetime object(s) in UTC timezone.
+        Returns the same type as input.
+
+    Notes
+    -----
+    - For naive datetimes, this function assumes the times are already in UTC and simply adds the timezone information
+    - For timezone-aware datetimes, conversion to UTC is performed
+    - When processing pandas objects, the operation is vectorized for efficiency
+    """
+    if isinstance(time, pd.Series):
+        if pd.api.types.is_datetime64_any_dtype(time):
+            if time.dt.tz is None:
+                return time.dt.tz_localize("UTC")
+            else:
+                return time.dt.tz_convert("UTC")
+        else:
+            raise TypeError(f"Series must have datetime64 dtype, got {time.dtype}")
+
+    elif isinstance(time, pd.DatetimeIndex):
+        if time.tz is None:
+            return time.tz_localize("UTC")
+        else:
+            return time.tz_convert("UTC")
+
+    elif isinstance(time, pd.Timestamp):
+        if time.tz is None:
+            return time.tz_localize("UTC")
+        else:
+            return time.tz_convert("UTC")
+
+    elif isinstance(time, list):
+        return [
+            (
+                dt.replace(tzinfo=timezone.utc)
+                if isinstance(dt, datetime) and dt.tzinfo is None
+                else dt.astimezone(timezone.utc)
+                if isinstance(dt, datetime)
+                else dt
+            )
+            for dt in time
+        ]
+
+    elif isinstance(time, datetime):
+        if time.tzinfo is None:
+            return time.replace(tzinfo=timezone.utc)
+        else:
+            return time.astimezone(timezone.utc)
+
+    else:
+        raise TypeError(
+            f"Unsupported type: {type(time)}. "
+            f"Expected datetime, list of datetime, pd.Timestamp, pd.Series, or pd.DatetimeIndex"
+        )

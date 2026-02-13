@@ -19,6 +19,8 @@ import numpy as np
 import pandas as pd
 import requests
 
+from swvo.io.utils import enforce_utc_timezone
+
 logger = logging.getLogger(__name__)
 
 logging.captureWarnings(True)
@@ -161,10 +163,9 @@ class KpSWPC:
         ValueError
             Raises `ValueError` if the time range is more than 3 days.
         """
-        if not start_time.tzinfo:
-            start_time = start_time.replace(tzinfo=timezone.utc)
-        if end_time is not None and not end_time.tzinfo:
-            end_time = end_time.replace(tzinfo=timezone.utc)
+        start_time = enforce_utc_timezone(start_time)
+        if end_time is not None:
+            end_time = enforce_utc_timezone(end_time)
 
         if end_time is None:
             end_time = start_time + timedelta(days=3)
@@ -180,7 +181,7 @@ class KpSWPC:
             freq=timedelta(hours=3),
         )
         data_out = pd.DataFrame(index=t)
-        data_out.index = data_out.index.tz_localize(timezone.utc)  # ty: ignore[possibly-missing-attribute]
+        data_out.index = enforce_utc_timezone(data_out.index)  # ty: ignore[no-matching-overload]
         data_out["kp"] = np.array([np.nan] * len(t))
         data_out["file_name"] = np.array([np.nan] * len(t))
 

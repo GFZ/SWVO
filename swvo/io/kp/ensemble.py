@@ -16,6 +16,8 @@ from typing import Iterable, Optional
 import numpy as np
 import pandas as pd
 
+from swvo.io.utils import enforce_utc_timezone
+
 logger = logging.getLogger(__name__)
 
 logging.captureWarnings(True)
@@ -79,16 +81,16 @@ class KpEnsemble:
             Raises `FileNotFoundError` if no ensemble files are found for the requested date.
         """
         # It does not make sense to read KpEnsemble files from different dates
-        if start_time is not None and not start_time.tzinfo:
-            start_time = start_time.replace(tzinfo=timezone.utc)
-        if end_time is not None and not end_time.tzinfo:
-            end_time = end_time.replace(tzinfo=timezone.utc)
+        if start_time is not None:
+            start_time = enforce_utc_timezone(start_time)
+        if end_time is not None:
+            end_time = enforce_utc_timezone(end_time)
 
         if start_time is None:
             start_time = datetime.now(timezone.utc)
 
         if end_time is None:
-            end_time = start_time.replace(tzinfo=timezone.utc) + timedelta(days=3)
+            end_time = start_time + timedelta(days=3)
 
         start_time = start_time.replace(microsecond=0, minute=0, second=0)
         str_date = start_time.strftime("%Y%m%dT%H0000")
@@ -108,7 +110,7 @@ class KpEnsemble:
                 freq=timedelta(hours=3),
             )
             data_out = pd.DataFrame(index=t)
-            data_out.index = data_out.index.tz_localize(timezone.utc)  # ty: ignore[possibly-missing-attribute]
+            data_out.index = enforce_utc_timezone(data_out.index)  # ty: ignore[no-matching-overload]
             data_out["kp"] = np.array([np.nan] * len(t))
             data_out = data_out.truncate(
                 before=start_time - timedelta(hours=2.9999),
@@ -129,7 +131,7 @@ class KpEnsemble:
                 df["file_name"] = file
                 df.loc[df["kp"].isna(), "file_name"] = None
 
-                df.index = df.index.tz_localize("UTC")  # ty: ignore[possibly-missing-attribute]
+                df.index = enforce_utc_timezone(df.index)  # ty: ignore[no-matching-overload]
 
                 df = df.truncate(
                     before=start_time - timedelta(hours=2.9999),
@@ -206,10 +208,10 @@ class KpEnsemble:
         ValueError
             Raises `ValueError` if the horizon is not between 0 and 72 hours.
         """
-        if start_time is not None and not start_time.tzinfo:
-            start_time = start_time.replace(tzinfo=timezone.utc)
-        if end_time is not None and not end_time.tzinfo:
-            end_time = end_time.replace(tzinfo=timezone.utc)
+        if start_time is not None:
+            start_time = enforce_utc_timezone(start_time)
+        if end_time is not None:
+            end_time = enforce_utc_timezone(end_time)
 
         if not (0 <= horizon <= 72):
             raise ValueError("Horizon must be between 0 and 72 hours")
@@ -237,7 +239,7 @@ class KpEnsemble:
                         parse_dates=["Forecast Time"],
                     ).iloc[iloc]
                     data["source"] = str_date
-                    data["Forecast Time"] = data["Forecast Time"].tz_localize("UTC")
+                    data["Forecast Time"] = enforce_utc_timezone(data["Forecast Time"])
                     df.loc[file_time, "Forecast Time"] = data["Forecast Time"]
                     df.loc[file_time, "kp"] = data["kp"]
                     df.loc[file_time, "source"] = file_list[ensemble_idx].stem

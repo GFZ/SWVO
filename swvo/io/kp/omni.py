@@ -8,13 +8,14 @@ Module holding the reader for reading Kp data from OMNI files.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
 import pandas as pd
 
 from swvo.io.omni import OMNILowRes
+from swvo.io.utils import enforce_utc_timezone
 
 
 class KpOMNI(OMNILowRes):
@@ -55,10 +56,8 @@ class KpOMNI(OMNILowRes):
         data_out = super().read(start_time, end_time, download=download)
         kp_df = pd.DataFrame(index=data_out.index)
 
-        if not start_time.tzinfo:
-            start_time = start_time.replace(tzinfo=timezone.utc)
-        if not end_time.tzinfo:
-            end_time = end_time.replace(tzinfo=timezone.utc)
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
 
         kp_df["kp"] = data_out["kp"]
         kp_df["file_name"] = data_out["file_name"]

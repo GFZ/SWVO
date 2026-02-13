@@ -18,6 +18,8 @@ import numpy as np
 import pandas as pd
 import requests
 
+from swvo.io.utils import enforce_utc_timezone
+
 logger = logging.getLogger(__name__)
 
 logging.captureWarnings(True)
@@ -148,11 +150,8 @@ class KpNiemegk:
             Niemegk Kp dataframe.
         """
 
-        if not start_time.tzinfo:
-            start_time = start_time.replace(tzinfo=timezone.utc)
-
-        if not end_time.tzinfo:
-            end_time = end_time.replace(tzinfo=timezone.utc)
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
 
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
 
@@ -163,7 +162,7 @@ class KpNiemegk:
             freq=timedelta(hours=3),
         )
         data_out = pd.DataFrame(index=t)
-        data_out.index = data_out.index.tz_localize(timezone.utc)  # ty: ignore[possibly-missing-attribute]
+        data_out.index = enforce_utc_timezone(data_out.index)  # ty: ignore[no-matching-overload]
         data_out["kp"] = np.array([np.nan] * len(t))
         data_out["file_name"] = np.array([None] * len(t))
 
@@ -254,8 +253,7 @@ class KpNiemegk:
         df["t"] = pd.to_datetime(df["t"])
         df.index = df["t"]
         df.drop(labels=["t"], axis=1, inplace=True)
-        if not df.index.tzinfo:  # ty: ignore[possibly-missing-attribute]
-            df.index = df.index.tz_localize(timezone.utc)  # ty: ignore[possibly-missing-attribute]
+        df.index = enforce_utc_timezone(df.index)  # ty: ignore[no-matching-overload]
 
         df["file_name"] = file_path
         df.loc[df["kp"].isna(), "file_name"] = None
@@ -302,7 +300,7 @@ class KpNiemegk:
         )
         data.index.rename("t", inplace=True)
         data.index = data["t"]
-        data.index = data.index.tz_localize(timezone.utc)  # ty: ignore[possibly-missing-attribute]
+        data.index = enforce_utc_timezone(data.index)  # ty: ignore[no-matching-overload]
         data.drop(labels=["t"], axis=1, inplace=True)
         data.dropna(inplace=True)
         data = data[data["kp"] != -1.0]

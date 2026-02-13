@@ -38,6 +38,7 @@ from swvo.io.RBMDataSet.utils import (
     load_file_any_format,
     matlab2python,
 )
+from swvo.io.utils import enforce_utc_timezone
 
 
 class RBMDataSet:
@@ -163,11 +164,8 @@ class RBMDataSet:
                 msg = "For file-based loading, start_time, end_time, and folder_path must all be provided"
                 raise ValueError(msg)
 
-            if start_time.tzinfo is None:
-                start_time = start_time.replace(tzinfo=timezone.utc)
-
-            if end_time.tzinfo is None:
-                end_time = end_time.replace(tzinfo=timezone.utc)
+            start_time = enforce_utc_timezone(start_time)
+            end_time = enforce_utc_timezone(end_time)
 
             self._start_time = start_time
             self._end_time = end_time

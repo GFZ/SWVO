@@ -9,13 +9,14 @@ Module for handling OMNI SYM-H data.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
 import pandas as pd
 
 from swvo.io.omni import OMNIHighRes
+from swvo.io.utils import enforce_utc_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -67,10 +68,8 @@ class SymhOMNI(OMNIHighRes):
         """
         data_out = super().read(start_time, end_time, cadence_min=cadence_min, download=download)
 
-        if not start_time.tzinfo:
-            start_time = start_time.replace(tzinfo=timezone.utc)
-        if not end_time.tzinfo:
-            end_time = end_time.replace(tzinfo=timezone.utc)
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
 
         symh_df = pd.DataFrame(index=data_out.index)
 

@@ -15,6 +15,8 @@ from typing import Iterable, Optional, TypeVar
 import numpy as np
 import pandas as pd
 
+from swvo.io.utils import enforce_utc_timezone
+
 logger = logging.getLogger(__name__)
 
 Number = TypeVar("Number", int, float)
@@ -89,16 +91,16 @@ class HpEnsemble(ABC):
         FileNotFoundError
             Returns `FileNotFoundError` if no ensemble file is found for the requested date.
         """
-        if start_time is not None and not start_time.tzinfo:
-            start_time = start_time.replace(tzinfo=timezone.utc)
-        if end_time is not None and not end_time.tzinfo:
-            end_time = end_time.replace(tzinfo=timezone.utc)
+        if start_time is not None:
+            start_time = enforce_utc_timezone(start_time)
+        if end_time is not None:
+            end_time = enforce_utc_timezone(end_time)
 
         if start_time is None:
             start_time = datetime.now(timezone.utc)
 
         if end_time is None:
-            end_time = start_time.replace(tzinfo=timezone.utc) + timedelta(days=3)
+            end_time = start_time + timedelta(days=3)
 
         start_date = start_time.replace(microsecond=0, minute=0, second=0)
         str_date = start_date.strftime("%Y%m%dT%H0000")
@@ -173,10 +175,10 @@ class HpEnsemble(ABC):
 
     @abstractmethod
     def read_with_horizon(self, start_time: datetime, end_time: datetime, horizon: Number) -> list[pd.DataFrame]:
-        if start_time is not None and not start_time.tzinfo:
-            start_time = start_time.replace(tzinfo=timezone.utc)
-        if end_time is not None and not end_time.tzinfo:
-            end_time = end_time.replace(tzinfo=timezone.utc)
+        if start_time is not None:
+            start_time = enforce_utc_timezone(start_time)
+        if end_time is not None:
+            end_time = enforce_utc_timezone(end_time)
 
         if not (0 <= horizon <= 72):  # ty: ignore[unsupported-operator]
             raise ValueError("Horizon must be between 0 and 72 hours")
@@ -212,7 +214,7 @@ class HpEnsemble(ABC):
                         parse_dates=["Forecast Time"],
                     ).iloc[iloc]
                     data["source"] = str_date
-                    data["Forecast Time"] = data["Forecast Time"].tz_localize("UTC")
+                    data["Forecast Time"] = enforce_utc_timezone(data["Forecast Time"])
                     df.loc[file_time, "Forecast Time"] = data["Forecast Time"]
                     df.loc[file_time, self.index] = data[self.index]
                     df.loc[file_time, "source"] = file_list[ensemble_idx].stem

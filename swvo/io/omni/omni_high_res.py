@@ -17,6 +17,8 @@ from typing import List, Optional, Tuple
 import pandas as pd
 import requests
 
+from swvo.io.utils import enforce_utc_timezone
+
 logger = logging.getLogger(__name__)
 
 
@@ -158,11 +160,8 @@ class OMNIHighRes:
             "Only 1 or 5 minute cadence can be chosen for high resolution omni data."
         )
 
-        if not start_time.tzinfo:
-            start_time = start_time.replace(tzinfo=timezone.utc)
-
-        if not end_time.tzinfo:
-            end_time = end_time.replace(tzinfo=timezone.utc)
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
 
         if start_time < datetime(self.START_YEAR, 1, 1, tzinfo=timezone.utc):
             logger.warning(
@@ -190,8 +189,7 @@ class OMNIHighRes:
         data_out = pd.concat(dfs, ignore_index=False)
 
         if not data_out.empty:
-            if not data_out.index.tzinfo:
-                data_out.index = data_out.index.tz_localize("UTC")
+            data_out.index = enforce_utc_timezone(data_out.index)
 
         data_out = data_out.truncate(
             before=start_time - timedelta(minutes=cadence_min - 0.0000001),

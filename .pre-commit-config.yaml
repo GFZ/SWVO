@@ -11,7 +11,9 @@ repos:
 
   - repo: local
     hooks:
-      - id: ty
-        name: ty check
-        entry: ty check swvo --ignore unresolved-import
-        language: python
+      - id: type-check
+        name: Type check
+        entry: ty check .
+        language: system
+        types: [python]
+        pass_filenames: false

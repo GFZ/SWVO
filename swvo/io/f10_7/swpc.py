@@ -20,6 +20,8 @@ import numpy as np
 import pandas as pd
 import requests
 
+from swvo.io.utils import enforce_utc_timezone
+
 logger = logging.getLogger(__name__)
 
 logging.captureWarnings(True)
@@ -231,10 +233,8 @@ class F107SWPC:
             msg = "start_time must be before end_time"
             raise ValueError(msg)
 
-        if not start_time.tzinfo:
-            start_time = start_time.replace(tzinfo=timezone.utc)
-        if not end_time.tzinfo:
-            end_time = end_time.replace(tzinfo=timezone.utc)
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
 
         file_paths, _ = self._get_processed_file_list(start_time, end_time)
         t = pd.date_range(
@@ -272,8 +272,7 @@ class F107SWPC:
             data_out = df_one_file.combine_first(data_out)
 
         if not data_out.empty:
-            if data_out.index.tzinfo is None:  # ty: ignore[possibly-missing-attribute]
-                data_out.index = data_out.index.tz_localize("UTC")  # ty: ignore[possibly-missing-attribute]
+            data_out.index = enforce_utc_timezone(data_out.index)  # ty: ignore[no-matching-overload]
         data_out.drop("date", axis=1, inplace=True)
         data_out = data_out.truncate(
             before=start_time - timedelta(hours=23.9999),

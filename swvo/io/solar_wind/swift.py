@@ -18,7 +18,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from swvo.io.utils import sw_mag_propagation
+from swvo.io.utils import enforce_utc_timezone, sw_mag_propagation
 
 logger = logging.getLogger(__name__)
 
@@ -97,16 +97,16 @@ class SWSWIFTEnsemble:
             A list of data frames containing ensemble data for the requested period.
         """
 
-        if start_time and not start_time.tzinfo:
-            start_time = start_time.replace(tzinfo=timezone.utc)
-        if end_time and not end_time.tzinfo:
-            end_time = end_time.replace(tzinfo=timezone.utc)
+        if start_time:
+            start_time = enforce_utc_timezone(start_time)
+        if end_time:
+            end_time = enforce_utc_timezone(end_time)
 
         if start_time is None:
             start_time = datetime.now(timezone.utc).replace(microsecond=0, minute=0, second=0)
 
         if end_time is None:
-            end_time = start_time.replace(tzinfo=timezone.utc) + timedelta(days=3)
+            end_time = start_time + timedelta(days=3)
 
         if propagation:
             logger.info("Shifting start day by -1 day to account for propagation")
