@@ -1,3 +1,10 @@
+<!--
+SPDX-FileCopyrightText: 2026 GFZ Helmholtz Centre for Geosciences
+SPDX-FileContributor: Sahil Jhawar
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Contributing to SWVO
 Thank you for your interest in contributing to [SWVO](https://github.com/GFZ/SWVO). This guide explains the development workflow, coding standards, and testing requirements.
 ## Getting Started

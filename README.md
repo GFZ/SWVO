@@ -1,3 +1,12 @@
+<!--
+SPDX-FileCopyrightText: 2026 GFZ Helmholtz Centre for Geosciences
+SPDX-FileContributor: Matyas Szabo-Roberts
+SPDX-FileContributor: Ruggero Vasile
+SPDX-FileContributor: Sahil Jhawar
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # SWVO @ GFZ
 
 [![PyPI version](https://badge.fury.io/py/swvo.svg)](https://badge.fury.io/py/swvo)
@@ -5,6 +14,7 @@
 [![SWVO Tests](https://github.com/GFZ/SWVO/actions/workflows/tests.yml/badge.svg)](https://github.com/GFZ/SWVO/actions/workflows/tests.yml)
 [![Python version](https://img.shields.io/pypi/pyversions/swvo.svg)](https://badge.fury.io/py/swvo)
 [![Coverage Status](https://coveralls.io/repos/github/GFZ/SWVO/badge.svg?branch=main)](https://coveralls.io/github/GFZ/SWVO?branch=main)
+[![REUSE status](https://api.reuse.software/badge/github.com/GFZ/SWVO)](https://api.reuse.software/info/github.com/GFZ/SWVO)
 
 ## Introduction
 
