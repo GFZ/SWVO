@@ -130,7 +130,9 @@ class SWSWIFTEnsemble:
 
         for ensemble_folder in ensemble_folders:
             try:
-                file = list((ensemble_folder / "SWIFT").glob("gsm_*"))[0]
+                gsm_path = ensemble_folder / "SWIFT"
+                json_files = [f for f in (gsm_path).glob("gsm_*") if f.suffix == ".json"]
+                file = json_files[0] if len(json_files) > 0 else []
                 data_gsm = self._read_single_file(file)
                 if truncate:
                     data_gsm = data_gsm.truncate(
@@ -143,7 +145,7 @@ class SWSWIFTEnsemble:
                     data_gsm["file_name"] = data_gsm.apply(self._update_filename, axis=1)
 
                 gsm_s.append(data_gsm)
-            except IndexError:
+            except (IndexError, TypeError):
                 msg = f"GSM SWIFT output file for date {str_date} and task {ensemble_folder} not found...impossible to read"
                 warnings.warn(msg)
 
