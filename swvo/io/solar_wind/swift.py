@@ -58,7 +58,7 @@ class SWSWIFTEnsemble:
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
 
-        self.data_dir: Path = Path(data_dir)
+        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
 
         logger.info(f"SWIFT ensemble data directory: {self.data_dir}")
 
@@ -212,7 +212,7 @@ class SWSWIFTEnsemble:
                     "uz": uz,
                     "pdyn": pdyn,
                 },
-                index=time,
+                index=time,  # ty:ignore[invalid-argument-type]
             )
         else:
             df = pd.DataFrame(
@@ -226,7 +226,7 @@ class SWSWIFTEnsemble:
                     "bz_gsm": bz,
                     "pdyn": pdyn,
                 },
-                index=time,
+                index=time,  # ty:ignore[invalid-argument-type]
             )
 
         df["file_name"] = file_name

@@ -67,7 +67,7 @@ class F107OMNI(OMNILowRes):
         f107_df["file_name"] = data_out["file_name"]
 
         # we return it just every 24 hours
-        f107_df = f107_df.drop(f107_df[data_out.index.hour % 24 != 0].index, axis=0)  # ty: ignore[possibly-missing-attribute]
+        f107_df = f107_df.drop(f107_df[data_out.index.hour % 24 != 0].index, axis=0)  # ty: ignore[unresolved-attribute]
         f107_df = f107_df.replace(999.9, np.nan)
         f107_df = f107_df.truncate(
             before=start_time - timedelta(hours=23.9999),

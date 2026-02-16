@@ -61,7 +61,7 @@ class KpSWPC:
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
 
-        self.data_dir: Path = Path(data_dir)
+        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"Kp SWPC  data directory: {self.data_dir}")
@@ -253,7 +253,7 @@ class KpSWPC:
             lines = f.readlines()
             for line in lines:
                 if ":Issued:" in line:
-                    year = int(re.search(r"(\d{4})", line).group(1))  # ty: ignore[possibly-missing-attribute]
+                    year = int(re.search(r"(\d{4})", line).group(1))  # ty: ignore[unresolved-attribute]
                     break
 
             for i, line in enumerate(lines):
@@ -286,7 +286,7 @@ class KpSWPC:
                 kp.append(kp_data[j][i])
 
         time_in = [timestamp[0]] * 24
-        df = pd.DataFrame({"t_forecast": timestamp}, index=time_in)
+        df = pd.DataFrame({"t_forecast": timestamp}, index=time_in)  # ty:ignore[invalid-argument-type]
         df["kp"] = kp
 
         df.loc[round(df["kp"] % 1, 2) == 0.67, "kp"] = round(df.loc[round(df["kp"] % 1, 2) == 0.67, "kp"]) + 2 / 3

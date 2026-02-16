@@ -62,7 +62,7 @@ class DSCOVR:
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
 
-        self.data_dir: Path = Path(data_dir)
+        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"DSCOVR data directory: {self.data_dir}")
@@ -103,7 +103,7 @@ class DSCOVR:
         logger.debug("Processing file ...")
         processed_df = self._process_single_file(temporary_dir)
 
-        unique_dates = np.unique(processed_df.index.date)  # ty: ignore[possibly-missing-attribute]
+        unique_dates = np.unique(processed_df.index.date)  # ty: ignore[unresolved-attribute]
 
         for date in unique_dates:
             file_path = self.data_dir / date.strftime("%Y/%m") / f"DSCOVR_SW_NOWCAST_{date.strftime('%Y%m%d')}.csv"

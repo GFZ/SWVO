@@ -59,7 +59,7 @@ class F107SWPC:
                 raise ValueError(msg)
             data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
 
-        self.data_dir: Path = Path(data_dir)
+        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"SWPC F10.7 data directory: {self.data_dir}")
@@ -130,7 +130,7 @@ class F107SWPC:
                     logger.debug(f"Updating {file_path}...")
 
                     existing_data = pd.read_csv(file_path, parse_dates=["date"])
-                    existing_data["date"] = pd.to_datetime(existing_data["date"]).dt.tz_localize(None)  # ty: ignore[unresolved-attribute]
+                    existing_data["date"] = pd.to_datetime(existing_data["date"]).dt.tz_localize(None)
                     combined_data = pd.concat([existing_data, year_data])
                     combined_data = combined_data.drop_duplicates(subset=["date"], keep="last")
                     combined_data = combined_data.sort_values("date")
@@ -199,7 +199,7 @@ class F107SWPC:
             skiprows=13,
             usecols=[0, 1, 2, 3],
             names=["year", "month", "day", "f107"],
-        )
+        )  # ty:ignore[no-matching-overload]
 
         data["date"] = pd.to_datetime(data[["year", "month", "day"]].assign(hour=0))
         data = data[["date", "f107"]]

@@ -61,7 +61,7 @@ class HpGFZ:
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
 
-        self.data_dir: Path = Path(data_dir)
+        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.index_number: int = index[2:]
 
@@ -161,7 +161,7 @@ class HpGFZ:
             with open(output_file, "w") as f:
                 json.dump(data, f)
 
-        except requests.exceptions.RequestException as e:  # ty: ignore[unresolved-attribute]
+        except requests.exceptions.RequestException as e:
             logger.error(f"API request failed: {e}")
             raise
 

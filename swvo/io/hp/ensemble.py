@@ -59,7 +59,7 @@ class HpEnsemble:
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
 
-        self.data_dir: Path = Path(data_dir)
+        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
 
         logger.info(f"{self.index.upper()} Ensemble data directory: {self.data_dir}")
 
@@ -178,7 +178,7 @@ class HpEnsemble:
         if end_time is not None:
             end_time = enforce_utc_timezone(end_time)
 
-        if not (0 <= horizon <= 72):  # ty: ignore[unsupported-operator]
+        if not (0 <= horizon <= 72):
             raise ValueError("Horizon must be between 0 and 72 hours")
 
         if self.index == "hp30":
@@ -187,7 +187,7 @@ class HpEnsemble:
                 raise ValueError("Horizon for hp30 must be in 0.5 hour increments")
         elif self.index == "hp60":
             freq = "1h"
-            if horizon % 1 != 0:  # ty: ignore[unsupported-operator]
+            if horizon % 1 != 0:
                 raise ValueError("Horizon for hp60 must be in 1 hour increments")
 
         align_start_to_hp_hr = start_time.replace(hour=start_time.hour, minute=0, second=0, microsecond=0)

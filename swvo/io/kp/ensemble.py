@@ -53,7 +53,7 @@ class KpEnsemble:
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
 
-        self.data_dir: Path = Path(data_dir)
+        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
 
         logger.info(f"Kp Ensemble data directory: {self.data_dir}")
 

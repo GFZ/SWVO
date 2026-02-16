@@ -57,7 +57,7 @@ class DSTWDC:
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
 
-        self.data_dir: Path = Path(data_dir)
+        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"WDC Dst data directory: {self.data_dir}")
@@ -199,7 +199,7 @@ class DSTWDC:
                 if len(val) > 4:
                     val = val[:4] if not val.startswith("9999") else None
                 try:
-                    dst = float(val)
+                    dst = float(val)  # ty:ignore[invalid-argument-type]
                 except:  # noqa: E722
                     continue
                 dt = datetime(year, month, day, hour)

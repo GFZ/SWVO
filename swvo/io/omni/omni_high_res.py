@@ -55,7 +55,7 @@ class OMNIHighRes:
 
             data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
 
-        self.data_dir: Path = Path(data_dir)
+        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"OMNI high resolution data directory: {self.data_dir}")
@@ -296,7 +296,7 @@ class OMNIHighRes:
             logger.error(msg)
             raise ValueError(msg)
 
-        df = pd.DataFrame([line.split() for line in data_lines], columns=columns)
+        df = pd.DataFrame([line.split() for line in data_lines], columns=columns)  # ty:ignore[invalid-argument-type]
         df = df.apply(pd.to_numeric)
 
         df["timestamp"] = df["YYYY"].map(str).apply(lambda x: x + "-01-01 ") + df["HR"].map(str).apply(

@@ -201,8 +201,8 @@ def create_RBSP_line_data(
                     rbm_data_set_result.line_data_flux[:, e] = np.squeeze(
                         rbm_data[min_offset_instrument].interp_flux(
                             target_en_single,
-                            target_al[e],
-                            TargetType.TargetPairs,  # ty:ignore[not-subscriptable]
+                            target_al[e],  # ty:ignore[non-subscriptable]  # ty:ignore[ignore-comment-unknown-rule, not-subscriptable]
+                            TargetType.TargetPairs,  # ty:ignore[non-subscriptable]  # ty:ignore[ignore-comment-unknown-rule]
                         )
                     )
 

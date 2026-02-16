@@ -62,7 +62,7 @@ class KpOMNI(OMNILowRes):
         kp_df["kp"] = data_out["kp"]
         kp_df["file_name"] = data_out["file_name"]
         # we return it just every 3 hours
-        kp_df = kp_df.drop(kp_df[data_out.index.hour % 3 != 0].index, axis=0)  # ty: ignore[possibly-missing-attribute]
+        kp_df = kp_df.drop(kp_df[data_out.index.hour % 3 != 0].index, axis=0)  # ty: ignore[unresolved-attribute]
         kp_df = kp_df.truncate(
             before=start_time - timedelta(hours=2.9999),
             after=end_time + timedelta(hours=2.9999),
