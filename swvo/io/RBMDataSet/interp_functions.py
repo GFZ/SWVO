@@ -10,6 +10,7 @@ from collections.abc import Iterable
 from enum import Enum
 from functools import partial
 from multiprocessing import Pool
+from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -119,14 +120,14 @@ def interp_flux(
         target_type = TargetType[target_type]
 
     if target_type == TargetType.TargetPairs:
-        assert len(target_en) == len(
-            target_al
+        assert len(target_en) == len(  # ty:ignore[invalid-argument-type]
+            target_al  # ty:ignore[invalid-argument-type]
         ), "For TargetType.Pairs, the target vectors must have the same size!"
 
-        result_arr = np.empty((len(self.time), len(target_en)))
+        result_arr = np.empty((len(self.time), len(target_en)))  # ty:ignore[invalid-argument-type]
         targets = list(zip(target_en, target_al))
     else:
-        result_arr = np.empty((len(self.time), len(target_en), len(target_al)))
+        result_arr = np.empty((len(self.time), len(target_en), len(target_al)))  # ty:ignore[invalid-argument-type]
         targets = list(itertools.product(target_en, target_al))
 
     func = partial(
@@ -142,12 +143,12 @@ def interp_flux(
 
         # display progress bar if verbose
         if self._verbose:
-            total_elements = rs._number_left
+            total_elements = rs._number_left  # ty:ignore[unresolved-attribute]
             with tqdm(total=total_elements) as t:
                 while True:
                     if rs.ready():
                         break
-                    t.n = total_elements - rs._number_left
+                    t.n = total_elements - rs._number_left  # ty:ignore[unresolved-attribute]
                     t.refresh()
                     time.sleep(1)
         else:
@@ -164,9 +165,9 @@ def interp_flux(
                 result_arr[i, t] = parallel_results[i][t]
         else:
             for ie, ia in itertools.product(
-                range(len(target_en)), range(len(target_al))
+                range(len(target_en)), range(len(target_al))  # ty:ignore[invalid-argument-type]
             ):
-                result_arr[i, ie, ia] = parallel_results[i][ie * len(target_al) + ia]
+                result_arr[i, ie, ia] = parallel_results[i][ie * len(target_al) + ia]  # ty:ignore[invalid-argument-type]
 
     return result_arr
 
@@ -296,11 +297,11 @@ def interp_psd(self: RBMDataSet,
 
     if target_type == TargetType.TargetPairs:
         assert len(target_mu) == len(target_K), \
-            "For TargetType.Pairs, mu and K vectors must have the same size!"
-        result_arr = np.empty((len(self.time), len(target_mu)))
+            "For TargetType.Pairs, mu and K vectors must have the same size!"  # ty:ignore[invalid-argument-type]
+        result_arr = np.empty((len(self.time), len(target_mu)))  # ty:ignore[invalid-argument-type]
         targets = list(zip(target_mu, target_K))
     else:
-        result_arr = np.empty((len(self.time), len(target_mu), len(target_K)))
+        result_arr = np.empty((len(self.time), len(target_mu), len(target_K)))  # ty:ignore[invalid-argument-type]
         targets = list(itertools.product(target_mu, target_K))
 
     # ensure needed fields are loaded (triggers lazy loader if any)
@@ -313,11 +314,11 @@ def interp_psd(self: RBMDataSet,
         rs = p.map_async(func, range(len(self.time)))
 
         if self._verbose:
-            total_elements = rs._number_left
+            total_elements = rs._number_left  # ty:ignore[unresolved-attribute]
             with tqdm(total=total_elements) as t:
                 while True:
                     if rs.ready(): break
-                    t.n = (total_elements - rs._number_left)
+                    t.n = (total_elements - rs._number_left)  # ty:ignore[unresolved-attribute]
                     t.refresh()
                     time.sleep(1)
         else:
@@ -333,7 +334,7 @@ def interp_psd(self: RBMDataSet,
             for t, _ in enumerate(targets):
                 result_arr[i, t] = parallel_results[i][t]
     else:
-        n_mu, n_K = len(target_mu), len(target_K)
+        n_mu, n_K = len(target_mu), len(target_K)  # ty:ignore[invalid-argument-type]
         for i in range(result_arr.shape[0]):
             for im, iK in itertools.product(range(n_mu), range(n_K)):
                 result_arr[i, im, iK] = parallel_results[i][im * n_K + iK]

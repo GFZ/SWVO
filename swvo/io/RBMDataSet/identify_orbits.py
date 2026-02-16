@@ -12,8 +12,8 @@ from typing import Literal, NamedTuple
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
-from scipy.interpolate import make_splrep  # type: ignore[reportUnknownVariableType]
-from scipy.signal import find_peaks  # type: ignore[reportUnknownVariableType]
+from scipy.interpolate import make_splrep
+from scipy.signal import find_peaks
 
 if typing.TYPE_CHECKING:
     from swvo.io.RBMDataSet import RBMDataSet, RBMNcDataSet
@@ -32,12 +32,12 @@ def _identify_orbits(
 
     if apply_smoothing:
         timestamps = [t.timestamp() for t in time]
-        distance_filled = make_splrep(timestamps, distance_filled, s=0)(timestamps)  # type: ignore[reportUnknownVariableType]
+        distance_filled = make_splrep(timestamps, distance_filled, s=0)(timestamps)
         distance_filled = typing.cast("NDArray[np.floating]", distance_filled)
 
-    peaks, _ = find_peaks(distance_filled, distance=minimal_distance)  # type: ignore[reportUnknownVariableType]
-    troughs, _ = find_peaks(-distance_filled, distance=minimal_distance)  # type: ignore[reportUnknownVariableType]
-    extrema = np.sort(np.concatenate((peaks, troughs)))  # type: ignore[reportUnknownVariableType]
+    peaks, _ = find_peaks(distance_filled, distance=minimal_distance)
+    troughs, _ = find_peaks(-distance_filled, distance=minimal_distance)
+    extrema = np.sort(np.concatenate((peaks, troughs)))
     extrema = typing.cast("NDArray[np.int32]", extrema)
 
     diffs = np.diff(distance_filled)

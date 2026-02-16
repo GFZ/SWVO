@@ -97,7 +97,7 @@ def create_RBSP_line_data(
         target_type = TargetType[target_type]
 
     if target_type == TargetType.TargetPairs:
-        assert len(target_en) == len(target_al), "For TargetType.Pairs, the target vectors must have the same size!"
+        assert len(target_en) == len(target_al), "For TargetType.Pairs, the target vectors must have the same size!"  # ty:ignore[invalid-argument-type]
 
     result_arr = []
     list_instruments_used = []
@@ -115,18 +115,18 @@ def create_RBSP_line_data(
                     instrument,
                     mfm,
                     verbose=verbose,
-                )
+                )  # ty:ignore[no-matching-overload]
             )
 
             # strip of time dimention
             if rbm_data[i].energy_channels.shape[0] == len(rbm_data[i].time):
-                rbm_data[i].energy_channels_no_time = np.nanmean(rbm_data[i].energy_channels, axis=0)
+                rbm_data[i].energy_channels_no_time = np.nanmean(rbm_data[i].energy_channels, axis=0)  # ty:ignore[unresolved-attribute]
             else:
-                rbm_data[i].energy_channels_no_time = rbm_data[i].energy_channels
+                rbm_data[i].energy_channels_no_time = rbm_data[i].energy_channels  # ty:ignore[unresolved-attribute]
             if rbm_data[i].alpha_local.shape[0] == len(rbm_data[i].time):
-                rbm_data[i].alpha_local_no_time = np.nanmean(rbm_data[i].alpha_local, axis=0)
+                rbm_data[i].alpha_local_no_time = np.nanmean(rbm_data[i].alpha_local, axis=0)  # ty:ignore[unresolved-attribute]
             else:
-                rbm_data[i].alpha_local_no_time = rbm_data[i].alpha_local
+                rbm_data[i].alpha_local_no_time = rbm_data[i].alpha_local  # ty:ignore[unresolved-attribute]
 
         for e, target_en_single in enumerate(target_en):
             if verbose:
@@ -150,19 +150,19 @@ def create_RBSP_line_data(
                     rbm_data_set_result = deepcopy(rbm_data[i])
 
                     if target_type == TargetType.TargetPairs:
-                        rbm_data_set_result.line_data_flux = np.empty((len(rbm_data_set_result.time), len(target_en)))
-                        rbm_data_set_result.line_data_energy = np.empty((len(target_en),))
-                        rbm_data_set_result.line_data_alpha_local = np.empty((len(target_al),))
+                        rbm_data_set_result.line_data_flux = np.empty((len(rbm_data_set_result.time), len(target_en)))  # ty:ignore[invalid-argument-type, unresolved-attribute]
+                        rbm_data_set_result.line_data_energy = np.empty((len(target_en),))  # ty:ignore[invalid-argument-type, unresolved-attribute]
+                        rbm_data_set_result.line_data_alpha_local = np.empty((len(target_al),))  # ty:ignore[invalid-argument-type, unresolved-attribute]
                     elif target_type == TargetType.TargetMeshGrid:
-                        rbm_data_set_result.line_data_flux = np.empty(
+                        rbm_data_set_result.line_data_flux = np.empty(  # ty:ignore[unresolved-attribute]
                             (
                                 len(rbm_data_set_result.time),
-                                len(target_en),
-                                len(target_al),
+                                len(target_en),  # ty:ignore[invalid-argument-type]
+                                len(target_al),  # ty:ignore[invalid-argument-type]
                             )
                         )
-                        rbm_data_set_result.line_data_energy = np.empty((len(target_en),))
-                        rbm_data_set_result.line_data_alpha_local = np.empty((len(target_al),))
+                        rbm_data_set_result.line_data_energy = np.empty((len(target_en),))  # ty:ignore[invalid-argument-type, unresolved-attribute]
+                        rbm_data_set_result.line_data_alpha_local = np.empty((len(target_al),))  # ty:ignore[invalid-argument-type, unresolved-attribute]
 
             energy_offsets_relative = energy_offsets / target_en_single
             if np.all(np.abs(energy_offsets_relative) > energy_offset_threshold):
@@ -187,7 +187,7 @@ def create_RBSP_line_data(
 
             if target_type == TargetType.TargetPairs:
                 closest_al_idx = np.nanargmin(
-                    np.abs(rbm_data[min_offset_instrument].alpha_local_no_time - target_al[e])
+                    np.abs(rbm_data[min_offset_instrument].alpha_local_no_time - target_al[e])  # ty:ignore[not-subscriptable]
                 )
                 rbm_data_set_result.line_data_alpha_local[e] = rbm_data[min_offset_instrument].alpha_local_no_time[
                     closest_al_idx
@@ -200,7 +200,9 @@ def create_RBSP_line_data(
                 else:
                     rbm_data_set_result.line_data_flux[:, e] = np.squeeze(
                         rbm_data[min_offset_instrument].interp_flux(
-                            target_en_single, target_al[e], TargetType.TargetPairs
+                            target_en_single,
+                            target_al[e],
+                            TargetType.TargetPairs,  # ty:ignore[not-subscriptable]
                         )
                     )
 

@@ -94,7 +94,7 @@ push = true
 
 [tool.ty.src]
 include = ["swvo"]
-exclude = ["tests", "swvo/io/RBMDataSet"]
+exclude = ["tests"]
 
 [[tool.ty.overrides]]
 include = ["swvo"]

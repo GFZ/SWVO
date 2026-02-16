@@ -159,7 +159,7 @@ class RBMNcDataSet(RBMDataSet):
                 np.asarray(
                     [dt.datetime.fromtimestamp(t.astype(np.int64), tz=dt.timezone.utc) for t in datasets["time"]]
                 ),
-            )  # type: ignore
+            )
             datasets["datetime"] = datetimes
 
             # limit in time
@@ -183,7 +183,7 @@ class RBMNcDataSet(RBMDataSet):
                 else:
                     joined_value = var_arr
 
-                loaded_var_arrs[key] = joined_value
+                loaded_var_arrs[key] = joined_value  # ty:ignore[invalid-assignment]
 
                 if key not in var_names_stored:
                     var_names_stored.append(key)
@@ -194,9 +194,9 @@ class RBMNcDataSet(RBMDataSet):
 
         for var_name in var_names_stored:
             if var_name == "datetime":
-                loaded_var_arrs[var_name] = list(loaded_var_arrs[var_name])  # type: ignore
+                loaded_var_arrs[var_name] = list(loaded_var_arrs[var_name])  # ty:ignore[invalid-assignment]
 
-            rbm_var_name = RBMNcDataSet._get_rbm_name(var_name, self._mfm.mfm_name)
+            rbm_var_name = RBMNcDataSet._get_rbm_name(var_name, self._mfm.mfm_name)  # ty:ignore[invalid-argument-type]
 
             if rbm_var_name is not None:
                 setattr(self, rbm_var_name, loaded_var_arrs[var_name])

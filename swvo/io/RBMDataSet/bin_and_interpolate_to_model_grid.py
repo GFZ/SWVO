@@ -76,7 +76,7 @@ def bin_and_interpolate_to_model_grid(
         raise (ValueError(msg))
 
     # 3. Bin in time
-    psd_binned_in_time = _bin_in_time(self.datetime, sim_time, psd_binned_in_space)
+    psd_binned_in_time = _bin_in_time(self.datetime, sim_time, psd_binned_in_space)  # ty:ignore[invalid-argument-type]
     # sanity check
     if np.min(target_var_init) > np.min(psd_binned_in_time) or np.max(target_var_init) < np.max(psd_binned_in_time):
         msg = "Found inconsitency in time binning. Aborting..."
@@ -87,7 +87,7 @@ def bin_and_interpolate_to_model_grid(
             plot_debug_figures(
                 self,
                 psd_binned_in_time,
-                sim_time,
+                sim_time,  # ty:ignore[invalid-argument-type]
                 grid_P,
                 grid_R,
                 grid_mu_V,
@@ -99,7 +99,7 @@ def bin_and_interpolate_to_model_grid(
             plot_debug_figures_plasmasphere(
                 self,
                 psd_binned_in_time,
-                sim_time,
+                sim_time,  # ty:ignore[invalid-argument-type]
                 grid_P,
                 grid_R,
                 debug_plot_settings,
@@ -257,12 +257,12 @@ def _interpolate_in_V_K(
         rs = p.map_async(func, range(psd_in.shape[0]))
 
         # display progress bar if verbose
-        total_elements = rs._number_left
+        total_elements = rs._number_left  # ty:ignore[unresolved-attribute]
         with tqdm(total=total_elements) as t:
             while True:
                 if rs.ready():
                     break
-                t.n = total_elements - rs._number_left
+                t.n = total_elements - rs._number_left  # ty:ignore[unresolved-attribute]
                 t.refresh()
                 time.sleep(1)
 
@@ -417,11 +417,11 @@ def plot_debug_figures_plasmasphere(
         )
         ax0.set_ylim(1, 6.6)
         ax0.set_title("Orbit")
-        ax0.set_rlim([0, 6.6])
-        ax0.set_theta_offset(np.pi)
+        ax0.set_rlim([0, 6.6])  # ty:ignore[unresolved-attribute]
+        ax0.set_theta_offset(np.pi)  # ty:ignore[unresolved-attribute]
 
-        grid_X = grid_R[:, :, 0, 0] * np.cos(grid_P[:, :, 0, 0])
-        grid_Y = grid_R[:, :, 0, 0] * np.sin(grid_P[:, :, 0, 0])
+        grid_X = grid_R[:, :, 0, 0] * np.cos(grid_P[:, :, 0, 0])  # ty:ignore[non-subscriptable]  # ty:ignore[ignore-comment-unknown-rule, not-subscriptable]
+        grid_Y = grid_R[:, :, 0, 0] * np.sin(grid_P[:, :, 0, 0])  # ty:ignore[non-subscriptable]  # ty:ignore[ignore-comment-unknown-rule, not-subscriptable]
 
         pc = ax1.pcolormesh(
             grid_X,
@@ -478,8 +478,8 @@ def plot_debug_figures(
 
         R_idx = np.argwhere(np.abs(grid_R[0, :, 0, 0] - R_or_Lstar_arr[sat_time_idx]))
 
-        K_idx = np.argmin(np.abs(grid_K[0, R_idx, 0, :] - debug_plot_settings.target_K))
-        V_idx = np.argmin(np.abs(grid_V[0, R_idx, :, K_idx] - debug_plot_settings.target_V))
+        K_idx = np.argmin(np.abs(grid_K[0, R_idx, 0, :] - debug_plot_settings.target_K))  # ty:ignore[unsupported-operator]
+        V_idx = np.argmin(np.abs(grid_V[0, R_idx, :, K_idx] - debug_plot_settings.target_V))  # ty:ignore[unsupported-operator]
 
         V_lim_min = np.log10(0.9 * np.min([np.nanmin(data_set_V_or_Mu), np.min(grid_V)]))
         V_lim_max = np.log10(1.1 * np.max([np.nanmax(data_set_V_or_Mu), np.max(grid_V)]))
@@ -497,7 +497,7 @@ def plot_debug_figures(
         ax0.scatter(data_set.P[sat_time_idx], R_or_Lstar_arr[sat_time_idx], c="k", marker="D")
         ax0.set_ylim(1, 6.6)
         ax0.set_title("Orbit")
-        ax0.set_theta_offset(np.pi)
+        ax0.set_theta_offset(np.pi)  # ty:ignore[unresolved-attribute]
 
         ax1.vlines(
             [np.log10(np.min(grid_V)), np.log10(np.max(grid_V))],

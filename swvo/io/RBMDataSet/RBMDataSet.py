@@ -236,7 +236,7 @@ class RBMDataSet:
                 sat_variable = var
                 break
             else:
-                dist = distance.levenshtein(name, var.var_name)
+                dist = distance.levenshtein(name, var.var_name)  # ty:ignore[possibly-missing-attribute]
                 if name.lower() in var.var_name.lower():
                     dist = 1
 
@@ -406,7 +406,7 @@ class RBMDataSet:
             datetimes = typing.cast(
                 NDArray[np.object_],
                 np.asarray([matlab2python(t) for t in file_content["time"]]),
-            )  # type: ignore
+            )
             file_content["datetime"] = datetimes
 
             # limit in time
@@ -433,7 +433,7 @@ class RBMDataSet:
                 else:
                     joined_value = var_arr
 
-                loaded_var_arrs[key] = joined_value
+                loaded_var_arrs[key] = joined_value  # ty:ignore[invalid-assignment]
 
                 if key not in var_names_storred:
                     var_names_storred.append(key)
@@ -456,7 +456,7 @@ class RBMDataSet:
                 loaded_vars.append(var.var_name)
         return loaded_vars
 
-    def __eq__(self, other: RBMDataSet) -> bool:
+    def __eq__(self, other: RBMDataSet) -> bool:  # type :ignore[override]
         if (
             self._file_loading_mode != other._file_loading_mode
             or self._satellite != other._satellite
@@ -501,7 +501,7 @@ class RBMDataSet:
 
         return different_vars
 
-    from .bin_and_interpolate_to_model_grid import bin_and_interpolate_to_model_grid
+    from .bin_and_interpolate_to_model_grid import bin_and_interpolate_to_model_grid  # noqa: I001
     from .identify_orbits import identify_orbits
     from .interp_functions import interp_flux, interp_psd
     from .linearize_trajectories import linearize_trajectories

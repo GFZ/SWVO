@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, overload
+from typing import Iterable, Literal, overload
 
 from swvo.io.RBMDataSet.custom_enums import (
     FolderTypeEnum,
@@ -94,7 +94,7 @@ class RBMDataSetManager:
         folder_type: FolderTypeEnum = FolderTypeEnum.DataServer,
         *,
         verbose: bool = True,
-        preferred_extension: str = "pickle",
+        preferred_extension: Literal["mat", "pickle"] = "pickle",
     ) -> RBMDataSet | list[RBMDataSet]:
         """Loads an RBMDataSet or a list of RBMDataSets based on the provided parameters.
 
@@ -152,7 +152,7 @@ class RBMDataSetManager:
                 return_list.append(cls._instance.data_set_dict[key_tuple])
             else:
                 cls._instance.data_set_dict[key_tuple] = RBMDataSet(
-                    satellite=sat,
+                    satellite=sat,  # ty:ignore[invalid-argument-type]
                     instrument=instrument,
                     mfm=mfm,
                     start_time=start_time,
