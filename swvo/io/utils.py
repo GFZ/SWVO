@@ -90,7 +90,10 @@ def construct_updated_data_frame(
 
     # extend the data we have read so far to match the new ensemble numbers
     if len(data) == 1 and len(data_one_model) > 1:
-        data = data * len(data_one_model)
+        # Use copies to avoid all list elements sharing the same DataFrame reference.
+        # `[data[0]] * n` would create n aliases to the same object, causing in-place
+        # mutations (e.g. loc assignments) to bleed across all ensemble members.
+        data = [data[0].copy() for _ in range(len(data_one_model))]
     elif len(data) != len(data_one_model):
         msg = f"Tried to combine models with different ensemble numbers: {len(data)} and {len(data_one_model)}!"
         raise ValueError(msg)
