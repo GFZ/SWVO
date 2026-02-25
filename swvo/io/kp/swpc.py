@@ -289,9 +289,6 @@ class KpSWPC:
         df = pd.DataFrame({"t_forecast": timestamp}, index=time_in)  # ty:ignore[invalid-argument-type]
         df["kp"] = kp
 
-        df.loc[round(df["kp"] % 1, 2) == 0.67, "kp"] = round(df.loc[round(df["kp"] % 1, 2) == 0.67, "kp"]) + 2 / 3
-        df.loc[round(df["kp"] % 1, 2) == 0.33, "kp"] = round(df.loc[round(df["kp"] % 1, 2) == 0.33, "kp"]) + 1 / 3
-
         df.index.rename("t", inplace=True)
 
         return df

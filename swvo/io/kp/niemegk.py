@@ -305,4 +305,6 @@ class KpNiemegk:
         data.dropna(inplace=True)
         data = data[data["kp"] != -1.0]
 
+        data["kp"] = np.round(data["kp"], decimals=2)
+
         return data
