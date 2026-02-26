@@ -11,4 +11,3 @@ SPDX-License-Identifier: Apache-2.0
 * Sahil Jhawar
 * Stefano Bianco
 * Ruggero Vasile
-* Dmitrii Gurev
