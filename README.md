@@ -71,7 +71,7 @@ This package provides tools to read, process, and analyze several key solar and 
     - SWPC: `F107SWPC`
     - Combined: `read_f107_from_multiple_models`
 
-- **SME Index**:
+- **SME Index**:  
   The SME (SuperMAG Electrojet) index measures auroral electrojet strength based on SuperMAG ground magnetometers.
   - **Sources & Classes:**
     - SuperMAG: `SMESuperMAG`
