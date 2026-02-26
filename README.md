@@ -71,6 +71,11 @@ This package provides tools to read, process, and analyze several key solar and 
     - SWPC: `F107SWPC`
     - Combined: `read_f107_from_multiple_models`
 
+- **SME Index**:
+  The SME (SuperMAG Electrojet) index measures auroral electrojet strength based on SuperMAG ground magnetometers.
+  - **Sources & Classes:**
+    - SuperMAG: `SMESuperMAG`
+
 - **Solar Wind Parameters**:  
   Access to solar wind data (speed, density, magnetic field components) from various spacecraft. Essential for solar-terrestrial interaction studies.
   - **Sources & Classes:**
