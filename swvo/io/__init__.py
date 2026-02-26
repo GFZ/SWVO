@@ -11,4 +11,5 @@ from swvo.io import (
     plasmasphere as plasmasphere,
     RBMDataSet as RBMDataSet,
     solar_wind as solar_wind,
+    sme as sme,
 )
