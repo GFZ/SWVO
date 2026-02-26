@@ -73,7 +73,7 @@ class TestSMESuperMAG:
         expected_files = list(MOCK_DATA_PATH.glob("**/SuperMAG_SME_*.csv"))
         print(expected_files)
 
-        assert 1 <= len(expected_files) & len(expected_files) <= 2
+        assert len(expected_files) == 2
 
         data = pd.read_csv(expected_files[0])
         assert "sme" in data.columns
