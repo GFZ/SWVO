@@ -1,4 +1,4 @@
-<!--
+﻿<!--
 SPDX-FileCopyrightText: 2026 GFZ Helmholtz Centre for Geosciences
 SPDX-FileContributor: Matyas Szabo-Roberts
 SPDX-FileContributor: Ruggero Vasile
@@ -72,7 +72,7 @@ This package provides tools to read, process, and analyze several key solar and 
     - Combined: `read_f107_from_multiple_models`
 
 - **SME Index**:  
-  The SME (SuperMAG Electrojet) index measures auroral electrojet strength based on SuperMAG ground magnetometers.
+  The SME (SuperMAG Electrojet) index measures auroral electrojet strength based on SuperMAG ground magnetometers. Requires a valid SuperMAG account.
   - **Sources & Classes:**
     - SuperMAG: `SMESuperMAG`
 
