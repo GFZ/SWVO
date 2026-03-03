@@ -34,8 +34,11 @@ jobs:
       - name: Set up Python
         run: uv python install
 
+      - name: Install project and ty
+        run: uv pip install . ty
+
       - name: Run ty
-        run: uvx ty check
+        run: uv run ty check
 
   tests:
     needs: [ruff, ty]
