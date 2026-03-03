@@ -22,7 +22,7 @@ LOGS_DIR = os.environ.get("DAILY_DOWNLOAD_LOGS_DIR", "./logs")
 
 time_now = datetime.now(timezone.utc)
 
-log_dir = Path(LOGS_DIR) / f"{time_now.year}" / f"{time_now.month}"
+log_dir = Path(LOGS_DIR) / f"{time_now.year}" / f"{time_now.month:02d}"
 
 log_dir.mkdir(parents=True, exist_ok=True)
 
