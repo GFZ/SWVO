@@ -92,9 +92,11 @@ class TestKpSWPC:
         assert data["kp"].max() <= 9
         assert data.index.tzinfo == timezone.utc
 
-        decimals = (data["kp"] % 1).unique()
+        decimals = [round(x, 2) for x in (data["kp"] % 1).unique()]
         for decimal in decimals:
-            assert np.isclose(decimal, 0) or np.isclose(decimal, 1 / 3) or np.isclose(decimal, 2 / 3)
+            assert (
+                np.isclose(decimal, 0) or np.isclose(decimal, round(1 / 3, 2)) or np.isclose(decimal, round(2 / 3, 2))
+            )
 
     def test_read_exceeding_three_days(self, kp_swpc_instance):
         start_time = datetime.now(timezone.utc)

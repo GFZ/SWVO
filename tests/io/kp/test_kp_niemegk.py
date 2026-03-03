@@ -143,12 +143,12 @@ class TestKpNiemegk:
             assert len(df) == 2
 
             expected_values = [
-                3.667,
-                2.333,
+                3.67,
+                2.33,
             ]
 
             for actual, expected in zip(df["kp"].values, expected_values):
-                assert np.isclose(actual, expected, atol=0.001)
+                assert np.isclose(actual, expected, atol=0.0)
 
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
