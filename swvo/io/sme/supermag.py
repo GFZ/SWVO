@@ -238,15 +238,12 @@ class SMESuperMAG:
         data_out["file_name"] = np.array([None] * len(t))
 
         for file_path in file_paths:
+            if not file_path.exists() and download:
+                self.download_and_process(start_time, end_time)
+
             if not file_path.exists():
-                if download:
-                    self.download_and_process(start_time, end_time)
-                    if not file_path.exists():
-                        warnings.warn(f"File {file_path} could not be downloaded or processed, skipping.")
-                        continue
-                    else:
-                        warnings.warn(f"File {file_path} not found")
-                        continue
+                warnings.warn(f"File {file_path} not found")
+                continue
 
             df_one_file = self._read_single_file(file_path)
             data_out = df_one_file.combine_first(data_out)
