@@ -13,7 +13,7 @@ import pandas as pd
 
 from swvo.io.dst import DSTOMNI, DSTWDC
 from swvo.io.exceptions import ModelError
-from swvo.io.utils import any_nans, construct_updated_data_frame
+from swvo.io.utils import any_nans, construct_updated_data_frame, enforce_utc_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +57,12 @@ def read_dst_from_multiple_models(
     :class:`pandas.DataFrame`
         A data frame containing data for the requested period.
     """
+
+    start_time = enforce_utc_timezone(start_time)
+    end_time = enforce_utc_timezone(end_time)
+    if historical_data_cutoff_time is not None:
+        historical_data_cutoff_time = enforce_utc_timezone(historical_data_cutoff_time)
+
     if historical_data_cutoff_time is None:
         historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
 
@@ -71,8 +77,7 @@ def read_dst_from_multiple_models(
             raise ModelError(f"Unknown or incompatible model: {type(model).__name__}")
         logger.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
         data_one_model = model.read(start_time, end_time, download=download)
-
-        index_range = pd.date_range(start=historical_data_cutoff_time, end=end_time, freq="h")
+        index_range = pd.date_range(start=historical_data_cutoff_time, end=end_time, freq="h", name="t")
         data_one_model = data_one_model.reindex(data_one_model.index.union(index_range))
 
         data_one_model.loc[data_one_model.index > historical_data_cutoff_time, "dst"] = np.nan

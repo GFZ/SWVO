@@ -92,10 +92,8 @@ class DSTOMNI(OMNILowRes):
             before=start_time - timedelta(hours=0.9999),
             after=end_time + timedelta(hours=0.9999),
         )
-        if all(data_out["dst"].isna()):
-            return data_out
-
-        data_out.drop(columns=["timestamp", "t"], inplace=True)
+        data_out.index.name = "t"
+        data_out.drop(columns=["timestamp", "t"], inplace=True, errors="ignore")
 
         return data_out
 

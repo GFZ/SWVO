@@ -203,13 +203,14 @@ class DSTWDC:
                 except:  # noqa: E722
                     continue
                 dt = datetime(year, month, day, hour)
-                records.append({"timestamp": dt, "dst": dst})
+                records.append({"t": dt, "dst": dst})
 
         df = pd.DataFrame(records)
         df.reset_index(drop=True, inplace=True)
-        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True) + pd.Timedelta(hours=1)
-        df.index = df["timestamp"]
-        df.drop(columns=["timestamp"], inplace=True)
+        df["t"] = pd.to_datetime(df["t"], utc=True)
+        df.index = df["t"]
+        df.drop(columns=["t"], inplace=True)
+        df.index.rename("timestamp", inplace=True)
 
         file_path.unlink()
 
@@ -265,6 +266,8 @@ class DSTWDC:
             before=start_time - timedelta(hours=0.9999),
             after=end_time + timedelta(hours=0.9999),
         )
+        data_out.index.rename("t", inplace=True)
+        data_out = data_out[["dst", "file_name"]]
 
         return data_out
 
@@ -282,9 +285,8 @@ class DSTWDC:
             Data from yearly WDC Dst file.
         """
         df = pd.read_csv(file_path)
-
         df.index = pd.to_datetime(df["timestamp"], utc=True)
-
+        df.index.rename("t", inplace=True)
         df["file_name"] = file_path
         df.loc[df["dst"].isna(), "file_name"] = None
 
