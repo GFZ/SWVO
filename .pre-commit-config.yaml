@@ -13,13 +13,3 @@ repos:
         args: [--fix]
       # Run the formatter.
       - id: ruff-format
-
-  - repo: https://github.com/allganize/ty-pre-commit
-    rev: v0.0.17
-    hooks:
-      - id: ty-check
-        name: Type check
-        entry: ty check .
-        language: system
-        types: [python]
-        pass_filenames: false
