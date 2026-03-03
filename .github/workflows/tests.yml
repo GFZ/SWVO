@@ -35,7 +35,7 @@ jobs:
         run: uv python install
 
       - name: Install project and ty
-        run: uv pip install . ty
+        run: uv venv && uv pip install . ty
 
       - name: Run ty
         run: uv run ty check
@@ -58,6 +58,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          uv venv
           uv pip install .
           uv pip install coveralls coverage pytest-cov
 
