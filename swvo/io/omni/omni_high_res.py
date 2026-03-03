@@ -296,7 +296,7 @@ class OMNIHighRes:
             logger.error(msg)
             raise ValueError(msg)
 
-        df = pd.DataFrame([line.split() for line in data_lines], columns=columns)  # ty:ignore[invalid-argument-type]
+        df = pd.DataFrame([line.split() for line in data_lines], columns=columns)
         df = df.apply(pd.to_numeric)
 
         df["timestamp"] = df["YYYY"].map(str).apply(lambda x: x + "-01-01 ") + df["HR"].map(str).apply(

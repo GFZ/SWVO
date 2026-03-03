@@ -212,7 +212,7 @@ class SWSWIFTEnsemble:
                     "uz": uz,
                     "pdyn": pdyn,
                 },
-                index=time,  # ty:ignore[invalid-argument-type]
+                index=time,
             )
         else:
             df = pd.DataFrame(
@@ -226,7 +226,7 @@ class SWSWIFTEnsemble:
                     "bz_gsm": bz,
                     "pdyn": pdyn,
                 },
-                index=time,  # ty:ignore[invalid-argument-type]
+                index=time,
             )
 
         df["file_name"] = file_name

@@ -199,7 +199,7 @@ class F107SWPC:
             skiprows=13,
             usecols=[0, 1, 2, 3],
             names=["year", "month", "day", "f107"],
-        )  # ty:ignore[no-matching-overload]
+        )
 
         data["date"] = pd.to_datetime(data[["year", "month", "day"]].assign(hour=0))
         data = data[["date", "f107"]]

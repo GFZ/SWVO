@@ -286,7 +286,7 @@ class KpSWPC:
                 kp.append(kp_data[j][i])
 
         time_in = [timestamp[0]] * 24
-        df = pd.DataFrame({"t_forecast": timestamp}, index=time_in)  # ty:ignore[invalid-argument-type]
+        df = pd.DataFrame({"t_forecast": timestamp}, index=time_in)
         df["kp"] = kp
 
         df.index.rename("t", inplace=True)

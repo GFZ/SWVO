@@ -67,7 +67,7 @@ class HpEnsemble:
             msg = f"Data directory {self.data_dir} does not exist! Impossible to retrive data!"
             raise FileNotFoundError(msg)
 
-        self.index_number: int = index[2:]
+        self.index_number: int = int(index[2:])
 
     def read(self, start_time: datetime, end_time: datetime) -> list[pd.DataFrame]:
         """

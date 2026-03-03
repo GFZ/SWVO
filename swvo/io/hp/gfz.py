@@ -63,7 +63,7 @@ class HpGFZ:
 
         self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self.index_number: int = index[2:]
+        self.index_number: int = int(index[2:])
 
         logger.info(f"{self.index.upper()} GFZ data directory: {self.data_dir}")
 
