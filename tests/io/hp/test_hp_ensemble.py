@@ -44,7 +44,7 @@ class TestHpEnsemble:
 
         instance = ensemble_class(data_dir=ensemble_dir)
         assert instance.index == index_name
-        assert instance.index_number == index_name[2:]
+        assert instance.index_number == int(index_name[2:])
         assert instance.data_dir == ensemble_dir
 
     def test_initialization_without_env_var(self):

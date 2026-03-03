@@ -44,12 +44,12 @@ class TestHpGFZ:
 
     def test_hp30gfz_initialization(self, hp30gfz):
         assert hp30gfz.index == "hp30"
-        assert hp30gfz.index_number == "30"
+        assert hp30gfz.index_number == 30
         assert isinstance(hp30gfz.data_dir, Path)
 
     def test_hp60gfz_initialization(self, hp60gfz):
         assert hp60gfz.index == "hp60"
-        assert hp60gfz.index_number == "60"
+        assert hp60gfz.index_number == 60
         assert isinstance(hp60gfz.data_dir, Path)
 
     def test_invalid_index(self):
