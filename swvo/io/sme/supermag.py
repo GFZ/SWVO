@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 logging.captureWarnings(True)
 
+
 class SMESuperMAG:
     """Class for SuperMAG SME data.
 
@@ -52,7 +53,7 @@ class SMESuperMAG:
 
     def __init__(self, username: str, data_dir: Optional[Path] = None) -> None:
         self.username = username
-        
+
         if data_dir is None:
             if self.ENV_VAR_NAME not in os.environ:
                 msg = f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
@@ -130,9 +131,9 @@ class SMESuperMAG:
                 if tmp_path.exists():
                     tmp_path.unlink()
                 continue
-        
+
         rmtree(temporary_dir, ignore_errors=True)
-    
+
     def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
         """Get a list of file paths and their corresponding time intervals.
 
@@ -146,7 +147,7 @@ class SMESuperMAG:
         time = []
 
         current_time = start_time.replace(hour=0, minute=0, second=0, microsecond=0)
-        end_time = (end_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1))
+        end_time = end_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
 
         while current_time < end_time:
             file_path = self.data_dir / f"SuperMAG_SME_{current_time.strftime('%Y%m%d')}.csv"
@@ -155,12 +156,12 @@ class SMESuperMAG:
             file_time = current_time
 
             time.append(file_time)
-            
+
             # Increment the day
             current_time = current_time + timedelta(days=1)
 
         return file_paths, time
-    
+
     def _process_single_file(self, file_path: Path) -> pd.DataFrame:
         """Process daily SuperMAG SME file into a DataFrame.
 
@@ -180,11 +181,10 @@ class SMESuperMAG:
             If no JSON object/array is found in the downloaded file.
         """
 
-
         with open(file_path, "r") as file:
             text = file.read()
 
-        match = re.search(r'(\{.*\}|\[.*\])', text, re.S)
+        match = re.search(r"(\{.*\}|\[.*\])", text, re.S)
         if match is None:
             raise ValueError("No JSON object/array found in file")
         json_text = match.group(1)
@@ -195,7 +195,7 @@ class SMESuperMAG:
         df["timestamp"] = pd.to_datetime(df["tval"], unit="s", utc=True)
         df.index = df["timestamp"]
         df.drop(columns=["timestamp", "tval"], inplace=True)
-        df = df.rename(columns={'SME': 'sme'})
+        df = df.rename(columns={"SME": "sme"})
 
         mask = df["sme"] >= 999998
         df.loc[mask, "sme"] = np.nan
@@ -220,7 +220,7 @@ class SMESuperMAG:
         :class:`pandas.DataFrame`
            SuperMAG SME data.
         """
-        
+
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
 
@@ -242,12 +242,12 @@ class SMESuperMAG:
                 if download:
                     self.download_and_process(start_time, end_time)
                     if not file_path.exists():
-                    	warnings.warn(f"File {file_path} could not be downloaded or processed, skipping.")
-                    	continue
+                        warnings.warn(f"File {file_path} could not be downloaded or processed, skipping.")
+                        continue
                     else:
                         warnings.warn(f"File {file_path} not found")
-                    	continue
-        
+                        continue
+
             df_one_file = self._read_single_file(file_path)
             data_out = df_one_file.combine_first(data_out)
 
@@ -257,7 +257,7 @@ class SMESuperMAG:
         )
 
         return data_out
-    
+
     def _read_single_file(self, file_path: Path) -> pd.DataFrame:
         """Read a daily SuperMAG SME file into a DataFrame.
 
@@ -272,7 +272,7 @@ class SMESuperMAG:
             Data from daily SuperMAG SME file.
         """
         df = pd.read_csv(file_path)
-        
+
         df.index = pd.to_datetime(df["timestamp"], utc=True)
         df.drop(columns=["timestamp"], inplace=True)
         df.index.name = None
