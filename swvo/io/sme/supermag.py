@@ -112,7 +112,8 @@ class SMESuperMAG:
 
                 data = response.text.splitlines()
                 if data[0].startswith("ERROR"):
-                    logger.info(f"SuperMAG {data[0]}")
+                    err = f"SuperMAG {data[0]}"
+                    raise ValueError(err)
 
                 filename = "index.html"
                 with open(temporary_dir / filename, "w") as file:
@@ -240,9 +241,12 @@ class SMESuperMAG:
             if not file_path.exists():
                 if download:
                     self.download_and_process(start_time, end_time)
-                else:
-                    warnings.warn(f"File {file_path} not found")
-                    continue
+                    if not file_path.exists():
+                    	warnings.warn(f"File {file_path} could not be downloaded or processed, skipping.")
+                    	continue
+                    else:
+                        warnings.warn(f"File {file_path} not found")
+                    	continue
         
             df_one_file = self._read_single_file(file_path)
             data_out = df_one_file.combine_first(data_out)
