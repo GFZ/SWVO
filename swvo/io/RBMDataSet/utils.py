@@ -113,7 +113,10 @@ def matlab2python(datenum: float | Iterable[float]) -> Iterable[datetime] | date
 
     if isinstance(datenum, Iterable):
         datenum = enforce_utc_timezone(list(datenum))  # ty:ignore[invalid-assignment]
-        datenum = [round_seconds(x) for x in datenum]  # ty:ignore[invalid-argument-type, invalid-assignment, not-iterable]
+        datenum = [  # ty:ignore[invalid-assignment]
+            round_seconds(x)  # ty:ignore[invalid-argument-type]
+            for x in datenum  # ty:ignore[not-iterable]
+        ]
     else:
         datenum = round_seconds(enforce_utc_timezone(datenum))  # ty:ignore[invalid-assignment]
 

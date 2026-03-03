@@ -420,8 +420,9 @@ def plot_debug_figures_plasmasphere(
         ax0.set_rlim([0, 6.6])  # ty:ignore[unresolved-attribute]
         ax0.set_theta_offset(np.pi)  # ty:ignore[unresolved-attribute]
 
-        grid_X = grid_R[:, :, 0, 0] * np.cos(grid_P[:, :, 0, 0])  # ty:ignore[non-subscriptable]  # ty:ignore[ignore-comment-unknown-rule, not-subscriptable]
-        grid_Y = grid_R[:, :, 0, 0] * np.sin(grid_P[:, :, 0, 0])  # ty:ignore[non-subscriptable]  # ty:ignore[ignore-comment-unknown-rule, not-subscriptable]
+        grid_X = grid_R[:, :, 0, 0] * np.cos(grid_P[:, :, 0, 0])  # ty:ignore[not-subscriptable]
+
+        grid_Y = grid_R[:, :, 0, 0] * np.sin(grid_P[:, :, 0, 0])  # ty:ignore[not-subscriptable]
 
         pc = ax1.pcolormesh(
             grid_X,
@@ -478,8 +479,12 @@ def plot_debug_figures(
 
         R_idx = np.argwhere(np.abs(grid_R[0, :, 0, 0] - R_or_Lstar_arr[sat_time_idx]))
 
-        K_idx = np.argmin(np.abs(grid_K[0, R_idx, 0, :] - debug_plot_settings.target_K))  # ty:ignore[unsupported-operator]
-        V_idx = np.argmin(np.abs(grid_V[0, R_idx, :, K_idx] - debug_plot_settings.target_V))  # ty:ignore[unsupported-operator]
+        K_idx = np.argmin(
+            np.abs(grid_K[0, R_idx, 0, :] - debug_plot_settings.target_K)  # ty:ignore[unsupported-operator]
+        )
+        V_idx = np.argmin(
+            np.abs(grid_V[0, R_idx, :, K_idx] - debug_plot_settings.target_V)  # ty:ignore[unsupported-operator]
+        )
 
         V_lim_min = np.log10(0.9 * np.min([np.nanmin(data_set_V_or_Mu), np.min(grid_V)]))
         V_lim_max = np.log10(1.1 * np.max([np.nanmax(data_set_V_or_Mu), np.max(grid_V)]))

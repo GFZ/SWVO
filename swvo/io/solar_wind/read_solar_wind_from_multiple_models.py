@@ -17,7 +17,11 @@ from scipy.interpolate import UnivariateSpline
 
 from swvo.io.exceptions import ModelError
 from swvo.io.solar_wind import DSCOVR, SWACE, SWOMNI, SWSWIFTEnsemble
-from swvo.io.utils import any_nans, construct_updated_data_frame
+from swvo.io.utils import (
+    any_nans,
+    construct_updated_data_frame,
+    enforce_utc_timezone,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +86,11 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     """
 
     assert reduce_ensemble in (None, "mean", "median"), "reduce_ensemble must be None, `mean` or `median`"
+
+    start_time = enforce_utc_timezone(start_time)
+    end_time = enforce_utc_timezone(end_time)
+    if historical_data_cutoff_time is not None:
+        historical_data_cutoff_time = enforce_utc_timezone(historical_data_cutoff_time)
 
     if historical_data_cutoff_time is None:
         historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)

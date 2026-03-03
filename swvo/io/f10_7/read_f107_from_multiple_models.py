@@ -13,7 +13,11 @@ import pandas as pd
 
 from swvo.io.exceptions import ModelError
 from swvo.io.f10_7 import F107OMNI, F107SWPC
-from swvo.io.utils import any_nans, construct_updated_data_frame
+from swvo.io.utils import (
+    any_nans,
+    construct_updated_data_frame,
+    enforce_utc_timezone,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +62,11 @@ def read_f107_from_multiple_models(
         A data frame containing data for the requested
         period.
     """
+    start_time = enforce_utc_timezone(start_time)
+    end_time = enforce_utc_timezone(end_time)
+    if historical_data_cutoff_time is not None:
+        historical_data_cutoff_time = enforce_utc_timezone(historical_data_cutoff_time)
+
     if historical_data_cutoff_time is None:
         historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
 

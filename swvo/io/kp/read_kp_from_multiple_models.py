@@ -17,7 +17,11 @@ import pandas as pd
 
 from swvo.io.exceptions import ModelError
 from swvo.io.kp import KpEnsemble, KpNiemegk, KpOMNI, KpSWPC
-from swvo.io.utils import any_nans, construct_updated_data_frame
+from swvo.io.utils import (
+    any_nans,
+    construct_updated_data_frame,
+    enforce_utc_timezone,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +78,11 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
         A data frame or a list of data frames containing data for the requested period.
 
     """
+    start_time = enforce_utc_timezone(start_time)
+    end_time = enforce_utc_timezone(end_time)
+    if historical_data_cutoff_time is not None:
+        historical_data_cutoff_time = enforce_utc_timezone(historical_data_cutoff_time)
+
     if historical_data_cutoff_time is None:
         historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
 

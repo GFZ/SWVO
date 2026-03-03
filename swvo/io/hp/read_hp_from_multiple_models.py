@@ -16,7 +16,11 @@ import pandas as pd
 
 from swvo.io.exceptions import ModelError
 from swvo.io.hp import Hp30Ensemble, Hp30GFZ, Hp60Ensemble, Hp60GFZ
-from swvo.io.utils import any_nans, construct_updated_data_frame
+from swvo.io.utils import (
+    any_nans,
+    construct_updated_data_frame,
+    enforce_utc_timezone,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +67,11 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     Union[:class:`pandas.DataFrame`, list[:class:`pandas.DataFrame`]]
         A data frame or a list of data frames containing data for the requested period.
     """
+    start_time = enforce_utc_timezone(start_time)
+    end_time = enforce_utc_timezone(end_time)
+    if historical_data_cutoff_time is not None:
+        historical_data_cutoff_time = enforce_utc_timezone(historical_data_cutoff_time)
+
     if historical_data_cutoff_time is None:
         historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
 
