@@ -34,13 +34,8 @@ jobs:
       - name: Set up Python
         run: uv python install
 
-      - name: Install ty
-        run: uv pip install ty
-        env:
-          UV_SYSTEM_PYTHON: 1
-
       - name: Run ty
-        run: ty check
+        run: uvx ty check
 
   tests:
     needs: [ruff, ty]
@@ -62,15 +57,13 @@ jobs:
         run: |
           uv pip install .
           uv pip install coveralls coverage pytest-cov
-        env:
-          UV_SYSTEM_PYTHON: 1
 
       - name: Run tests
-        run: python -m coverage run --source swvo -m pytest -rf tests/io
+        run: uv run python -m coverage run --source swvo -m pytest -rf tests/io
 
       - name: Run Coveralls
         if: ${{ success() && matrix.python-version == '3.11' }}
         run: |
-          coveralls --service=github
+          uv run coveralls --service=github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
