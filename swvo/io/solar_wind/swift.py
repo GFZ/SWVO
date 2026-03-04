@@ -112,6 +112,11 @@ class SWSWIFTEnsemble:
             logger.info("Shifting start day by -1 day to account for propagation")
             start_time = start_time - timedelta(days=1)
 
+        if start_time >= end_time:
+            msg = "start_time must be before end_time"
+            logger.error(msg)
+            raise ValueError(msg)
+
         str_date = start_time.strftime("%Y%m%dt0000")
 
         ensemble_folders = sorted(

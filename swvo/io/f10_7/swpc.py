@@ -231,6 +231,7 @@ class F107SWPC:
 
         if start_time >= end_time:
             msg = "start_time must be before end_time"
+            logger.error(msg)
             raise ValueError(msg)
 
         start_time = enforce_utc_timezone(start_time)

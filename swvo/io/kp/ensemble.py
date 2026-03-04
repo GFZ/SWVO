@@ -93,6 +93,12 @@ class KpEnsemble:
             end_time = start_time + timedelta(days=3)
 
         start_time = start_time.replace(microsecond=0, minute=0, second=0)
+
+        if start_time >= end_time:
+            msg = "start_time must be before end_time"
+            logger.error(msg)
+            raise ValueError(msg)
+
         str_date = start_time.strftime("%Y%m%dT%H0000")
 
         file_list = self.ensemble_file_list(str_date)
@@ -212,6 +218,10 @@ class KpEnsemble:
             start_time = enforce_utc_timezone(start_time)
         if end_time is not None:
             end_time = enforce_utc_timezone(end_time)
+        if start_time >= end_time:
+            msg = "start_time must be before end_time"
+            logger.error(msg)
+            raise ValueError(msg)
 
         if not (0 <= horizon <= 72):
             raise ValueError("Horizon must be between 0 and 72 hours")

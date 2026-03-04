@@ -175,6 +175,11 @@ class KpSWPC:
             logger.error(msg)
             raise ValueError(msg)
 
+        if start_time >= end_time:
+            msg = "start_time must be before end_time"
+            logger.error(msg)
+            raise ValueError(msg)
+
         t = pd.date_range(
             datetime(start_time.year, start_time.month, start_time.day),
             datetime(end_time.year, end_time.month, end_time.day, 23, 59, 59),

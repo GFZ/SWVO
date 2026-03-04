@@ -61,9 +61,13 @@ class DSTOMNI(OMNILowRes):
         :class:`pandas.DataFrame`
             OMNI DST data.
         """
+        if start_time >= end_time:
+            msg = "start_time must be before end_time"
+            logger.error(msg)
+            raise ValueError(msg)
+
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
-        assert start_time < end_time
 
         file_paths, _ = self._get_processed_file_list(start_time, end_time)
 

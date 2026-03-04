@@ -104,6 +104,11 @@ class HpEnsemble:
         start_date = start_time.replace(microsecond=0, minute=0, second=0)
         str_date = start_date.strftime("%Y%m%dT%H0000")
 
+        if start_time >= end_time:
+            msg = "start_time must be before end_time"
+            logger.error(msg)
+            raise ValueError(msg)
+
         file_list = self._ensemble_file_list(str_date)
         data = []
 
@@ -177,6 +182,11 @@ class HpEnsemble:
             start_time = enforce_utc_timezone(start_time)
         if end_time is not None:
             end_time = enforce_utc_timezone(end_time)
+
+        if start_time >= end_time:
+            msg = "start_time must be before end_time"
+            logger.error(msg)
+            raise ValueError(msg)
 
         if not (0 <= horizon <= 72):
             raise ValueError("Horizon must be between 0 and 72 hours")

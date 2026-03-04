@@ -8,6 +8,7 @@ Module holding the reader for reading Kp data from OMNI files.
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -16,6 +17,11 @@ import pandas as pd
 
 from swvo.io.omni import OMNILowRes
 from swvo.io.utils import enforce_utc_timezone
+
+logger = logging.getLogger(__name__)
+
+
+logging.captureWarnings(True)
 
 
 class KpOMNI(OMNILowRes):
@@ -53,9 +59,14 @@ class KpOMNI(OMNILowRes):
         :class:`pandas.DataFrame`
             Kp data from OMNI Low Resolution data.
         """
+
+        if start_time >= end_time:
+            msg = "start_time must be before end_time"
+            logger.error(msg)
+            raise ValueError(msg)
+
         data_out = super().read(start_time, end_time, download=download)
         kp_df = pd.DataFrame(index=data_out.index)
-
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
 

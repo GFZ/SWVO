@@ -67,6 +67,11 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     Union[:class:`pandas.DataFrame`, list[:class:`pandas.DataFrame`]]
         A data frame or a list of data frames containing data for the requested period.
     """
+
+    if start_time >= end_time:
+        msg = "start_time must be before end_time"
+        raise ValueError(msg)
+
     start_time = enforce_utc_timezone(start_time)
     end_time = enforce_utc_timezone(end_time)
     if historical_data_cutoff_time is not None:

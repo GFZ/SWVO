@@ -8,6 +8,7 @@ Module for handling F10.7 data from OMNI low resolution files.
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -17,6 +18,11 @@ import pandas as pd
 
 from swvo.io.omni import OMNILowRes
 from swvo.io.utils import enforce_utc_timezone
+
+logger = logging.getLogger(__name__)
+
+
+logging.captureWarnings(True)
 
 
 class F107OMNI(OMNILowRes):
@@ -56,10 +62,15 @@ class F107OMNI(OMNILowRes):
             F10.7 from OMNI Low Resolution data.
         """
 
-        data_out = super().read(start_time, end_time, download=download)
+        if start_time >= end_time:
+            msg = "start_time must be before end_time"
+            logger.error(msg)
+            raise ValueError(msg)
 
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
+
+        data_out = super().read(start_time, end_time, download=download)
 
         f107_df = pd.DataFrame(index=data_out.index)
 

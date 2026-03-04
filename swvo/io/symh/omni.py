@@ -66,10 +66,15 @@ class SymhOMNI(OMNIHighRes):
         :class:`pandas.DataFrame`
             OMNI SYM-H data.
         """
-        data_out = super().read(start_time, end_time, cadence_min=cadence_min, download=download)
+
+        if start_time >= end_time:
+            msg = "start_time must be before end_time"
+            logger.error(msg)
+            raise ValueError(msg)
 
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
+        data_out = super().read(start_time, end_time, cadence_min=cadence_min, download=download)
 
         symh_df = pd.DataFrame(index=data_out.index)
 

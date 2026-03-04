@@ -182,6 +182,11 @@ class HpGFZ:
         :class:`pandas.DataFrame`
             HpGFZ data for the given time range.
         """
+        if start_time >= end_time:
+            msg = "start_time must be before end_time"
+            logger.error(msg)
+            raise ValueError(msg)
+
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
 

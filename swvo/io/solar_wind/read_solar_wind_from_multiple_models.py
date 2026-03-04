@@ -87,6 +87,10 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
 
     assert reduce_ensemble in (None, "mean", "median"), "reduce_ensemble must be None, `mean` or `median`"
 
+    if start_time >= end_time:
+        msg = "start_time must be before end_time"
+        raise ValueError(msg)
+
     start_time = enforce_utc_timezone(start_time)
     end_time = enforce_utc_timezone(end_time)
     if historical_data_cutoff_time is not None:

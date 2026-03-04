@@ -196,7 +196,13 @@ class DSCOVR:
         AssertionError
             Raises `AssertionError` if the start time is before the end time.
         """
-        assert start_time < end_time, "Start time must be before end time!"
+        if start_time >= end_time:
+            msg = "start_time must be before end_time"
+            logger.error(msg)
+            raise ValueError(msg)
+
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
 
         if propagation:
             logger.info("Shiting start day by -1 day to account for propagation")
