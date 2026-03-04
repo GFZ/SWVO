@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
 #
 # SPDX-License-Identifier: Apache-2.0
-
 import os
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -54,16 +54,52 @@ class TestOMNIHighRes:
             omni_high_res.read(start_time, end_time, download=False)
 
     def test_read_with_download(self, omni_high_res, mocker):
-        mocker.patch.object(omni_high_res, "download_and_process")
-        mocker.patch.object(omni_high_res, "_read_single_file", return_value=pd.DataFrame())
         start_time = datetime(2022, 1, 1, tzinfo=timezone.utc)
-        end_time = datetime(2022, 12, 31, tzinfo=timezone.utc)
-        d = omni_high_res.read(start_time, end_time, download=True)
+        end_time = datetime(2022, 2, 28, tzinfo=timezone.utc)
 
-        print(d)
-        assert omni_high_res.download_and_process.call_count == 12, (
-            "Expected download_and_process to be called 12 times for each month of the year."
+        mocker.patch.object(
+            omni_high_res,
+            "download_and_process",
+            wraps=omni_high_res.download_and_process,
         )
+        mocker.patch.object(
+            omni_high_res,
+            "_read_single_file",
+            wraps=omni_high_res._read_single_file,
+        )
+
+        omni_high_res.read(start_time, end_time, download=True)
+        omni_high_res.download_and_process.assert_called_once_with(start_time, end_time, cadence_min=1)
+
+        assert omni_high_res._read_single_file.call_count == 2
+
+    def test_download_and_process_calls_get_data_per_month(self, omni_high_res, mocker):
+        start_time = datetime(2023, 1, 1, tzinfo=timezone.utc)
+        end_time = datetime(2023, 12, 31, tzinfo=timezone.utc)
+
+        dummy_df = pd.DataFrame(
+            {
+                col: [1.0]
+                for col in [
+                    "bavg",
+                    "bx_gsm",
+                    "by_gsm",
+                    "bz_gsm",
+                    "speed",
+                    "proton_density",
+                    "temperature",
+                    "pdyn",
+                    "sym-h",
+                ]
+            },
+            index=pd.DatetimeIndex(["2023-01-01"], tz="UTC", name="timestamp"),
+        )
+
+        mocker.patch.object(omni_high_res, "_get_data_from_omni", return_value=[])
+        mocker.patch.object(omni_high_res, "_process_single_month", return_value=dummy_df)
+
+        omni_high_res.download_and_process(start_time, end_time)
+        assert omni_high_res._get_data_from_omni.call_count == 12
 
     def test_invalid_cadence(self, omni_high_res):
         start_time = datetime(2022, 1, 1, tzinfo=timezone.utc)
@@ -153,5 +189,6 @@ class TestOMNIHighRes:
         with pytest.raises(StopIteration):
             omni_high_res._process_single_month(data)
 
-    # def test_remove_processed_file(self):
-    #     shutil.rmtree(Path(TEST_DIR) / "data/OMNI", ignore_errors=True)
+    def test_remove_processed_file(self):
+        shutil.rmtree(Path(TEST_DIR) / "data/OMNI/2022", ignore_errors=True)
+        shutil.rmtree(Path(TEST_DIR) / "data/OMNI/2023", ignore_errors=True)
