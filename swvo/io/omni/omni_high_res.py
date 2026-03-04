@@ -114,7 +114,13 @@ class OMNIHighRes:
 
                 logger.debug("Processing file ...")
 
-                processed_df = self._process_single_month(data)
+                processed_df = self._process_single_month(data, original_end=time_interval[1], cadence_min=cadence_min)
+
+                # Do not save empty DataFrames — no data available for this interval
+                if processed_df.empty:
+                    logger.warning(f"Skipping save for {file_path}: no data available for this interval.")
+                    continue
+
                 processed_df.to_csv(tmp_path, index=True, header=True)
                 tmp_path.replace(file_path)
 
@@ -183,6 +189,12 @@ class OMNIHighRes:
                 else:
                     logger.warning(f"File {file_path} not found")
                     continue
+
+            # Re-check after attempted download — file may not exist if no data
+            # was available for this interval (e.g. beyond the OMNI data range)
+            if not file_path.exists():
+                logger.warning(f"File {file_path} not available after download attempt, skipping.")
+                continue
 
             dfs.append(self._read_single_file(file_path))
 
@@ -273,19 +285,41 @@ class OMNIHighRes:
 
         return file_paths, time_intervals
 
-    def _process_single_month(self, data: list[str]) -> pd.DataFrame:
+    def _process_single_month(
+        self, data: list[str], original_end: Optional[datetime] = None, cadence_min: int = 1
+    ) -> pd.DataFrame:
         """Process monthly OMNI High Resolution data to a DataFrame.
 
         Parameters
         ----------
         data : list[str]
             Raw data lines from the OMNI service.
+        original_end : datetime, optional
+            The original requested end time. Used to build a NaN-filled DataFrame
+            when no data is available (e.g. the interval is beyond the OMNI data range).
 
         Returns
         -------
         pd.DataFrame
-            Monthly OMNI High Resolution data.
+            Monthly OMNI High Resolution data. Returns a NaN-filled DataFrame
+            up to ``original_end`` if no data is available, or an empty DataFrame
+            if ``original_end`` is not provided.
         """
+        columns = ["bavg", "bx_gsm", "by_gsm", "bz_gsm", "speed", "proton_density", "temperature", "pdyn", "sym-h"]
+
+        # Empty data list signals that no data is available for this interval
+        if not data:
+            if original_end is None:
+                return pd.DataFrame(columns=columns)
+            # Build a NaN-filled DataFrame with the correct timestamps up to original_end
+            index = pd.date_range(
+                start=original_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0),
+                end=original_end,
+                freq=pd.tseries.frequencies.to_offset(f"{cadence_min}min"),
+                tz=original_end.tzinfo,
+            )
+            return pd.DataFrame(pd.NA, index=index, columns=columns)
+
         header_line = next(line for line in data if line.strip().startswith("YYYY"))
         columns = header_line.split()
 
@@ -345,12 +379,9 @@ class OMNIHighRes:
         pd.DataFrame
             Data from monthly High Resolution file.
         """
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, index_col=0)
 
-        df["t"] = pd.to_datetime(df["timestamp"], utc=True)
-        df.index = df["t"]
-        df.drop(labels=["t"], axis=1, inplace=True)
-        df.drop(labels=["timestamp"], axis=1, inplace=True)
+        df.index = pd.to_datetime(df.index, utc=True)
 
         nan_mask = df.isna().all(axis=1)
         df["file_name"] = file_path
@@ -363,7 +394,9 @@ class OMNIHighRes:
         Fetches data from NASA's OMNIWeb service.
 
         If an invalid date range error is returned, it automatically finds the
-        suggested valid end date and retries the request.
+        suggested valid end date and retries the request. If the suggested end
+        date falls before the start date, an empty list is returned to signal
+        that no data is available for the requested interval.
         """
 
         payload = {
@@ -399,11 +432,20 @@ class OMNIHighRes:
                     match = re.search(r"correct range: \d{8} - (\d{8})", line)
                     if match:
                         new_end_date_str = match.group(1)
-                        new_end_date = datetime.strptime(new_end_date_str, "%Y%m%d")
+                        new_end_date = datetime.strptime(new_end_date_str, "%Y%m%d").replace(tzinfo=timezone.utc)
 
                         logger.warning(
                             f"Invalid date range detected. Found suggested end date: {new_end_date.strftime('%Y-%m-%d')}"
                         )
+
+                        # If the suggested end date is before the start date, no data is available
+                        # for this range — return an empty list to signal an empty DataFrame
+                        if new_end_date < start:
+                            logger.warning(
+                                f"Suggested end date {new_end_date.strftime('%Y-%m-%d')} is before "
+                                f"start date {start.strftime('%Y-%m-%d')}. No data available for this range."
+                            )
+                            return []
 
                         # Recursively call the function with the original start date and the new end date
                         return self._get_data_from_omni(start=start, end=new_end_date, cadence=cadence)
