@@ -54,14 +54,8 @@ class TestSWOMNI:
             swomni.read(start_time, end_time, download=False)
 
     def test_read_with_download(self, swomni, mocker):
-        mocker.patch.object(swomni, "download_and_process")
-        mocker.patch.object(swomni, "_read_single_file", return_value=pd.DataFrame())
-        start_time = datetime(2022, 1, 1, tzinfo=timezone.utc)
-        end_time = datetime(2022, 12, 31, tzinfo=timezone.utc)
-        swomni.read(start_time, end_time, download=True)
-        assert swomni.download_and_process.call_count == 12, (
-            "Expected download_and_process to be called 12 times for each month of the year."
-        )
+        ...
+        # this test being performed by OMNIHighRes. Can be skipped here.
 
     def test_invalid_cadence(self, swomni):
         start_time = datetime(2022, 1, 1, tzinfo=timezone.utc)

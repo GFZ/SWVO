@@ -19,6 +19,7 @@ TEST_DATA_DIR = Path("test_data")
 MOCK_DATA_PATH = TEST_DATA_DIR / "mock_sme"
 TEST_USERNAME = "swvo_test"
 
+
 class TestSMESuperMAG:
     @pytest.fixture(autouse=True)
     def setup_and_cleanup(self):
@@ -45,7 +46,7 @@ class TestSMESuperMAG:
 {"tval": 1668816240.000000, "SME": 220.567047},
 {"tval": 1668816300.000000, "SME": 213.856384}]
     """
-    
+
     def test_initialization_with_env_var(self):
         with patch.dict("os.environ", {SMESuperMAG.ENV_VAR_NAME: str(MOCK_DATA_PATH)}):
             sme = SMESuperMAG(TEST_USERNAME)
