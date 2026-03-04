@@ -88,8 +88,9 @@ class DSCOVR:
         None
         """
         current_time = datetime.now(timezone.utc)
-        assert request_time < current_time, "Request time cannot be in the future!"
-
+        assert request_time < current_time, (
+            f"Request time: {request_time} cannot be in the future. Current time: {current_time}!"
+        )
         if current_time - request_time > timedelta(hours=24):
             logger.debug("We can only download DSCOVR data for the last 23 hours and a hour in past!")
             return
@@ -234,7 +235,10 @@ class DSCOVR:
         for file_path in file_paths:
             if not file_path.exists() and download:
                 file_date = enforce_utc_timezone(datetime.strptime(file_path.stem.split("_")[-1], "%Y%m%d"))
-                self.download_and_process(file_date)
+                try:
+                    self.download_and_process(file_date)
+                except AssertionError as e:
+                    logger.error(f"`download_and_process` failed because: {e}")
 
             if not file_path.exists():
                 warnings.warn(f"File {file_path} not found")

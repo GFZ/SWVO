@@ -92,7 +92,9 @@ class SWACE:
 
         current_time = datetime.now(timezone.utc)
 
-        assert request_time < current_time, "Request time cannot be in the future!"
+        assert request_time < current_time, (
+            f"Request time: {request_time} cannot be in the future. Current time: {current_time}!"
+        )
         # assert request_time < (datetime.now(timezone.utc).replace(second=0, microsecond=0) - timedelta(minutes = 121)), "Request time cannot be in the past!"
 
         if current_time - request_time > timedelta(hours=2):
@@ -237,7 +239,10 @@ class SWACE:
                 file_date = enforce_utc_timezone(datetime.strptime(file_path.stem.split("_")[-1], "%Y%m%d"))
                 hour_now = datetime.now(timezone.utc).hour
                 file_date = file_date.replace(hour=hour_now, minute=0, second=0, microsecond=0)
-                self.download_and_process(file_date)
+                try:
+                    self.download_and_process(file_date)
+                except AssertionError as e:
+                    logger.error(f"`download_and_process` failed because: {e}")
 
             if not file_path.exists():
                 warnings.warn(f"File {file_path} not found")
