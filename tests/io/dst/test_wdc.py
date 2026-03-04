@@ -112,7 +112,7 @@ DAY
         start_time = datetime(2020, 12, 31)
         end_time = datetime(2020, 1, 1)
 
-        with pytest.raises(AssertionError, match="Start time must be before end time!"):
+        with pytest.raises(ValueError, match="start_time must be before end_time"):
             dst_instance.read(start_time, end_time)
 
     def test_read_with_existing_data(self, dst_instance):

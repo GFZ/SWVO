@@ -127,7 +127,7 @@ class TestHpGFZ:
         end_time = datetime(2020, 1, 1)
         start_time = datetime(2020, 12, 31)
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             hp30gfz.read(start_time, end_time)
 
     def test_download_and_process(self, hp30gfz, mocker):

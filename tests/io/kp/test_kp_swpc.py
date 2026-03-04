@@ -80,7 +80,7 @@ class TestKpSWPC:
         current_time = datetime.now(timezone.utc)
         end_time = current_time + timedelta(days=1)
 
-        data = kp_swpc_instance.read(current_time + timedelta(days=1), end_time, download=True)
+        data = kp_swpc_instance.read(current_time, end_time, download=True)
 
         assert isinstance(data, pd.DataFrame)
         assert "kp" in data.columns

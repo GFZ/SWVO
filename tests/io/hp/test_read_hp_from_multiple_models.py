@@ -124,7 +124,7 @@ class TestHpFromMultipleModels:
             assert d.index.is_monotonic_increasing
 
     def test_invalid_time_range(self, sample_times, hp_index, models):
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             read_hp_from_multiple_models(
                 start_time=sample_times["future_end"],
                 end_time=sample_times["past_start"],

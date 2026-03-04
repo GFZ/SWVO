@@ -139,7 +139,7 @@ class TestReadKpFromMultipleModels:
             assert d.index.max() <= end + timedelta(hours=3)
 
     def test_invalid_time_range(self, sample_times):
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             read_kp_from_multiple_models(
                 start_time=sample_times["future_end"],
                 end_time=sample_times["past_start"],

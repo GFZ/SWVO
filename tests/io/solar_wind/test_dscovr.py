@@ -120,7 +120,7 @@ class TestDSCOVR:
         start_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
         end_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             swace_instance.read(start_time, end_time)
 
     def test_read_with_existing_data(self, swace_instance):
