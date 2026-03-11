@@ -128,6 +128,7 @@ class KpEnsemble:
 
         else:
             for file in file_list:
+                logger.info(f"Reading ensemble file: {file}")
                 df = pd.read_csv(file, names=["t", "kp"])
 
                 df["t"] = pd.to_datetime(df["t"])
