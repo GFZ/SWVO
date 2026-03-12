@@ -5,6 +5,8 @@
 import logging
 import os
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 
@@ -27,62 +29,31 @@ class PlasmaspherePredictionReader:
         If the source of data requested is not among the available ones.
     """
 
-    def __init__(self, folder: str):
-        self.data_folder = folder
-        self._check_data_folder()
+    ENV_VAR_NAME = "PLASMASPHERE_OUTPUT_DIR"
+    LABEL = "plasmsphere"
 
-    def _check_data_folder(self) -> None:
-        """Checks if the data folder exists.
+    def __init__(self, data_dir: Optional[Path] = None) -> None:
+        if data_dir is None:
+            if self.ENV_VAR_NAME not in os.environ:
+                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
 
-        Raises
-        ------
-        FileNotFoundError
-            If the data folder does not exist.
-        """
-        if not os.path.exists(self.data_folder):
-            msg = f"Data folder {self.data_folder} for WP3 plasma output not found...impossible to retrieve data."
+            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
+
+        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
+
+        logger.info(f"Plasmasphere data directory: {self.data_dir}")
+
+        if not self.data_dir.exists():
+            msg = f"Plasmasphere directory {self.data_dir} does not exist! Impossible to retrive data!"
             logger.error(msg)
             raise FileNotFoundError(msg)
 
-    @staticmethod
-    def _read_single_file(folder: str, date: datetime) -> pd.DataFrame | None:
-        """Read a single file from the specified folder for the given date.
-
-        Parameters
-        ----------
-        folder : str
-            folder where we look for the plasmasphere prediction
-        date : datetime
-            date of the plasmasphere prediction we want to read
-
-        Returns
-        -------
-        pd.DataFrame | None
-            pandas.DataFrame with the data read from the file, or None if the file does not exist.
-        """
-
-        file_name = f"plasmasphere_density_{date.year}{str(date.month).zfill(2)}{str(date.day).zfill(2)}T{str(date.hour).zfill(2)}00.csv"
-
-        file_path = os.path.join(folder, file_name)
-        logger.info(f"Looking for file {file_path} for date {date}")
-        if not os.path.isfile(file_path):
-            msg = f"No suitable files found in the folder {folder} for the requested date {date}"
-            logger.warning(msg)
-            return None
-
-        data = pd.read_csv(file_path, parse_dates=["date"])
-        data["t"] = data["date"]
-        data.drop(labels=["date"], axis=1, inplace=True)
-        return data
-
-    def read(self, source: str, requested_date: datetime | None = None) -> pd.DataFrame | None:
+    def read(self, requested_date: datetime | None = None) -> pd.DataFrame | None:
         """
         Reads one of the available PAGER plasmasphere density prediction.
 
         Parameters
         ----------
-        source : str
-            The source of plasmasphere density product requested. Available only "gfz_plasma".
         requested_date : datetime.datetime or None
             Date of plasma density prediction thar we want to read up to hour precision.
 
@@ -100,10 +71,18 @@ class PlasmaspherePredictionReader:
         if requested_date is None:
             requested_date = datetime.now(timezone.utc).replace(microsecond=0, minute=0, second=0)
 
-        if source == "gfz_plasma":
-            requested_date = requested_date.replace(minute=0, second=0, microsecond=0)
-            return self._read_single_file(self.data_folder, requested_date)
-        else:
-            msg = f"Source {source} requested for reading plasmasphere prediction not available..."
-            logger.error(msg)
-            raise RuntimeError(msg)
+        requested_date = requested_date.replace(minute=0, second=0, microsecond=0)
+
+        file_name = f"plasmasphere_density_{requested_date.year}{str(requested_date.month).zfill(2)}{str(requested_date.day).zfill(2)}T{str(requested_date.hour).zfill(2)}00.csv"
+
+        file_path = os.path.join(self.data_dir, file_name)
+        logger.info(f"Looking for file {file_path} for date {requested_date}")
+        if not os.path.isfile(file_path):
+            msg = f"No suitable files ({file_path}) found in the folder {self.data_dir} for the requested date {requested_date}"
+            logger.warning(msg)
+            return None
+
+        data = pd.read_csv(file_path, parse_dates=["date"])
+        data["t"] = data["date"]
+        data.drop(labels=["date"], axis=1, inplace=True)
+        return data
