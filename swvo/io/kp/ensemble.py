@@ -58,7 +58,9 @@ class KpEnsemble:
         logger.info(f"Kp Ensemble data directory: {self.data_dir}")
 
         if not self.data_dir.exists():
-            raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrive data!")
+            msg = f"Data directory {self.data_dir} does not exist! Impossible to retrive data!"
+            logger.error(msg)
+            raise FileNotFoundError(msg)
 
     def read(self, start_time: datetime, end_time: datetime) -> list[pd.DataFrame]:
         """Read Kp ensemble data for the requested period.
