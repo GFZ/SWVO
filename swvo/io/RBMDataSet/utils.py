@@ -4,7 +4,9 @@
 
 from __future__ import annotations
 
+import fnmatch
 import pickle
+import re
 import typing
 import warnings
 from collections.abc import Iterable
@@ -28,7 +30,8 @@ def join_var(var1: NDArray[np.generic], var2: NDArray[np.generic]) -> NDArray[np
 
 def get_file_path_any_format(folder_path: Path, file_stem: str, preferred_ext: str) -> Path | None:
     """Get the file path for a given file stem and preferred extension."""
-    all_files = list(folder_path.glob(file_stem + ".*"))
+    pattern = re.compile(fnmatch.translate(file_stem + ".*"), re.IGNORECASE)
+    all_files = [p for p in folder_path.iterdir() if pattern.match(p.name)]
 
     if len(all_files) == 0:
         warnings.warn(f"File not found: {folder_path / (file_stem + '.*')}", stacklevel=2)
