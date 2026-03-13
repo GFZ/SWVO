@@ -136,6 +136,11 @@ class PlasmaspherePredictionReader:
             logger.error(msg)
             raise FileNotFoundError(msg)
 
+    def _parse_none_date(self, date: datetime | None) -> datetime:
+        if date is None:
+            return datetime.now(timezone.utc).replace(microsecond=0, minute=0, second=0)
+        return date.replace(minute=0, second=0, microsecond=0)
+
     def read(self, requested_date: datetime | None = None) -> pd.DataFrame | None:
         """
         Reads one of the available PAGER plasmasphere density prediction.
@@ -156,19 +161,18 @@ class PlasmaspherePredictionReader:
             pandas.DataFrame with L, MLT, density and date as columns
         """
 
-        if requested_date is None:
-            requested_date = datetime.now(timezone.utc).replace(microsecond=0, minute=0, second=0)
-
-        requested_date = requested_date.replace(minute=0, second=0, microsecond=0)
+        requested_date = self._parse_none_date(requested_date)
 
         file_name = f"plasmasphere_density_{requested_date.strftime('%Y%m%dT%H00')}.csv"
 
         file_path = os.path.join(self.data_dir, file_name)
         logger.info(f"Looking for file {file_path} for date {requested_date}")
         if not os.path.isfile(file_path):
-            msg = f"No suitable files ({file_path}) found in the folder {self.data_dir} for the requested date {requested_date}"
-            logger.warning(msg)
+            msg = f"No suitable files ({file_path}) found for the requested date {requested_date}. Returning None."
+            logger.error(msg)
             return None
+
+        logger.info(f"Reading plasmasphere density data from {file_path}")
 
         data = pd.read_csv(file_path, parse_dates=["date"])
         data["t"] = data["date"]
@@ -194,7 +198,7 @@ class PlasmaspherePredictionReader:
             raise ValueError(msg)
 
         if not pd.api.types.is_datetime64_any_dtype(data["t"]):
-            msg = "values of date column must be datetime objects"
+            msg = "values of 't' column must be datetime objects"
             logger.error(msg)
             raise TypeError(msg)
 
@@ -247,7 +251,7 @@ class PlasmaspherePredictionReader:
         Parameters
         ----------
         requested_date : datetime.datetime or None
-            Date of plasma density prediction thar we want to read up to hour precision.
+            Date of plasma density prediction that we want to read up to hour precision.
 
         Returns
         -------
@@ -258,10 +262,9 @@ class PlasmaspherePredictionReader:
 
             If no data is available for the requested date, returns None.
         """
+        requested_date = self._parse_none_date(requested_date)
         data = self.read(requested_date=requested_date)
         if data is None:
-            msg = f"No data available for the requested date {requested_date}"
-            logger.error(msg)
             return None
         self._validate_data(data)
 
@@ -269,10 +272,9 @@ class PlasmaspherePredictionReader:
             resolved_density_columns = self._get_density_columns(data)
         else:
             resolved_density_columns = [self._resolve_density_column(data, density_column)]
-
-        dates = pd.to_datetime(data["t"].unique())
-        dates_to_return = dates.to_pydatetime()
-        dates = np.sort(dates)
+        dates = np.sort(data["t"].unique())
+        dates = pd.to_datetime(dates)
+        dates_to_return = np.array([dt.to_pydatetime() for dt in dates.to_list()])
         density_slices_by_column = {column: [] for column in resolved_density_columns}
 
         l_axis_ref = None
