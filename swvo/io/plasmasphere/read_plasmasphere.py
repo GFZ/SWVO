@@ -17,7 +17,7 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True)
 class PlasmasphereDensityCube:
     """A structured container for plasmaspheric electron density data.
 
@@ -46,9 +46,6 @@ class PlasmasphereDensityCube:
     mlt_grid: np.ndarray
     density_grid: np.ndarray | list[np.ndarray]
     density_column: str | list[str]
-
-    def __repr__(self) -> str:
-        return self.__str__()
 
     def __str__(self) -> str:
         """Readable summary for logging and printing."""
@@ -99,6 +96,35 @@ class PlasmasphereDensityCube:
             return False
 
         return True
+
+    def get_density_at_time(self, time: datetime) -> np.ndarray | list[np.ndarray]:
+        """Extract density grid for a specific time.
+
+        Parameters
+        ----------
+        time : datetime
+            The specific time for which to extract the density grid.
+
+        Returns
+        -------
+        np.ndarray or list[np.ndarray]
+            The density grid corresponding to the specified time.
+
+        Raises
+        ------
+        IndexError
+            If the specified time is not found in the density cube.
+        """
+        if time not in self.time:
+            logger.error(f"Requested time {time} not found in density cube.")
+            raise IndexError(f"Requested time {time} not found in density cube.")
+
+        time_index = np.where(self.time == time)[0][0]
+
+        if isinstance(self.density_grid, list):
+            return [grid[time_index] for grid in self.density_grid]
+        else:
+            return self.density_grid[time_index]
 
 
 class PlasmaspherePredictionReader:
