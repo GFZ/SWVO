@@ -413,11 +413,11 @@ class OMNIHighRes:
         if cadence == 1:
             params = {"res": "min", "spacecraft": "omni_min"}
             payload.update(params)
-            payload.update(common_vars)
+            payload.update(common_vars)  # ty: ignore[no-matching-overload]
         elif cadence == 5:
             params = {"res": "5min", "spacecraft": "omni_5min"}
             payload.update(params)
-            payload.update(common_vars)
+            payload.update(common_vars)  # ty: ignore[no-matching-overload]
 
         else:
             msg = f"Invalid cadence: {cadence}. Only 1 or 5 minutes are supported."

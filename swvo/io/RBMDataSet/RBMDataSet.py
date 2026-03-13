@@ -236,7 +236,7 @@ class RBMDataSet:
                 sat_variable = var
                 break
             else:
-                dist = distance.levenshtein(name, var.var_name)  # ty:ignore[possibly-missing-attribute]
+                dist = distance.levenshtein(name, var.var_name)
                 if name.lower() in var.var_name.lower():
                     dist = 1
 
