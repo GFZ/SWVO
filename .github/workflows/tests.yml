@@ -41,7 +41,7 @@ jobs:
         run: uv run ty check
 
   tests:
-    needs: [ruff, ty]
+    needs: [ruff]
     strategy:
       fail-fast: false
       matrix:
