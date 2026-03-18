@@ -57,6 +57,10 @@ class VariableEnum(Variable, Enum):
     P = "P", "mlt", with_B
     R_0 = "R0", "R0", with_B
     DENSITY = "density", "density", without_B
+    # NC only variables
+    FEDU = "FEDU", "", without_B
+    FEIU = "FEIU", "", without_B
+    Lm = "Lm", "", without_B
 
 
 VariableLiteral = Literal[
@@ -72,6 +76,9 @@ VariableLiteral = Literal[
     "InvV",
     "Lstar",
     "Flux",
+    "FEDU",
+    "FEIU",
+    "Lm",
     "PSD",
     "MLT",
     "B_SM",
