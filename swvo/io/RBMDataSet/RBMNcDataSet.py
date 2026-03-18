@@ -221,8 +221,11 @@ class RBMNcDataSet(RBMDataSet):
             rbm_var_names = RBMNcDataSet._get_rbm_name(var_name, self._mfm.mfm_name)  # ty:ignore[invalid-argument-type]
 
             if rbm_var_names is not None:
-                for name in rbm_var_names:
-                    setattr(self, name, loaded_var_arrs[var_name])
+                if isinstance(rbm_var_names, list):
+                    for name in rbm_var_names:
+                        setattr(self, name, loaded_var_arrs[var_name])
+                else:
+                    setattr(self, rbm_var_names, loaded_var_arrs[var_name])
 
     @classmethod
     def _get_rbm_name(cls, var_name: str, mag_field: MfmEnumLiteral) -> VariableLiteral | None | list[VariableLiteral]:
