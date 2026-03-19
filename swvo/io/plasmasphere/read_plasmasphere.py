@@ -44,7 +44,7 @@ class PlasmasphereDensityCube:
     mlt: np.ndarray
     l_grid: np.ndarray
     mlt_grid: np.ndarray
-    density_grid: np.ndarray | list[np.ndarray]
+    density_grid: list[np.ndarray]
     density_column: str | list[str]
 
     def __str__(self) -> str:
@@ -124,7 +124,7 @@ class PlasmasphereDensityCube:
         if isinstance(self.density_grid, list):
             return [grid[time_index] for grid in self.density_grid]
         else:
-            return self.density_grid[time_index]
+            return [self.density_grid[time_index]]
 
 
 class PlasmaspherePredictionReader:
@@ -334,10 +334,12 @@ class PlasmaspherePredictionReader:
 
         if len(resolved_density_columns) == 1:
             resolved_density_column: str | list[str] = resolved_density_columns[0]
-            density_grid: np.ndarray | list[np.ndarray] = np.stack(
-                density_slices_by_column[resolved_density_columns[0]],
-                axis=0,
-            )
+            density_grid = [
+                np.stack(
+                    density_slices_by_column[resolved_density_columns[0]],
+                    axis=0,
+                )
+            ]
         else:
             resolved_density_column = resolved_density_columns
             density_grid = [np.stack(density_slices_by_column[column], axis=0) for column in resolved_density_columns]
