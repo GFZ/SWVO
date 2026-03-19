@@ -35,7 +35,7 @@ class PlasmasphereDensityCube:
         Grid of MLT-values. L x MLT shape.
     density_grid : list[np.ndarray]
         List of arrays (n_time x n_L x n_MLT) containing electron density values for each time step.
-    density_column : str or list[str]
+    density_column : list[str]
         Name(s) of the column(s) containing electron density data.
     """
 
@@ -108,7 +108,7 @@ class PlasmasphereDensityCube:
         Returns
         -------
         list[np.ndarray]
-            The density grid corresponding to the specified time.
+            The list of ensemble density grid corresponding to the specified time.
 
         Raises
         ------
