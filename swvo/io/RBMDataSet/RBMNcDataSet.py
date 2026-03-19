@@ -110,6 +110,28 @@ class RBMNcDataSet(RBMDataSet):
             verbose=verbose,
         )
 
+        mfm_str = mfm if isinstance(mfm, str) else mfm.mfm_name
+
+        self.variable_lut = {
+            "time": "time",
+            "datetime": "datetime",
+            "flux/FEDU": "Flux",
+            "flux/alpha_eq": "alpha_eq_model",
+            "flux/energy": "energy_channels",
+            "flux/alpha_local": "alpha_local",
+            "position/xGEO": "xGEO",
+            "psd/PSD": "PSD",
+            "density/density_local": "density",
+
+            f"position/{mfm_str}/MLT": "MLT",
+            f"position/{mfm_str}/R0": "R0",
+            f"position/{mfm_str}/Lstar": "Lstar",
+            f"position/{mfm_str}/Lm": "Lm",
+            f"mag_field/{mfm_str}/B_local": "B_total",
+            f"psd/{mfm_str}/inv_mu": "InvMu",
+            f"psd/{mfm_str}/inv_K": "InvK",
+        }
+
     def _create_file_path_stem(self) -> Path:
         # implement special cases here
         # if self._satellite == SatelliteEnum.THEMIS:
@@ -196,20 +218,26 @@ class RBMNcDataSet(RBMDataSet):
             if var_name == "datetime":
                 loaded_var_arrs[var_name] = list(loaded_var_arrs[var_name])  # ty:ignore[invalid-assignment]
 
-            rbm_var_name = RBMNcDataSet._get_rbm_name(var_name, self._mfm.mfm_name)  # ty:ignore[invalid-argument-type]
+            rbm_var_names = RBMNcDataSet._get_rbm_name(var_name, self._mfm.mfm_name)  # ty:ignore[invalid-argument-type]
 
-            if rbm_var_name is not None:
-                setattr(self, rbm_var_name, loaded_var_arrs[var_name])
+            if rbm_var_names is not None:
+                if isinstance(rbm_var_names, list):
+                    for name in rbm_var_names:
+                        setattr(self, name, loaded_var_arrs[var_name])
+                else:
+                    setattr(self, rbm_var_names, loaded_var_arrs[var_name])
 
     @classmethod
-    def _get_rbm_name(cls, var_name: str, mag_field: MfmEnumLiteral) -> VariableLiteral | None:
+    def _get_rbm_name(cls, var_name: str, mag_field: MfmEnumLiteral) -> VariableLiteral | None | list[VariableLiteral]:
         match var_name:
             case "time":
                 return "time"
             case "datetime":
                 return "datetime"
             case "flux/FEDU":
-                return "Flux"
+                return ["Flux", "FEDU"]
+            case "flux/FEIU":
+                return ["Flux", "FEIU"]
             case "flux/alpha_eq":
                 return "alpha_eq_model"
             case "flux/energy":
