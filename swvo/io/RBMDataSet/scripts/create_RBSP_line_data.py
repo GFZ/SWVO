@@ -82,7 +82,7 @@ def create_RBSP_line_data(
         InstrumentEnum.MAGEIS,
         InstrumentEnum.REPT,
     ]
-    satellites = satellites or [SatelliteEnum.RBSPA, SatelliteEnum.RBSPB]
+    satellites = satellites or [SatelliteEnum.RBSPA, SatelliteEnum.RBSPB]  # ty :ignore[invalid-assignment]
 
     # pass and check args
     if isinstance(data_server_path, str):
@@ -92,7 +92,7 @@ def create_RBSP_line_data(
     if not isinstance(target_en, Iterable):
         target_en = [target_en]
     if not isinstance(satellites, Iterable) or isinstance(satellites, str):
-        satellites = [satellites]
+        satellites = [satellites]  # ty :ignore[invalid-assignment]
     if isinstance(target_type, str):
         target_type = TargetType[target_type]
 
@@ -102,7 +102,7 @@ def create_RBSP_line_data(
     result_arr = []
     list_instruments_used = []
 
-    for satellite in satellites:
+    for satellite in satellites:  # ty :ignore[not-iterable]
         rbm_data: list[RBMDataSet] = []
 
         for i, instrument in enumerate(instruments):

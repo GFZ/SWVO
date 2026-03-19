@@ -229,13 +229,12 @@ class RBMDataSet:
         raise AttributeError(msg)
 
     def load(self, name_or_var: str | VariableEnum) -> None:
-        """ Load data into memory """
+        """Load data into memory"""
 
         if isinstance(name_or_var, VariableEnum):
             getattr(self, name_or_var.var_name)
         else:
             getattr(self, name_or_var)
-
 
     def find_similar_variable(self, name: str) -> tuple[None | VariableEnum, dict[str, Any]]:
         levenstein_info: dict[str, Any] = {"min_distance": 10, "var_name": ""}
@@ -245,7 +244,7 @@ class RBMDataSet:
                 sat_variable = var
                 break
             else:
-                dist = distance.levenshtein(name, var.var_name)  # ty:ignore[possibly-missing-attribute]
+                dist = distance.levenshtein(name, var.var_name)
                 if name.lower() in var.var_name.lower():
                     dist = 1
 

@@ -31,12 +31,10 @@ def join_var(var1: NDArray[np.generic], var2: NDArray[np.generic]) -> NDArray[np
 def get_file_path_any_format(folder_path: Path, file_stem: str, preferred_ext: str) -> Path | None:
     """Get the file path for a given file stem and preferred extension."""
     pattern = re.compile(fnmatch.translate(file_stem + ".*"), re.IGNORECASE)
-
-    if not folder_path.exists():
-        return None
-
-    all_files = [p for p in folder_path.iterdir() if pattern.match(p.name)]
-
+    try:
+        all_files = [p for p in folder_path.iterdir() if pattern.match(p.name)]
+    except FileNotFoundError:
+        all_files = []
 
     if len(all_files) == 0:
         warnings.warn(f"File not found: {folder_path / (file_stem + '.*')}", stacklevel=2)
@@ -120,10 +118,9 @@ def matlab2python(datenum: float | Iterable[float]) -> Iterable[datetime] | date
     datenum = pd.to_datetime(datenum - 719529, unit="D", origin=pd.Timestamp("1970-01-01")).to_pydatetime()  # ty:ignore[unresolved-attribute]
 
     if isinstance(datenum, Iterable):
-        datenum = enforce_utc_timezone(list(datenum))  # ty:ignore[invalid-assignment]
+        datenum = enforce_utc_timezone(list(datenum))  # ty:ignore[no-matching-overload]
         datenum = [  # ty:ignore[invalid-assignment]
-            round_seconds(x)  # ty:ignore[invalid-argument-type]
-            for x in datenum  # ty:ignore[not-iterable]
+            round_seconds(x) for x in datenum
         ]
     else:
         datenum = round_seconds(enforce_utc_timezone(datenum))  # ty:ignore[invalid-assignment]
