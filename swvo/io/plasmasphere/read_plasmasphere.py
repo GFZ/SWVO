@@ -33,8 +33,8 @@ class PlasmasphereDensityCube:
         Grid of L-values. L x MLT shape.
     mlt_grid : np.ndarray
         Grid of MLT-values. L x MLT shape.
-    density_grid : np.ndarray or list[np.ndarray]
-        Grid of electron density values. time x L x MLT shape if `density_column` is a single column, otherwise a list of such arrays (one per density column).
+    density_grid : list[np.ndarray]
+        List of arrays (n_time x n_L x n_MLT) containing electron density values for each time step.
     density_column : str or list[str]
         Name(s) of the column(s) containing electron density data.
     """
@@ -45,7 +45,7 @@ class PlasmasphereDensityCube:
     l_grid: np.ndarray
     mlt_grid: np.ndarray
     density_grid: list[np.ndarray]
-    density_column: str | list[str]
+    density_column: list[str]
 
     def __str__(self) -> str:
         """Readable summary for logging and printing."""
@@ -65,39 +65,39 @@ class PlasmasphereDensityCube:
         ]
         return "\n".join(summary)
 
+    def __post_init__(self) -> None:
+        if len(self.density_grid) != len(self.density_column):
+            msg = f"Length of density_grid ({len(self.density_grid)}) must match length of density_column ({len(self.density_column)})."
+            logger.error(msg)
+            raise ValueError(msg)
+
     def __eq__(self, other: object) -> bool:
+        return isinstance(other, PlasmasphereDensityCube) and not self.diff(other)
+
+    def diff(self, other: object) -> list[str]:
+        issues = []
         if not isinstance(other, PlasmasphereDensityCube):
-            return NotImplemented
+            issues.append("type mismatch")
+            return issues
 
         if not np.array_equal(self.time, other.time):
-            return False
+            issues.append("time mismatch")
         if not np.array_equal(self.l, other.l):
-            return False
+            issues.append("l mismatch")
         if not np.array_equal(self.mlt, other.mlt):
-            return False
+            issues.append("mlt mismatch")
         if not np.array_equal(self.l_grid, other.l_grid):
-            return False
+            issues.append("l_grid mismatch")
         if not np.array_equal(self.mlt_grid, other.mlt_grid):
-            return False
-
-        if isinstance(self.density_grid, np.ndarray) and isinstance(other.density_grid, np.ndarray):
-            if not np.array_equal(self.density_grid, other.density_grid):
-                return False
-        elif isinstance(self.density_grid, list) and isinstance(other.density_grid, list):
-            if len(self.density_grid) != len(other.density_grid):
-                return False
-            for grid_self, grid_other in zip(self.density_grid, other.density_grid):
-                if not np.array_equal(grid_self, grid_other):
-                    return False
-        else:
-            return False
-
+            issues.append("mlt_grid mismatch")
+        if not all(np.array_equal(a, b) for a, b in zip(self.density_grid, other.density_grid)):
+            issues.append("density_grid mismatch")
         if self.density_column != other.density_column:
-            return False
+            issues.append("density_column mismatch")
 
-        return True
+        return issues
 
-    def get_density_at_time(self, time: datetime) -> np.ndarray | list[np.ndarray]:
+    def get_density_at_time(self, time: datetime) -> list[np.ndarray]:
         """Extract density grid for a specific time.
 
         Parameters
@@ -107,7 +107,7 @@ class PlasmasphereDensityCube:
 
         Returns
         -------
-        np.ndarray or list[np.ndarray]
+        list[np.ndarray]
             The density grid corresponding to the specified time.
 
         Raises
@@ -333,7 +333,7 @@ class PlasmaspherePredictionReader:
             raise RuntimeError(msg)
 
         if len(resolved_density_columns) == 1:
-            resolved_density_column: str | list[str] = resolved_density_columns[0]
+            resolved_density_column: list[str] = [resolved_density_columns[0]]
             density_grid = [
                 np.stack(
                     density_slices_by_column[resolved_density_columns[0]],
