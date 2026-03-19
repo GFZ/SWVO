@@ -85,6 +85,13 @@ This package provides tools to read, process, and analyze several key solar and 
     - SWIFT: `SWSWIFTEnsemble`
     - Combined: `read_solar_wind_from_multiple_models`
 
+- **Plasmasphere Density Predictions**:  
+  Reader utilities for PAGER plasmasphere density grids and model combined inputs.
+  - **Sources & Classes:**
+    - Density predictions: `PlasmaspherePredictionReader`
+    - Combined inputs: `PlasmasphereCombinedInputsReader`
+    - Density cube container: `PlasmasphereDensityCube`
+
 Each index can be accessed via these dedicated reader classes, which handle downloading and read methods. See the code in `swvo/io` or API documentation for details on each index's implementation.
 
 ## Installation
