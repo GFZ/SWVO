@@ -9,18 +9,18 @@ Module for handling SuperMAG SME data.
 
 import json
 import logging
-import os
 import re
 import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
 import requests
 
+from swvo.io.base import BaseIO
 from swvo.io.utils import enforce_utc_timezone
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 logging.captureWarnings(True)
 
 
-class SMESuperMAG:
+class SMESuperMAG(BaseIO):
     """Class for SuperMAG SME data.
 
     Parameters
@@ -50,20 +50,11 @@ class SMESuperMAG:
     """
 
     ENV_VAR_NAME = "SUPERMAG_STREAM_DIR"
+    LABEL = "supermag"
 
-    def __init__(self, username: str, data_dir: Optional[Path] = None) -> None:
+    def __init__(self, username: str, data_dir: Path | None = None) -> None:
+        super().__init__(data_dir)
         self.username = username
-
-        if data_dir is None:
-            if self.ENV_VAR_NAME not in os.environ:
-                msg = f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
-                raise ValueError(msg)
-            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
-
-        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-
-        logger.info(f"SuperMAG SME data directory: {self.data_dir}")
 
     def download_and_process(self, start_time: datetime, end_time: datetime, reprocess_files: bool = False) -> None:
         """Download and process SuperMAG SME data files.

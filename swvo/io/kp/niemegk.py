@@ -12,12 +12,13 @@ import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
 import requests
 
+from swvo.io.base import BaseIO
 from swvo.io.utils import enforce_utc_timezone
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 logging.captureWarnings(True)
 
 
-class KpNiemegk:
+class KpNiemegk(BaseIO):
     """A class to handle Niemegk Kp data.
 
     Parameters
@@ -51,18 +52,6 @@ class KpNiemegk:
 
     DAYS_TO_SAVE_EACH_FILE = 3
     LABEL = "niemegk"
-
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
-        if data_dir is None:
-            if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
-
-            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
-
-        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-
-        logger.info(f"Kp Niemegk  data directory: {self.data_dir}")
 
     def download_and_process(self, start_time: datetime, end_time: datetime, reprocess_files: bool = False) -> None:
         """Download and process Niemegk Kp data file.

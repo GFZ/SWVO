@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 
@@ -29,17 +27,6 @@ class KpOMNI(OMNILowRes):
     Class for reading Kp data from OMNI low resolution files.
     Inherits the :func:`download_and_process`, other private methods and attributes from :class:`OMNILowRes`.
     """
-
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
-        """
-        Initialize a KpOMNI object.
-
-        Parameters
-        ----------
-        data_dir : Path | None
-            Data directory for the OMNI Kp data. If not provided, it will be read from the environment variable
-        """
-        super().__init__(data_dir=data_dir)
 
     def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
         """

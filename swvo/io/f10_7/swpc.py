@@ -9,17 +9,16 @@ Module for handling F10.7 data from SWPC.
 from __future__ import annotations
 
 import logging
-import os
 import shutil
 import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
 import requests
 
+from swvo.io.base import BaseIO
 from swvo.io.utils import enforce_utc_timezone
 
 logger = logging.getLogger(__name__)
@@ -27,13 +26,8 @@ logger = logging.getLogger(__name__)
 logging.captureWarnings(True)
 
 
-class F107SWPC:
+class F107SWPC(BaseIO):
     """This is a class for the SWPC F107 data.
-
-    Parameters
-    ----------
-    data_dir : Path | None
-        Data directory for the OMNI Low Resolution data. If not provided, it will be read from the environment variable
 
     Methods
     -------
@@ -51,18 +45,6 @@ class F107SWPC:
     NAME_F107 = "daily-solar-indices.txt"
 
     LABEL = "swpc"
-
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
-        if data_dir is None:
-            if self.ENV_VAR_NAME not in os.environ:
-                msg = f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
-                raise ValueError(msg)
-            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
-
-        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-
-        logger.info(f"SWPC F10.7 data directory: {self.data_dir}")
 
     def _is_within_download_range(self, target_date: datetime) -> bool:
         """Check if a date is within the last 30 days.

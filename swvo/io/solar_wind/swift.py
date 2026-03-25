@@ -33,6 +33,10 @@ class SWSWIFTEnsemble:
     ----------
     data_dir : Path | None
         Data directory for the SWIFT Ensemble data. If not provided, it will be read from the environment variable
+    prefer_env_var : bool, optional
+        If True, the environment variable takes precedence over the passed data_dir argument.
+        If False (default), the passed data_dir is used if provided, otherwise the environment variable is used.
+
 
     Methods
     -------
@@ -51,19 +55,21 @@ class SWSWIFTEnsemble:
     ENV_VAR_NAME = "SWIFT_ENSEMBLE_OUTPUT_DIR"
     LABEL = "swift"
 
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
-        if data_dir is None:
-            if self.ENV_VAR_NAME not in os.environ:
+    def __init__(self, data_dir: Optional[Path] = None, prefer_env_var: bool = False) -> None:
+
+        if prefer_env_var and self.ENV_VAR_NAME in os.environ:
+            data_dir = Path(os.environ[self.ENV_VAR_NAME])
+        elif data_dir is None:
+            if not self.ENV_VAR_NAME or self.ENV_VAR_NAME not in os.environ:
                 raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
-
-            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
-
-        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
+            data_dir = Path(os.environ[self.ENV_VAR_NAME])
+        self.data_dir = Path(data_dir)
 
         logger.info(f"SWIFT ensemble data directory: {self.data_dir}")
-
         if not self.data_dir.exists():
-            raise FileNotFoundError(f"Data directory {self.data_dir} does not exist! Impossible to retrieve data!")
+            msg = f"Data directory {self.data_dir} does not exist! Impossible to retrieve data!"
+            logger.error(msg)
+            raise FileNotFoundError(msg)
 
     def read(
         self,

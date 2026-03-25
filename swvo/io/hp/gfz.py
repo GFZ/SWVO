@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
@@ -16,12 +15,13 @@ import numpy as np
 import pandas as pd
 import requests
 
+from swvo.io.base import BaseIO
 from swvo.io.utils import enforce_utc_timezone
 
 logger = logging.getLogger(__name__)
 
 
-class HpGFZ:
+class HpGFZ(BaseIO):
     """This is a base class for HpGFZ data.
 
     Parameters
@@ -30,6 +30,9 @@ class HpGFZ:
         Hp index. Possible options are: hp30, hp60.
     data_dir : Path | None
         Data directory for the Hp data. If not provided, it will be read from the environment variable
+    prefer_env_var : bool, optional
+        If True, the environment variable takes precedence over the passed data_dir argument.
+        If False (default), the passed data_dir is used if provided, otherwise the environment variable is used.
 
     Methods
     -------
@@ -48,23 +51,27 @@ class HpGFZ:
     API_URL = "https://kp.gfz.de/app/json/"
     LABEL = "gfz"
 
-    def __init__(self, index: str, data_dir: Optional[Path] = None) -> None:
+    def __init__(self, index: str, data_dir: Optional[Path] = None, prefer_env_var: bool = False) -> None:
+        """Initialize HpGFZ.
+
+        Parameters
+        ----------
+        index : str
+            Hp index. Possible options are: hp30, hp60.
+        data_dir : Path | None
+            Data directory for the Hp data. If not provided, it will be read from the environment variable
+        prefer_env_var : bool, optional
+            If True, the environment variable takes precedence over the passed data_dir argument, by default False
+        """
         self.index = index
         if self.index not in ("hp30", "hp60"):
             msg = f"Encountered invalid index: {self.index}. Possible options are: hp30, hp60!"
             raise ValueError(msg)
 
-        if data_dir is None:
-            if self.ENV_VAR_NAME not in os.environ:
-                msg = f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
-                raise ValueError(msg)
-
-            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
-
-        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
-        self.data_dir.mkdir(parents=True, exist_ok=True)
+        super().__init__(data_dir=data_dir, prefer_env_var=prefer_env_var)
         self.index_number: int = int(index[2:])
 
+        self.data_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"{self.index.upper()} GFZ data directory: {self.data_dir}")
 
         (self.data_dir / str(self.index)).mkdir(exist_ok=True)
@@ -331,11 +338,14 @@ class Hp30GFZ(HpGFZ):
     ----------
     data_dir : str | Path, optional
         Data directory for the Hp30 data. If not provided, it will be read from the environment variable
+    prefer_env_var : bool, optional
+        If True, the environment variable takes precedence over the passed data_dir argument.
+        If False (default), the passed data_dir is used if provided, otherwise the environment variable is used.
 
     """
 
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
-        super().__init__("hp30", data_dir)
+    def __init__(self, data_dir: Optional[Path] = None, prefer_env_var: bool = False) -> None:
+        super().__init__("hp30", data_dir, prefer_env_var=prefer_env_var)
 
 
 class Hp60GFZ(HpGFZ):
@@ -345,8 +355,11 @@ class Hp60GFZ(HpGFZ):
     ----------
     data_dir : str | Path, optional
         Data directory for the Hp30 data. If not provided, it will be read from the environment variable
+    prefer_env_var : bool, optional
+        If True, the environment variable takes precedence over the passed data_dir argument.
+        If False (default), the passed data_dir is used if provided, otherwise the environment variable is used.
 
     """
 
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
-        super().__init__("hp60", data_dir)
+    def __init__(self, data_dir: Optional[Path] = None, prefer_env_var: bool = False) -> None:
+        super().__init__("hp60", data_dir, prefer_env_var=prefer_env_var)

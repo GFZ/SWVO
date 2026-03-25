@@ -7,17 +7,17 @@ Module for handling DSCOVR Solar Wind data.
 """
 
 import logging
-import os
 import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
 import requests
 
+from swvo.io.base import BaseIO
 from swvo.io.utils import enforce_utc_timezone, sw_mag_propagation
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 logging.captureWarnings(True)
 
 
-class DSCOVR:
+class DSCOVR(BaseIO):
     """This is a class for the DSCOVR Solar Wind data.
 
     Parameters
@@ -54,18 +54,6 @@ class DSCOVR:
     MAG_FIELDS = ["bx_gsm", "by_gsm", "bz_gsm", "bavg"]
 
     LABEL = "dscovr"
-
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
-        if data_dir is None:
-            if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
-
-            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
-
-        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-
-        logger.info(f"DSCOVR data directory: {self.data_dir}")
 
     def download_and_process(self, request_time: datetime) -> None:
         """

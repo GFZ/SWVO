@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 
@@ -28,17 +26,6 @@ class SymhOMNI(OMNIHighRes):
     Class for reading SYM-H data from OMNI High Resolution files.
     Inherits the `download_and_process`, other private methods and attributes from OMNIHighRes.
     """
-
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
-        """
-        Initialize a SymhOMNI object.
-
-        Parameters
-        ----------
-        data_dir : Path | None
-            Data directory for the SYM-H OMNI data. If not provided, it will be read from the environment variable
-        """
-        super().__init__(data_dir=data_dir)
 
     def read(
         self,

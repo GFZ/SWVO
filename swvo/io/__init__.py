@@ -13,3 +13,4 @@ from swvo.io import (
     solar_wind as solar_wind,
     sme as sme,
 )
+from swvo.io.base import BaseIO as BaseIO
