@@ -63,7 +63,7 @@ class HpEnsemble:
         """
         self.index = index
         if self.index not in ("hp30", "hp60"):
-            msg = "Encountered invalid index: {self.index}. Possible options are: hp30, hp60!"
+            msg = f"Encountered invalid index: {self.index}. Possible options are: hp30, hp60!"
             raise ValueError(msg)
         if prefer_env_var and self.ENV_VAR_NAME in os.environ:
             data_dir = Path(os.environ[self.ENV_VAR_NAME])
@@ -76,7 +76,7 @@ class HpEnsemble:
 
         logger.info(f"{self.index.upper()} Ensemble data directory: {self.data_dir}")
         if not self.data_dir.exists():
-            msg = f"Data directory {self.data_dir} does not exist! Impossible to retrive data!"
+            msg = f"Data directory {self.data_dir} does not exist! Impossible to retrieve data!"
             logger.error(msg)
             raise FileNotFoundError(msg)
 

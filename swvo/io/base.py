@@ -50,15 +50,16 @@ class BaseIO(ABC):
         ----------
         data_dir : Path | None
             Data directory for storing data. If not provided, it will be read
-            from the environment variable defined by ENV_VAR_NAME.
+            from the environment variable defined by `ENV_VAR_NAME`.
         prefer_env_var : bool, optional
-            If True, the environment variable takes precedence over the passed data_dir argument.
-            If False (default), the passed data_dir is used if provided, otherwise the environment variable is used.
+            If True, the environment variable takes precedence over the passed `data_dir` argument.
+            If False (default), the passed `data_dir` is used if provided, otherwise the environment variable is used.
+
         Raises
         ------
             ValueError
-            If data_dir is None and ENV_VAR_NAME is not set in environment,
-            or if prefer_env_var is True and ENV_VAR_NAME is not set.
+            If `data_dir` is None and `ENV_VAR_NAME` is not set in environment,
+            or if `prefer_env_var` is True and `ENV_VAR_NAME` is not set.
         """
         if prefer_env_var and self.ENV_VAR_NAME in os.environ:
             data_dir = Path(os.environ[self.ENV_VAR_NAME])

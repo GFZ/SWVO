@@ -62,7 +62,7 @@ class KpEnsemble:
 
         logger.info(f"{self.__class__.__name__} data directory: {self.data_dir}")
         if not self.data_dir.exists():
-            msg = f"Data directory {self.data_dir} does not exist! Impossible to retrive data!"
+            msg = f"Data directory {self.data_dir} does not exist! Impossible to retrieve data!"
             logger.error(msg)
             raise FileNotFoundError(msg)
 

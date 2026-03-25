@@ -37,6 +37,9 @@ class SMESuperMAG(BaseIO):
         SuperMAG username used for authenticated data access (register at the SuperMAG website to obtain one)
     data_dir : Path | None
         Data directory for the SuperMAG SME data. If not provided, it will be read from the environment variable
+    prefer_env_var : bool, optional
+        If True, the environment variable takes precedence over the passed data_dir argument.
+        If False (default), the passed data_dir is used if provided, otherwise the environment variable is used.
 
     Methods
     -------
@@ -52,8 +55,8 @@ class SMESuperMAG(BaseIO):
     ENV_VAR_NAME = "SUPERMAG_STREAM_DIR"
     LABEL = "supermag"
 
-    def __init__(self, username: str, data_dir: Path | None = None) -> None:
-        super().__init__(data_dir)
+    def __init__(self, username: str, data_dir: Path | None = None, prefer_env_var: bool = False) -> None:
+        super().__init__(data_dir, prefer_env_var)
         self.username = username
 
     def download_and_process(self, start_time: datetime, end_time: datetime, reprocess_files: bool = False) -> None:
