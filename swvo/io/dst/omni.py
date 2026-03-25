@@ -12,7 +12,6 @@ import logging
 import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -30,17 +29,6 @@ class DSTOMNI(OMNILowRes):
     Class for reading F10.7 data from OMNI DST files.
     Inherits the `download_and_process`, other private methods and attributes from OMNILowRes.
     """
-
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
-        """
-        Initialize a DSTOMNI object.
-
-        Parameters
-        ----------
-        data_dir : Path | None
-            Data directory for the Dst OMNI data. If not provided, it will be read from the environment variable
-        """
-        super().__init__(data_dir=data_dir)
 
     # data is downloaded along with OMNI data, check file name in parent class
     def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:

@@ -8,21 +8,20 @@ Module for handling OMNI high resolution data.
 
 import calendar
 import logging
-import os
 import re
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import List, Optional, Tuple
 
 import pandas as pd
 import requests
 
+from swvo.io.base import BaseIO
 from swvo.io.utils import enforce_utc_timezone
 
 logger = logging.getLogger(__name__)
 
 
-class OMNIHighRes:
+class OMNIHighRes(BaseIO):
     """This is a class for the OMNI High Resolution data.
 
     Parameters
@@ -47,18 +46,6 @@ class OMNIHighRes:
 
     START_YEAR = 1981
     LABEL = "omni"
-
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
-        if data_dir is None:
-            if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
-
-            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
-
-        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-
-        logger.info(f"OMNI high resolution data directory: {self.data_dir}")
 
     def download_and_process(
         self,

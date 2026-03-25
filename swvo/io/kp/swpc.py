@@ -7,7 +7,6 @@ Module for handling SWPC Kp data.
 """
 
 import logging
-import os
 import re
 import warnings
 from datetime import datetime, timedelta, timezone
@@ -19,6 +18,7 @@ import numpy as np
 import pandas as pd
 import requests
 
+from swvo.io.base import BaseIO
 from swvo.io.utils import enforce_utc_timezone
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 logging.captureWarnings(True)
 
 
-class KpSWPC:
+class KpSWPC(BaseIO):
     """
     A class for handling SWPC Kp data.
     In SWPC data, the file for current day always contains the forecast for the next 3 days. Keep this in mind when using the `read` and `download_and_process` methods.
@@ -53,18 +53,6 @@ class KpSWPC:
     NAME = "3-day-forecast.txt"
 
     LABEL = "swpc"
-
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
-        if data_dir is None:
-            if self.ENV_VAR_NAME not in os.environ:
-                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
-
-            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
-
-        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-
-        logger.info(f"Kp SWPC  data directory: {self.data_dir}")
 
     def download_and_process(self, target_date: datetime, reprocess_files: bool = False) -> None:
         """

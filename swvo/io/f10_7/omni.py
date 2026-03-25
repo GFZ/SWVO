@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -30,17 +28,6 @@ class F107OMNI(OMNILowRes):
     Class for reading F10.7 data from OMNI low resolution files.
     Inherits the :func:`download_and_process`, other private methods and attributes from :class:`OMNILowRes`.
     """
-
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
-        """
-        Initialize a F107OMNI object.
-
-        Parameters
-        ----------
-        data_dir : Path | None
-            Data directory for the OMNI Kp data. If not provided, it will be read from the environment variable
-        """
-        super().__init__(data_dir=data_dir)
 
     # data is downloaded along with OMNI data, check file name in parent class
     def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:

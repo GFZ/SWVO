@@ -30,6 +30,9 @@ class HpEnsemble:
         Hp index Possible options are: hp30, hp60.
     data_dir : Path | None
         Data directory for the Hp data. If not provided, it will be read from the environment variable
+    prefer_env_var : bool, optional
+        If True, the environment variable takes precedence over the passed data_dir argument.
+        If False (default), the passed data_dir is used if provided, otherwise the environment variable is used.
 
     Methods
     -------
@@ -43,28 +46,38 @@ class HpEnsemble:
         Returns `FileNotFoundError` if the data directory does not exist.
     """
 
-    ENV_VAR_NAME = "PLACEHOLDER; SEE DERIVED CLASSES BELOW"
-    LABEL = "ensemble"
+    ENV_VAR_NAME: str = ""  # Must be set by subclasses
+    LABEL: str = "ensemble"
 
-    def __init__(self, index: str, data_dir: Optional[Path] = None) -> None:
+    def __init__(self, index: str, data_dir: Optional[Path] = None, prefer_env_var: bool = False) -> None:
+        """Initialize HpEnsemble.
+
+        Parameters
+        ----------
+        index : str
+            Hp index. Possible options are: hp30, hp60.
+        data_dir : Path | None
+            Data directory for the Hp data. If not provided, it will be read from the environment variable
+        prefer_env_var : bool, optional
+            If True, the environment variable takes precedence over the passed data_dir argument, by default False
+        """
         self.index = index
         if self.index not in ("hp30", "hp60"):
-            msg = "Encountered invalid index: {self.index}. Possible options are: hp30, hp60!"
+            msg = f"Encountered invalid index: {self.index}. Possible options are: hp30, hp60!"
             raise ValueError(msg)
+        if prefer_env_var and self.ENV_VAR_NAME in os.environ:
+            data_dir = Path(os.environ[self.ENV_VAR_NAME])
+        elif data_dir is None:
+            if not self.ENV_VAR_NAME or self.ENV_VAR_NAME not in os.environ:
+                raise ValueError(f"Necessary environment variable {self.ENV_VAR_NAME} not set!")
+            data_dir = Path(os.environ[self.ENV_VAR_NAME])
 
-        if data_dir is None:
-            if self.ENV_VAR_NAME not in os.environ:
-                msg = f"Necessary environment variable {self.ENV_VAR_NAME} not set!"
-                raise ValueError(msg)
-
-            data_dir = os.environ.get(self.ENV_VAR_NAME)  # ty: ignore[invalid-assignment]
-
-        self.data_dir: Path = Path(data_dir)  # ty:ignore[invalid-argument-type]
+        self.data_dir = Path(data_dir)
 
         logger.info(f"{self.index.upper()} Ensemble data directory: {self.data_dir}")
-
         if not self.data_dir.exists():
-            msg = f"Data directory {self.data_dir} does not exist! Impossible to retrive data!"
+            msg = f"Data directory {self.data_dir} does not exist! Impossible to retrieve data!"
+            logger.error(msg)
             raise FileNotFoundError(msg)
 
         self.index_number: int = int(index[2:])
@@ -315,8 +328,8 @@ class Hp30Ensemble(HpEnsemble):
 
     ENV_VAR_NAME = "HP30_ENSEMBLE_FORECAST_DIR"
 
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
-        super().__init__("hp30", data_dir)
+    def __init__(self, data_dir: Optional[Path] = None, prefer_env_var: bool = False) -> None:
+        super().__init__("hp30", data_dir, prefer_env_var)
 
     def read_with_horizon(self, start_time: datetime, end_time: datetime, horizon: float) -> list[pd.DataFrame]:
         """Read Ensemble Hp30 forecast data for a given time range and forecast horizon.
@@ -356,8 +369,8 @@ class Hp60Ensemble(HpEnsemble):
 
     ENV_VAR_NAME = "HP60_ENSEMBLE_FORECAST_DIR"
 
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
-        super().__init__("hp60", data_dir)
+    def __init__(self, data_dir: Optional[Path] = None, prefer_env_var: bool = False) -> None:
+        super().__init__("hp60", data_dir, prefer_env_var)
 
     def read_with_horizon(self, start_time: datetime, end_time: datetime, horizon: int) -> list[pd.DataFrame]:
         """Read Ensemble Hp60 forecast data for a given time range and forecast horizon.
