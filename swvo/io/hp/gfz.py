@@ -305,8 +305,7 @@ class HpGFZ(BaseIO):
             {f"Hp{self.index_number}": json_data[f"Hp{self.index_number}"]},
             index=pd.to_datetime(json_data["datetime"], utc=True),
         )
-        data_total.index = enforce_utc_timezone(data_total.index)  # ty: ignore[no-matching-overload]
-
+        data_total.index = enforce_utc_timezone(data_total.index)
         return data_total
 
     def _read_single_file(self, file_path: str) -> pd.DataFrame:

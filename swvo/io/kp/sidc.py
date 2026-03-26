@@ -178,7 +178,7 @@ class KpSIDC(BaseIO):
             freq=timedelta(hours=3),
         )
         data_out = pd.DataFrame(index=t)
-        data_out.index = enforce_utc_timezone(data_out.index)  # ty: ignore[no-matching-overload]
+        data_out.index = enforce_utc_timezone(data_out.index)
         data_out["kp"] = np.array([np.nan] * len(t))
         data_out["file_name"] = np.array([None] * len(t))
 
@@ -288,7 +288,7 @@ class KpSIDC(BaseIO):
         df["t"] = pd.to_datetime(df["t"])
         df.index = df["t"]
         df.drop(labels=["t"], axis=1, inplace=True)
-        df.index = enforce_utc_timezone(df.index)  # ty: ignore[no-matching-overload]
+        df.index = enforce_utc_timezone(df.index)
 
         df["file_name"] = file_path
         df.loc[df["kp"].isna(), "file_name"] = None
