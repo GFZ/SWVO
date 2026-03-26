@@ -69,6 +69,7 @@ class TestSMESuperMAG:
         assert all(path.name.startswith("SuperMAG_SME_") for path in file_paths)
         assert len(time_intervals) == 32
 
+    @pytest.mark.skip(reason="SME servers are down")
     def test_download_and_process(self, sme_instance):
         sme_instance.download_and_process(datetime(2020, 1, 1), datetime(2020, 1, 2))
 
