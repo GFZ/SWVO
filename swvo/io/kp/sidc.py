@@ -78,6 +78,9 @@ class KpSIDC(BaseIO):
         if end_time is None:
             end_time = datetime.now(timezone.utc) + timedelta(days=2)
 
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
+
         if start_time >= end_time:
             msg = "start_time must be before end_time"
             logger.error(msg)
