@@ -45,7 +45,7 @@ class KpSIDC(BaseIO):
         Returns `ValueError` if necessary environment variable is not set.
     """
 
-    ENV_VAR_NAME = "RT_KP_SIDC_STREAM_DIR"
+    ENV_VAR_NAME = "FC_KP_SIDC_STREAM_DIR"
 
     URL = "https://ssa.sidc.be/prod/API/index.php?component=latest&pc=G158&psc=a"
     NAME = "kp.json"
