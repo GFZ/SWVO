@@ -48,6 +48,8 @@ This package provides tools to read, process, and analyze several key solar and 
     - SWPC: `KpSWPC`
     - Niemegk: `KpNiemegk`
     - Ensemble: `KpEnsemble`
+    - BSG: `KpBGS`
+    - SIDC: `KpSIDC`
     - Combined: `read_kp_from_multiple_models`
 
 - **Dst Index**:  
