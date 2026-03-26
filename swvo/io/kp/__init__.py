@@ -7,6 +7,7 @@ from swvo.io.kp.niemegk import KpNiemegk as KpNiemegk
 from swvo.io.kp.omni import KpOMNI as KpOMNI
 from swvo.io.kp.swpc import KpSWPC as KpSWPC
 from swvo.io.kp.sidc import KpSIDC as KpSIDC
+from swvo.io.kp.bgs import KpBGS as KpBGS
 
 # This has to be imported after the models to avoid a circular import
 from swvo.io.kp.read_kp_from_multiple_models import read_kp_from_multiple_models as read_kp_from_multiple_models  # noqa: I001
