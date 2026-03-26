@@ -276,7 +276,11 @@ def enforce_utc_timezone(time: pd.Series) -> pd.Series: ...
 def enforce_utc_timezone(time: pd.DatetimeIndex) -> pd.DatetimeIndex: ...
 
 
-def enforce_utc_timezone(time: datetime | list[datetime] | pd.Timestamp | pd.Series | pd.DatetimeIndex):
+@overload
+def enforce_utc_timezone(time: pd.Index) -> pd.Index: ...
+
+
+def enforce_utc_timezone(time: datetime | list[datetime] | pd.Timestamp | pd.Series | pd.DatetimeIndex | pd.Index):
     """
     Ensure datetime object(s) have UTC timezone information.
 
