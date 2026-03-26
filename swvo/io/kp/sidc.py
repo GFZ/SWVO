@@ -50,7 +50,6 @@ class KpSIDC(BaseIO):
     URL = "https://ssa.sidc.be/prod/API/index.php?component=latest&pc=G158&psc=a"
     NAME = "kp.json"
 
-    DAYS_TO_SAVE_EACH_FILE = 3
     LABEL = "sidc"
 
     def download_and_process(
@@ -90,17 +89,16 @@ class KpSIDC(BaseIO):
         logger.debug(f"Downloading file {self.URL} ...")
 
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
-        for file_path, time_interval in zip(file_paths, time_intervals):
+        for num, (file_path, time_interval) in enumerate(zip(file_paths, time_intervals)):
             if file_path.exists() and not reprocess_files:
                 continue
             tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
             try:
-                self._download(temporary_dir, start_time, end_time)
-
                 # check if download was successfull
-                json_file = temporary_dir / self.NAME
+                json_file = temporary_dir / f"{self.NAME}"
+                self._download(json_file, time_interval[0], time_interval[1])
                 if not json_file.exists() or json_file.stat().st_size == 0:
-                    raise FileNotFoundError(f"Error while downloading file: {self.URL + self.NAME}!")
+                    raise FileNotFoundError(f"Error while downloading file: {self.URL}!")
 
                 logger.debug("Processing file ...")
                 processed_df = self._process_single_file(json_file)
@@ -127,11 +125,11 @@ class KpSIDC(BaseIO):
     def _download(self, temporary_dir, start_time: datetime, end_time: datetime) -> None:
         response = requests.get(
             self.URL
-            + f"&dts_start={start_time.strftime('%Y-%m-%dT%H:%M:%SZ')}&dts_end={end_time.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+            + f"&dts_start={start_time.strftime('%Y-%m-%dT%H:%M:%SZ')}&dts_end={(end_time + timedelta(seconds=1)).strftime('%Y-%m-%dT%H:%M:%SZ')}"
         )
         response.raise_for_status()
 
-        with open(temporary_dir / self.NAME, "w") as f:
+        with open(temporary_dir, "w") as f:
             f.write(response.text)
 
     def read(
@@ -232,7 +230,7 @@ class KpSIDC(BaseIO):
 
         while current_time < end_of_period:
             file_path = (
-                self.data_dir / current_time.strftime("%Y/%m") / f"SIDC_KP_FORECAST_{current_time.strftime('%Y%m')}.csv"
+                self.data_dir / current_time.strftime("%Y") / f"SIDC_KP_FORECAST_{current_time.strftime('%Y%m')}.csv"
             )
             file_paths.append(file_path)
 
@@ -321,5 +319,6 @@ class KpSIDC(BaseIO):
         data.rename(columns={"start_time": "t", "value": "Kp"}, inplace=True)
         data.index = data["t"]
         data.index = enforce_utc_timezone(data.index)
+        data.drop(columns=["t"], inplace=True)
 
         return data
