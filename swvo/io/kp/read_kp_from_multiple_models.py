@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 from swvo.io.exceptions import ModelError
-from swvo.io.kp import KpEnsemble, KpNiemegk, KpOMNI, KpSWPC
+from swvo.io.kp import KpBGS, KpEnsemble, KpNiemegk, KpOMNI, KpSIDC, KpSWPC
 from swvo.io.utils import (
     any_nans,
     construct_updated_data_frame,
@@ -25,7 +25,7 @@ from swvo.io.utils import (
 
 logger = logging.getLogger(__name__)
 
-KpModel = KpEnsemble | KpNiemegk | KpOMNI | KpSWPC
+KpModel = KpEnsemble | KpNiemegk | KpOMNI | KpSWPC | KpBGS | KpSIDC
 
 logging.captureWarnings(True)
 
@@ -39,7 +39,7 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
     *,
     download: bool = False,
     recurrence: bool = False,
-    rec_model_order: Sequence[KpOMNI | KpNiemegk] | None = None,
+    rec_model_order: Sequence[KpOMNI | KpNiemegk | KpBGS] | None = None,
 ) -> pd.DataFrame | list[pd.DataFrame]:
     """Read Kp data from multiple models.
 
@@ -67,7 +67,7 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
     recurrence : bool, optional
         If True, fill missing values using 27-day recurrence from historical models (OMNI, Niemegk).
         Defaults to False.
-    rec_model_order : Sequence[KpOMNI | KpNiemegk], optional
+    rec_model_order : Sequence[KpOMNI | KpNiemegk | KpBGS], optional
         The order in which historical models will be used for 27-day recurrence filling.
         Defaults to [OMNI, Niemegk].
 
@@ -113,7 +113,7 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
 
     if recurrence:
         if rec_model_order is None:
-            rec_model_order = [m for m in model_order if isinstance(m, (KpOMNI, KpNiemegk))]
+            rec_model_order = [m for m in model_order if isinstance(m, (KpOMNI, KpNiemegk, KpBGS))]
         for i, df in enumerate(data_out):
             if not df.empty:
                 data_out[i] = _recursive_fill_27d_historical(df, download, rec_model_order)
@@ -157,7 +157,7 @@ def _read_from_model(  # noqa: PLR0913
 
     """
     # Read from historical models
-    if isinstance(model, (KpOMNI, KpNiemegk)):
+    if isinstance(model, (KpOMNI, KpNiemegk, KpBGS)):
         data_one_model = _read_historical_model(
             model,
             start_time,
@@ -167,9 +167,9 @@ def _read_from_model(  # noqa: PLR0913
         )
 
     # Forecasting models are called with synthetic now time
-    if isinstance(model, KpSWPC):
+    if isinstance(model, (KpSWPC, KpSIDC)):
         logger.info(
-            f"Reading swpc from {historical_data_cutoff_time.replace(hour=0, minute=0, second=0)} to {end_time}\noriginal historical_data_cutoff_time: {historical_data_cutoff_time}"
+            f"Reading {model.LABEL} from {historical_data_cutoff_time.replace(hour=0, minute=0, second=0)} to {end_time}\noriginal historical_data_cutoff_time: {historical_data_cutoff_time}"
         )
         data_one_model = [
             model.read(
@@ -191,18 +191,18 @@ def _read_from_model(  # noqa: PLR0913
 
 
 def _read_historical_model(
-    model: KpOMNI | KpNiemegk,
+    model: KpOMNI | KpNiemegk | KpBGS,
     start_time: datetime,
     end_time: datetime,
     historical_data_cutoff_time: datetime,
     *,
     download: bool,
 ) -> pd.DataFrame:
-    """Reads Kp data from historical models (KpOMNI or KpNiemegk) within the specified time range.
+    """Reads Kp data from historical models (KpOMNI or KpNiemegk or KpBGS) within the specified time range.
 
     Parameters
     ----------
-    model : KpOMNI | KpNiemegk
+    model : KpOMNI | KpNiemegk | KpBGS
         The historical model from which to read the data.
     start_time : datetime
         The start time of the data range.
@@ -221,10 +221,10 @@ def _read_historical_model(
     Raises
     ------
     TypeError
-        If the provided model is not an instance of KpOMNI or KpNiemegk.
+        If the provided model is not an instance of KpOMNI or KpNiemegk or KpBGS.
 
     """
-    if not isinstance(model, (KpOMNI, KpNiemegk)):
+    if not isinstance(model, (KpOMNI, KpNiemegk, KpBGS)):
         msg = "Encountered invalide model type in read historical model!"
         raise TypeError(msg)
 
@@ -355,7 +355,7 @@ def _recursive_fill_27d_historical(df, download, historical_models):
         DataFrame to fill with gaps.
     download : bool
         Download new data or not.
-    historical_models : list[KpOMNI | KpNiemegk]
+    historical_models : list[KpOMNI | KpNiemegk | KpBGS]
         List of historical models to use for filling gaps.
     value_col : str, optional
         _description_, by default "kp"
