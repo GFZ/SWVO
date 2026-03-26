@@ -18,3 +18,4 @@ tqdm>=4.67.3
 wget>=3.2
 ty
 ruff
+beautifulsoup4
