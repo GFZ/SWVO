@@ -317,7 +317,7 @@ class KpBGS(BaseIO):
             logger.error(msg)
             raise ValueError(msg)
 
-        rows = table.find_all("tr")  # ty: ignore[unresolved-attribute]
+        rows = table.find_all("tr")
         records = []
 
         for row in rows[1:]:  # skip header row

@@ -464,7 +464,7 @@ class RBMDataSet:
                 loaded_vars.append(var.var_name)
         return loaded_vars
 
-    def __eq__(self, other: RBMDataSet) -> bool:  # type :ignore[override]
+    def __eq__(self, other: RBMDataSet) -> bool:  # ty :ignore[invalid-method-override]
         if (
             self._file_loading_mode != other._file_loading_mode
             or self._satellite != other._satellite

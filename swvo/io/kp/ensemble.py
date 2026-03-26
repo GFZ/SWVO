@@ -122,7 +122,7 @@ class KpEnsemble:
                 freq=timedelta(hours=3),
             )
             data_out = pd.DataFrame(index=t)
-            data_out.index = enforce_utc_timezone(data_out.index)  # ty: ignore[no-matching-overload]
+            data_out.index = enforce_utc_timezone(data_out.index)
             data_out["kp"] = np.array([np.nan] * len(t))
             data_out = data_out.truncate(
                 before=start_time - timedelta(hours=2.9999),
@@ -144,7 +144,7 @@ class KpEnsemble:
                 df["file_name"] = file
                 df.loc[df["kp"].isna(), "file_name"] = None
 
-                df.index = enforce_utc_timezone(df.index)  # ty: ignore[no-matching-overload]
+                df.index = enforce_utc_timezone(df.index)
 
                 df = df.truncate(
                     before=start_time - timedelta(hours=2.9999),

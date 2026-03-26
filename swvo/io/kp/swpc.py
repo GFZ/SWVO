@@ -174,7 +174,7 @@ class KpSWPC(BaseIO):
             freq=timedelta(hours=3),
         )
         data_out = pd.DataFrame(index=t)
-        data_out.index = enforce_utc_timezone(data_out.index)  # ty: ignore[no-matching-overload]
+        data_out.index = enforce_utc_timezone(data_out.index)
         data_out["kp"] = np.array([np.nan] * len(t))
         data_out["file_name"] = np.array([np.nan] * len(t))
 
