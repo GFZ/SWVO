@@ -402,6 +402,21 @@ def test_dict_mode_computed_invv_property(dict_dataset):
     np.testing.assert_allclose(dict_dataset.InvV, expected_invv)
 
 
+def test_get_loaded_variables_includes_computed_variables(dict_dataset):
+    """Computed variables should be tracked once accessed."""
+    dict_dataset.MLT = np.array([0.0, 6.0, 12.0])
+    dict_dataset.InvMu = np.array([[0.1, 0.2]])
+    dict_dataset.InvK = np.array([[1.0]])
+
+    _ = dict_dataset.P
+    _ = dict_dataset.InvV
+
+    loaded_variables = dict_dataset.get_loaded_variables()
+
+    assert "P" in loaded_variables
+    assert "InvV" in loaded_variables
+
+
 def test_dict_mode_getattr_errors(dict_dataset):
     """Test error handling for unset attributes in dict mode"""
     with pytest.raises(AttributeError, match="exists in `VariableLiteral` but has not been set"):
@@ -835,3 +850,242 @@ def test_eq_different_types():
     dataset2.time = [738000.0]
 
     assert dataset1 != dataset2
+
+
+@pytest.fixture
+def mock_dataset_nc(mocker) -> RBMDataSet:
+    start_time = dt.datetime(2026, 3, 1, tzinfo=timezone.utc)
+    end_time = dt.datetime(2026, 3, 31, tzinfo=timezone.utc)
+
+    dataset = RBMDataSet(
+        start_time=start_time,
+        end_time=end_time,
+        folder_path=Path(__file__).parent / "./data/",
+        satellite=SatelliteEnum.ARASE,
+        instrument=InstrumentEnum.XEP,
+        mfm=MfmEnum.T89,
+        preferred_extension="nc",
+        verbose=True,
+    )
+
+    return dataset
+
+
+def test_get_satellite_name_nc(mock_dataset_nc: RBMDataSet):
+    """Test get_satellite_name method."""
+    assert mock_dataset_nc.get_satellite_name() == "arase"
+
+
+def test_get_satellite_and_instrument_name_nc(mock_dataset_nc: RBMDataSet):
+    """Test get_satellite_and_instrument_name method."""
+    assert mock_dataset_nc.get_satellite_and_instrument_name() == "arase_XEP"
+
+
+def test_get_print_name_nc(mock_dataset_nc: RBMDataSet):
+    """Test get_print_name method."""
+    assert mock_dataset_nc.get_print_name() == "arase XEP"
+
+
+def test_getattr_with_valid_variable_nc(mock_dataset_nc: RBMDataSet):
+    """Test __getattr__ with a valid variable."""
+    with mock.patch.object(mock_dataset_nc, "_load_variable") as _:
+        mock_dataset_nc.Flux = np.array([1.0, 2.0, 3.0])
+        result = mock_dataset_nc.Flux
+        assert isinstance(result, np.ndarray)
+        assert (result == np.array([1.0, 2.0, 3.0])).all()
+
+
+def test_getattr_with_invalid_variable_nc(mock_dataset_nc: RBMDataSet):
+    """Test __getattr__ with an invalid variable."""
+    with pytest.raises(AttributeError):
+        _ = mock_dataset_nc.NonExistentAttribute
+
+
+def test_getattr_with_similar_variable_nc(mock_dataset_nc: RBMDataSet):
+    """Test __getattr__ suggests similar variable name."""
+    with pytest.raises(AttributeError) as e:
+        _ = mock_dataset_nc.Flx
+
+    assert "Maybe you meant Flux?" in str(e.value)
+
+
+def test_computed_invv_variable_nc(mock_dataset_nc: RBMDataSet):
+    """Test computed InvV variable."""
+
+    mock_dataset_nc.InvK = np.array([[1.0, 2.0]])
+    mock_dataset_nc.InvMu = np.array([[0.1, 0.2], [0.3, 0.4]])
+
+    mock_dataset_nc._load_variable(VariableEnum.INV_V)
+
+    expected = (
+        mock_dataset_nc.InvMu
+        * (np.repeat(mock_dataset_nc.InvK[:, np.newaxis, :], mock_dataset_nc.InvMu.shape[1], axis=1) + 0.5) ** 2
+    )
+    np.testing.assert_array_equal(mock_dataset_nc.InvV, expected)
+
+
+def test_computed_p_variable_nc(mock_dataset_nc: RBMDataSet):
+    """Test computed P variable."""
+
+    mock_dataset_nc.MLT = np.array([0.0, 6.0, 12.0, 18.0])
+
+    mock_dataset_nc._load_variable(VariableEnum.P)
+
+    expected = ((mock_dataset_nc.MLT + 12) / 12 * np.pi) % (2 * np.pi)
+    np.testing.assert_array_equal(mock_dataset_nc.P, expected)
+
+
+@pytest.mark.parametrize("satellite", list(SatelliteEnum))
+def test_all_satellites_work_nc(satellite, mock_module_string):
+    """Ensure all SatelliteEnum values initialize without error."""
+    with mock.patch(f"{mock_module_string}._create_date_list"):
+        with mock.patch(f"{mock_module_string}._create_file_path_stem"):
+            with mock.patch(f"{mock_module_string}._create_file_name_stem"):
+                dataset = RBMDataSet(
+                    start_time=dt.datetime(2023, 1, 1, tzinfo=timezone.utc),
+                    end_time=dt.datetime(2023, 1, 31, tzinfo=timezone.utc),
+                    folder_path=Path("/mock/path"),
+                    satellite=satellite,
+                    instrument=InstrumentEnum.HOPE,
+                    mfm=MfmEnum.T89,
+                    preferred_extension="nc",
+                )
+                assert dataset._satellite == satellite
+
+
+@pytest.mark.parametrize("instrument", list(InstrumentEnum))
+def test_all_instruments_work_nc(instrument, mock_module_string):
+    """Ensure all InstrumentEnum values initialize without error."""
+    with mock.patch(f"{mock_module_string}._create_date_list"):
+        with mock.patch(f"{mock_module_string}._create_file_path_stem"):
+            with mock.patch(f"{mock_module_string}._create_file_name_stem"):
+                dataset = RBMDataSet(
+                    start_time=dt.datetime(2023, 1, 1, tzinfo=timezone.utc),
+                    end_time=dt.datetime(2023, 1, 31, tzinfo=timezone.utc),
+                    folder_path=Path("/mock/path"),
+                    satellite=SatelliteEnum.RBSPA,
+                    instrument=instrument,
+                    mfm=MfmEnum.T89,
+                    preferred_extension="nc",
+                )
+                assert dataset._instrument == instrument
+
+
+def test_create_date_list_monthly_nc(mock_dataset_nc: RBMDataSet):
+    """Test monthly cadence date generation."""
+    mock_dataset_nc.set_file_cadence(FileCadenceEnum.Monthly)
+    date_list = mock_dataset_nc._create_date_list()
+    assert date_list[0].month == 3
+    assert all(date.tzinfo == timezone.utc for date in date_list)
+
+
+def test_create_date_list_daily_nc(mock_dataset_nc: RBMDataSet):
+    """Test daily cadence date generation."""
+    mock_dataset_nc.set_file_cadence(FileCadenceEnum.Daily)
+    date_list = mock_dataset_nc._create_date_list()
+    assert len(date_list) > 20
+    assert all(date.tzinfo == timezone.utc for date in date_list)
+
+
+def test_file_name_stem_generation_nc(mock_dataset_nc: RBMDataSet):
+    """Test that file name stem is generated correctly."""
+    assert mock_dataset_nc._create_file_name_stem() == "arase_XEP_"
+
+
+def test_file_path_stem_dataserver_nc(mock_dataset_nc: RBMDataSet):
+    """Test correct file path stem for DataServer folder type."""
+    expected_path = Path(__file__).parent / "./data/ARASE/arase"
+    assert mock_dataset_nc._create_file_path_stem() == expected_path
+
+
+def test_invalid_cadence_raises_nc(mock_dataset_nc: RBMDataSet):
+    """Invalid cadence should raise ValueError."""
+    mock_dataset_nc._file_cadence = None
+    with pytest.raises(ValueError):
+        mock_dataset_nc._create_date_list()
+
+
+def test_invalid_folder_type_raises_nc(mock_dataset_nc: RBMDataSet):
+    """Invalid folder type should raise ValueError."""
+    mock_dataset_nc._folder_type = None
+    with pytest.raises(ValueError):
+        mock_dataset_nc._create_file_path_stem()
+
+
+def test_get_var_method_nc(mock_dataset_nc: RBMDataSet):
+    """Test get_var returns correct variable."""
+    mock_dataset_nc.Flux = np.array([4.0, 5.0])
+    result = mock_dataset_nc.get_var(VariableEnum.FLUX)
+    assert isinstance(result, np.ndarray)
+    assert (result == np.array([4.0, 5.0])).all()
+
+
+def test_load_variable_real_file_nc():
+    start_time = dt.datetime(2025, 4, 1, tzinfo=dt.timezone.utc)
+    end_time = dt.datetime(2025, 4, 30, tzinfo=dt.timezone.utc)
+
+    dataset = RBMDataSet(
+        start_time=start_time,
+        end_time=end_time,
+        folder_path=Path("path/to/real/files"),  # this does not matter for the test
+        satellite=SatelliteEnum.GOESSecondary,
+        instrument=InstrumentEnum.MAGED,
+        mfm=MfmEnum.T89,
+        preferred_extension="nc",
+        verbose=True,
+    )
+
+    dataset._load_variable(VariableEnum.ALPHA_LOCAL)
+
+    assert hasattr(dataset, "alpha_local"), "Dataset should have 'alpha_local' attribute after loading."
+    assert isinstance(dataset.alpha_local, np.ndarray), "'alpha_local' should be a NumPy array."
+    assert hasattr(dataset, "FEDU")
+
+
+def test_all_variables_in_dir_nc(mock_dataset_nc: RBMDataSet):
+    vars = [
+        "datetime",
+        "time",
+        "energy_channels",
+        "alpha_local",
+        "alpha_eq_model",
+        "alpha_eq_real",
+        "InvMu",
+        "InvMu_real",
+        "InvK",
+        "InvV",
+        "Lstar",
+        "Flux",
+        "PSD",
+        "MLT",
+        "B_SM",
+        "B_total",
+        "B_sat",
+        "xGEO",
+        "P",
+        "R0",
+        "density",
+    ]
+
+    for var in vars:
+        assert var in mock_dataset_nc.__dir__()
+
+
+def test_load_all_variables_nc(mock_dataset_nc: RBMDataSet):
+    """Test that all variables can be loaded without error."""
+    for var in VariableEnum:
+        try:
+            mock_dataset_nc._load_variable(var)
+        except Exception as e:
+            pytest.fail(f"Loading variable {var.var_name} raised an exception: {e}")
+
+
+def test_get_loaded_variables_includes_computed_variables_nc(mock_dataset_nc: RBMDataSet):
+    """Computed variables should be tracked once accessed."""
+    _ = mock_dataset_nc.P
+    _ = mock_dataset_nc.InvV
+
+    loaded_variables = mock_dataset_nc.get_loaded_variables()
+
+    assert "P" in loaded_variables
+    assert "InvV" in loaded_variables
