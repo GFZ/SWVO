@@ -1080,6 +1080,26 @@ def test_load_all_variables_nc(mock_dataset_nc: RBMDataSet):
             pytest.fail(f"Loading variable {var.var_name} raised an exception: {e}")
 
 
+def test_load_variable_netcdf_caches_file_reads(mock_dataset_nc: RBMDataSet):
+    """Repeated NetCDF loads should reuse the parsed monthly file content."""
+    datasets = {
+        "time": np.array([dt.datetime(2026, 3, 15, tzinfo=timezone.utc).timestamp()], dtype=np.int64),
+        "flux/alpha_local": np.array([[0.1, 0.2, 0.3]]),
+        "flux/FEDU": np.array([[1.0, 2.0, 3.0]]),
+    }
+
+    with mock.patch(
+        "swvo.io.RBMDataSet.RBMDataSet._read_all_datasets_netcdf",
+        return_value=datasets,
+    ) as mock_read:
+        mock_dataset_nc._load_variable(VariableEnum.ALPHA_LOCAL)
+        mock_dataset_nc._load_variable(VariableEnum.FLUX)
+
+    assert mock_read.call_count == 1
+    np.testing.assert_array_equal(mock_dataset_nc.alpha_local, datasets["flux/alpha_local"])
+    np.testing.assert_array_equal(mock_dataset_nc.Flux, datasets["flux/FEDU"])
+
+
 def test_get_loaded_variables_includes_computed_variables_nc(mock_dataset_nc: RBMDataSet):
     """Computed variables should be tracked once accessed."""
     _ = mock_dataset_nc.P
