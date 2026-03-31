@@ -228,28 +228,7 @@ class RBMDataSet:
             self._date_of_files = self._create_date_list()
             self._file_loading_mode = True
             self._enable_dict_loading = enable_dict_loading
-
-            # Setup NetCDF-specific variable lookup table if using nc format
-            if self._preferred_ext == "nc":
-                mfm_str = mfm if isinstance(mfm, str) else mfm.mfm_name
-                self.variable_lut = {
-                    "time": "time",
-                    "datetime": "datetime",
-                    "flux/FEDU": "Flux",
-                    "flux/alpha_eq": "alpha_eq_model",
-                    "flux/energy": "energy_channels",
-                    "flux/alpha_local": "alpha_local",
-                    "position/xGEO": "xGEO",
-                    "psd/PSD": "PSD",
-                    "density/density_local": "density",
-                    f"position/{mfm_str}/MLT": "MLT",
-                    f"position/{mfm_str}/R0": "R0",
-                    f"position/{mfm_str}/Lstar": "Lstar",
-                    f"position/{mfm_str}/Lm": "Lm",
-                    f"mag_field/{mfm_str}/B_local": "B_total",
-                    f"psd/{mfm_str}/inv_mu": "InvMu",
-                    f"psd/{mfm_str}/inv_K": "InvK",
-                }
+            self._netcdf_dataset_cache: dict[Path, dict[str, Any]] = {}
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._satellite}, {self._instrument}, {self._mfm})"
@@ -559,7 +538,8 @@ class RBMDataSet:
             else:
                 raise NotImplementedError
 
-            datasets = _read_all_datasets_netcdf(self._file_path_stem / file_name)
+            file_path = self._file_path_stem / file_name
+            datasets = self._get_cached_datasets_netcdf(file_path)
 
             if datasets == {}:
                 continue
@@ -615,6 +595,13 @@ class RBMDataSet:
                         setattr(self, name, loaded_var_arrs[var_name])
                 else:
                     setattr(self, rbm_var_names, loaded_var_arrs[var_name])
+
+    def _get_cached_datasets_netcdf(self, file_path: Path) -> dict[str, Any]:
+        """Return cached parsed NetCDF content for a monthly file."""
+        file_path = Path(file_path)
+        if file_path not in self._netcdf_dataset_cache:
+            self._netcdf_dataset_cache[file_path] = _read_all_datasets_netcdf(file_path)
+        return self._netcdf_dataset_cache[file_path]
 
     @classmethod
     def _get_rbm_name_for_nc(
