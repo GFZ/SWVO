@@ -204,8 +204,26 @@ def _bin_in_space(
         grid_P_1d = None
         grid_R_1d = grid_R[0, :, 0, 0]
 
-        psd_binned = np.full((psd_in.shape[0], 1, grid_R.shape[1], psd_in.shape[1], psd_in.shape[2]), 0.0)
-        number_of_observations = np.full((psd_in.shape[0], 1, grid_R.shape[1], psd_in.shape[1], psd_in.shape[2]), 0)
+        psd_binned = np.full(
+            (
+                psd_in.shape[0],
+                1,
+                grid_R.shape[1],
+                psd_in.shape[1],
+                psd_in.shape[2],
+            ),
+            0.0,
+        )
+        number_of_observations = np.full(
+            (
+                psd_in.shape[0],
+                1,
+                grid_R.shape[1],
+                psd_in.shape[1],
+                psd_in.shape[2],
+            ),
+            0,
+        )
 
     for it in range(psd_in.shape[0]):
         if np.all(np.isnan(psd_in[it, :, :])):
@@ -312,7 +330,14 @@ def _parallel_func_VK(
             V_finite = np.isfinite(V_data[it, :, K_idx_left])
             V_sorted = 1 if np.all(np.diff(V_data[it, V_finite, K_idx_left]) >= 0) else -1
 
-            V_idx_left_left = np.searchsorted(V_sorted * V_data[it, :, K_idx_left], V_sorted * V_val, side="right") - 1
+            V_idx_left_left = (
+                np.searchsorted(
+                    V_sorted * V_data[it, :, K_idx_left],
+                    V_sorted * V_val,
+                    side="right",
+                )
+                - 1
+            )
             V_idx_left_right = V_idx_left_left + 1
 
             if V_idx_left_left == -1 or V_idx_left_right >= V_data.shape[1]:
@@ -503,7 +528,12 @@ def plot_debug_figures(
         # plot satellite trajectory on PxR grid
         # [x_sat, y_sat] = pol2cart(self.P, self.R)
 
-        ax0.scatter(data_set.P[sat_time_idx], R_or_Lstar_arr[sat_time_idx], c="k", marker="D")
+        ax0.scatter(
+            data_set.P[sat_time_idx],
+            R_or_Lstar_arr[sat_time_idx],
+            c="k",
+            marker="D",
+        )
         ax0.set_ylim(1, 6.6)
         ax0.set_title("Orbit")
         ax0.set_theta_offset(np.pi)  # ty:ignore[unresolved-attribute]
