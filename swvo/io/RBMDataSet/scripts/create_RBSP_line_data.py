@@ -15,7 +15,6 @@ from swvo.io.RBMDataSet import (
     InstrumentEnum,
     MfmEnum,
     RBMDataSet,
-    RBMDataSetManager,
     SatelliteEnum,
     SatelliteLike,
     TargetType,
@@ -107,15 +106,15 @@ def create_RBSP_line_data(
 
         for i, instrument in enumerate(instruments):
             rbm_data.append(
-                RBMDataSetManager.load(
+                RBMDataSet(
+                    satellite,  # ty: ignore[invalid-argument-type]
+                    instrument,
+                    mfm,
                     start_time,
                     end_time,
                     data_server_path,
-                    satellite,
-                    instrument,
-                    mfm,
                     verbose=verbose,
-                )  # ty:ignore[no-matching-overload]
+                )
             )
 
             # strip of time dimention

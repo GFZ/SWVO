@@ -15,8 +15,7 @@ from numpy.typing import NDArray
 from scipy.interpolate import make_splrep
 from scipy.signal import find_peaks
 
-if typing.TYPE_CHECKING:
-    from swvo.io.RBMDataSet import RBMDataSet, RBMNcDataSet
+from swvo.io.RBMDataSet import RBMDataSet
 
 
 class Trajectory(NamedTuple):
@@ -57,7 +56,7 @@ def _identify_orbits(
 
 
 def identify_orbits(
-    self: RBMDataSet | RBMNcDataSet,
+    self: RBMDataSet,
     orbit_type: Literal["R", "L*"] = "R",
     minimal_distance: int = 60,
     *,

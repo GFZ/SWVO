@@ -6,16 +6,15 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 from scipy.interpolate import interp1d
 
-if TYPE_CHECKING:
-    from swvo.io.RBMDataSet import RBMDataSet, RBMNcDataSet
-    from swvo.io.RBMDataSet.identify_orbits import Trajectory
+from swvo.io.RBMDataSet import RBMDataSet
+from swvo.io.RBMDataSet.identify_orbits import Trajectory
 
 
 def _linearize_trajectories(
@@ -79,7 +78,7 @@ def _linearize_trajectories(
 
 
 def linearize_trajectories(
-    self: RBMDataSet | RBMNcDataSet,
+    self: RBMDataSet,
     trajectories: list[Trajectory],
     orbit_type: Literal["R", "L*"] = "R",
 ) -> tuple[NDArray[np.floating], list[datetime]]:
