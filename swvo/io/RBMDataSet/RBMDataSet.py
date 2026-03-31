@@ -1,6 +1,10 @@
 # SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+# SPDX-FileContributor: Bernhard Haas
+# SPDX-FileContributor: Sahil Jhawar
 #
 # SPDX-License-Identifier: Apache-2.0
+
+"""Combined RBM Dataset class supporting .mat, .pickle, and .nc file formats."""
 
 from __future__ import annotations
 
@@ -11,6 +15,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import distance
+import netCDF4
 import numpy as np
 from dateutil.relativedelta import relativedelta
 from numpy.typing import NDArray
@@ -32,6 +37,7 @@ from swvo.io.RBMDataSet import (
     VariableEnum,
     VariableLiteral,
 )
+from swvo.io.RBMDataSet.custom_enums import MfmEnumLiteral
 from swvo.io.RBMDataSet.utils import (
     get_file_path_any_format,
     join_var,
@@ -41,10 +47,47 @@ from swvo.io.RBMDataSet.utils import (
 from swvo.io.utils import enforce_utc_timezone
 
 
-class RBMDataSet:
-    """RBMDataSet class for loading and managing data.
+def _read_all_datasets_netcdf(file_path: str | Path) -> dict[str, Any]:
+    """Reads all datasets (variables) from a NetCDF file, including those in groups.
 
-    This class can load data either from files or from a dictionary.
+    This function recursively traverses all groups and variables in a NetCDF-4
+    file and stores their data in a dictionary. The key for each dataset is its
+    full hierarchical path.
+
+    Args:
+        file_path (str | Path): The path to the NetCDF file.
+
+    Returns:
+        Dict[str, Any]: A dictionary where keys are the full variable paths
+                        and values are the corresponding NumPy arrays.
+    """
+    datasets: dict[str, Any] = {}
+    file_path = Path(file_path)
+
+    def _read_all_recursively(group: netCDF4.Group | netCDF4.Dataset, path: str = ""):
+        for var_name, var_obj in group.variables.items():
+            full_path = f"{path}/{var_name}" if path else var_name
+            datasets[full_path] = var_obj[:]
+
+        for group_name, group_obj in group.groups.items():
+            new_path = f"{path}/{group_name}" if path else group_name
+            _read_all_recursively(group_obj, new_path)
+
+    if not file_path.exists():
+        print(f"File not found: {file_path}")
+        return {}
+
+    with netCDF4.Dataset(file_path, "r") as nc_file:
+        _read_all_recursively(nc_file)
+
+    return datasets
+
+
+class RBMDataSet:
+    """RBMDataSet class supporting .mat, .pickle, and .nc file formats.
+
+    This unified class handles loading RBM (Radiation Belt Model) data from multiple
+    file formats. It can load data either from files or from a dictionary.
 
     For file-based loading, provide `start_time`, `end_time`, and `folder_path`.
     For dictionary-based loading, initialize without these parameters and use `update_from_dict()`.
@@ -63,7 +106,7 @@ class RBMDataSet:
         End time for file-based loading.
     folder_path : Path, optional
         Base folder path for file-based loading.
-    preferred_extension : Literal["mat", "pickle"], optional
+    preferred_extension : Literal["mat", "pickle", "nc"], optional
         Preferred file extension for file-based loading. Default is "pickle".
     verbose : bool, optional
         Whether to print verbose output. Default is True.
@@ -128,12 +171,13 @@ class RBMDataSet:
         start_time: dt.datetime | None = None,
         end_time: dt.datetime | None = None,
         folder_path: Path | None = None,
-        preferred_extension: Literal["mat", "pickle"] = "pickle",
+        preferred_extension: Literal["mat", "pickle", "nc"] = "pickle",
         *,
         verbose: bool = True,
         enable_dict_loading: bool = False,
     ) -> None:
         self.possible_variables: list[str] = list(VariableLiteral.__args__)
+
         # Handle satellite conversion with special cases for GOES
         if isinstance(satellite, str):
             if satellite.lower() == "goesprimary":
@@ -149,11 +193,17 @@ class RBMDataSet:
         if isinstance(mfm, str):
             mfm = MfmEnum[mfm.upper()]
 
+        # Validate preferred_extension
+        if preferred_extension not in ("mat", "pickle", "nc"):
+            msg = f"preferred_extension must be 'mat', 'pickle', or 'nc', got '{preferred_extension}'"
+            raise ValueError(msg)
+
         # Store the original satellite enum for properties and other attributes
         self._satellite = satellite
         self._instrument = instrument
         self._mfm = mfm
         self._verbose = verbose
+        self._preferred_ext = preferred_extension
 
         # For dict-based loading, modify satellite properties
         if start_time is None and end_time is None and folder_path is None:
@@ -171,7 +221,6 @@ class RBMDataSet:
             self._end_time = end_time
             self._satellite = satellite
             self._folder_path = Path(folder_path)
-            self._preferred_ext = preferred_extension
             self._folder_type = self._satellite.folder_type
             self._file_path_stem = self._create_file_path_stem()
             self._file_name_stem = self._create_file_name_stem()
@@ -179,6 +228,28 @@ class RBMDataSet:
             self._date_of_files = self._create_date_list()
             self._file_loading_mode = True
             self._enable_dict_loading = enable_dict_loading
+
+            # Setup NetCDF-specific variable lookup table if using nc format
+            if self._preferred_ext == "nc":
+                mfm_str = mfm if isinstance(mfm, str) else mfm.mfm_name
+                self.variable_lut = {
+                    "time": "time",
+                    "datetime": "datetime",
+                    "flux/FEDU": "Flux",
+                    "flux/alpha_eq": "alpha_eq_model",
+                    "flux/energy": "energy_channels",
+                    "flux/alpha_local": "alpha_local",
+                    "position/xGEO": "xGEO",
+                    "psd/PSD": "PSD",
+                    "density/density_local": "density",
+                    f"position/{mfm_str}/MLT": "MLT",
+                    f"position/{mfm_str}/R0": "R0",
+                    f"position/{mfm_str}/Lstar": "Lstar",
+                    f"position/{mfm_str}/Lm": "Lm",
+                    f"mag_field/{mfm_str}/B_local": "B_total",
+                    f"psd/{mfm_str}/inv_mu": "InvMu",
+                    f"psd/{mfm_str}/inv_K": "InvK",
+                }
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._satellite}, {self._instrument}, {self._mfm})"
@@ -197,14 +268,18 @@ class RBMDataSet:
         # Handle computed properties for both modes
         if name == "P":
             if len(self.MLT) == 0:  # MLT not found
-                return np.asarray([])
-            return ((self.MLT + 12) / 12 * np.pi) % (2 * np.pi)
+                self.P = np.asarray([])
+            else:
+                self.P = ((self.MLT + 12) / 12 * np.pi) % (2 * np.pi)
+            return self.P
 
         if name == "InvV":
             if len(self.InvK) == 0 or len(self.InvMu) == 0:  # invariants not found
-                return np.asarray([])
-            inv_K_repeated = np.repeat(self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1)
-            return self.InvMu * (inv_K_repeated + 0.5) ** 2
+                self.InvV = np.asarray([])
+            else:
+                inv_K_repeated = np.repeat(self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1)
+                self.InvV = self.InvMu * (inv_K_repeated + 0.5) ** 2
+            return self.InvV
 
         # check if a sat variable is requested
         # if we find a similar word, suggest that to the user
@@ -289,7 +364,7 @@ class RBMDataSet:
         VariableNotFoundError
             If a key in the `source_dict` is not a valid `VariableLiteral`.
         RuntimeError
-            If the `RBMDataSet` is in file loading mode and dictionary loading is not enabled.
+            If the RBMDataSet is in file loading mode and dictionary loading is not enabled.
 
         """
         if self._file_loading_mode and not self._enable_dict_loading:
@@ -328,11 +403,14 @@ class RBMDataSet:
         return list(date_of_files)
 
     def _create_file_path_stem(self) -> Path:
-        # implement special cases here
-        # if self._satellite == SatelliteEnum.THEMIS:
-        #     pass
+        """Create the file path stem based on format and folder type."""
         if self._folder_type == FolderTypeEnum.DataServer:
-            return self._folder_path / self._satellite.mission / self._satellite.sat_name / "Processed_Mat_Files"
+            if self._preferred_ext == "nc":
+                # NetCDF files use a different path structure
+                return self._folder_path / self._satellite.mission / self._satellite.sat_name
+            else:
+                # .mat and .pickle files use Processed_Mat_Files subdirectory
+                return self._folder_path / self._satellite.mission / self._satellite.sat_name / "Processed_Mat_Files"
 
         if self._folder_type == FolderTypeEnum.SingleFolder:
             return self._folder_path
@@ -341,10 +419,7 @@ class RBMDataSet:
         raise ValueError(msg)
 
     def _create_file_name_stem(self) -> str:
-        # implement special cases here
-        # if self._satellite == SatelliteEnum.THEMIS:
-        #     pass
-
+        """Create the file name stem."""
         return self._satellite.sat_name + "_" + self._instrument.instrument_name + "_"
 
     def get_satellite_name(self) -> str:
@@ -370,13 +445,20 @@ class RBMDataSet:
         return self._satellite.sat_name + " " + self._instrument.instrument_name
 
     def _load_variable(self, var: Variable | VariableEnum) -> None:
+        """Load variable using format-specific loading logic."""
+        if self._preferred_ext == "nc":
+            self._load_variable_netcdf(var)
+        else:
+            self._load_variable_mat_pickle(var)
+
+    def _load_variable_mat_pickle(self, var: Variable | VariableEnum) -> None:
+        """Load variable from .mat or .pickle files."""
         loaded_var_arrs: dict[str, NDArray[np.number]] = {}
         var_names_storred: list[str] = []
 
         # computed values
         if isinstance(var, VariableEnum) and var == VariableEnum.INV_V:
             inv_K_repeated = np.repeat(self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1)
-
             self.InvV = self.InvMu * (inv_K_repeated + 0.5) ** 2
             return
 
@@ -421,10 +503,6 @@ class RBMDataSet:
             correct_time_idx = (datetimes >= self._start_time) & (datetimes <= self._end_time)
 
             for key in file_content:
-                # if key == 'time' and var not in [VariableEnum.Time, VariableEnum.DateTime]:
-                # only save time if directly requested
-                #    continue
-
                 var_arr = file_content[key]
                 if ((not isinstance(var_arr, np.ndarray)) or (not np.issubdtype(var_arr.dtype, np.number))) and (
                     key != "datetime"
@@ -456,11 +534,136 @@ class RBMDataSet:
 
             setattr(self, var_name, loaded_var_arrs[var_name])
 
+    def _load_variable_netcdf(self, var: Variable | VariableEnum) -> None:
+        """Load variable from NetCDF files."""
+        loaded_var_arrs: dict[str, NDArray[np.number]] = {}
+        var_names_stored: list[str] = []
+
+        # computed values
+        if isinstance(var, VariableEnum) and var == VariableEnum.INV_V:
+            inv_K_repeated = np.repeat(self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1)
+            self.InvV = self.InvMu * (inv_K_repeated + 0.5) ** 2
+            return
+
+        if isinstance(var, VariableEnum) and var == VariableEnum.P:
+            self.P = ((self.MLT + 12) / 12 * np.pi) % (2 * np.pi)
+            return
+
+        for date in self._date_of_files:
+            if self._folder_type == FolderTypeEnum.DataServer:
+                start_month = date.replace(day=1)
+                next_month = start_month + relativedelta(months=1, days=-1)
+                date_str = start_month.strftime("%Y%m%d") + "to" + next_month.strftime("%Y%m%d")
+
+                file_name = self._file_name_stem + date_str + "_" + self._mfm.mfm_name + ".nc"
+            else:
+                raise NotImplementedError
+
+            datasets = _read_all_datasets_netcdf(self._file_path_stem / file_name)
+
+            if datasets == {}:
+                continue
+
+            # also store python datetimes for binning
+            datetimes = typing.cast(
+                NDArray[np.object_],
+                np.asarray(
+                    [dt.datetime.fromtimestamp(t.astype(np.int64), tz=dt.timezone.utc) for t in datasets["time"]]
+                ),
+            )
+            datasets["datetime"] = datetimes
+
+            # limit in time
+            correct_time_idx = (datetimes >= self._start_time) & (datetimes <= self._end_time)
+
+            for key, var_arr in datasets.items():
+                if ((not isinstance(var_arr, np.ndarray)) or (not np.issubdtype(var_arr.dtype, np.number))) and (
+                    key != "datetime"
+                ):
+                    # var represents some strings or metadata objects; don't read them
+                    continue
+                var_arr = typing.cast("NDArray[np.number]", var_arr)
+
+                # check if var is time dependent
+                if var_arr.shape[0] == correct_time_idx.shape[0]:
+                    var_arr_trimmed = var_arr[correct_time_idx.reshape(-1), ...]
+
+                    joined_value = (
+                        join_var(loaded_var_arrs[key], var_arr_trimmed) if key in loaded_var_arrs else var_arr_trimmed
+                    )
+                else:
+                    joined_value = var_arr
+
+                loaded_var_arrs[key] = joined_value  # ty:ignore[invalid-assignment]
+
+                if key not in var_names_stored:
+                    var_names_stored.append(key)
+
+        # not a single file was found
+        if var.var_name not in var_names_stored:
+            setattr(self, var.var_name, np.asarray([]))
+
+        for var_name in var_names_stored:
+            if var_name == "datetime":
+                loaded_var_arrs[var_name] = list(loaded_var_arrs[var_name])  # ty:ignore[invalid-assignment]
+
+            rbm_var_names = self._get_rbm_name_for_nc(var_name, self._mfm.mfm_name)  # ty:ignore[invalid-argument-type]
+
+            if rbm_var_names is not None:
+                if isinstance(rbm_var_names, list):
+                    for name in rbm_var_names:
+                        setattr(self, name, loaded_var_arrs[var_name])
+                else:
+                    setattr(self, rbm_var_names, loaded_var_arrs[var_name])
+
+    @classmethod
+    def _get_rbm_name_for_nc(
+        cls, var_name: str, mag_field: MfmEnumLiteral
+    ) -> VariableLiteral | None | list[VariableLiteral]:
+        """Map NetCDF variable names to RBM variable names."""
+        match var_name:
+            case "time":
+                return "time"
+            case "datetime":
+                return "datetime"
+            case "flux/FEDU":
+                return ["Flux", "FEDU"]
+            case "flux/FEIU":
+                return ["Flux", "FEIU"]
+            case "flux/alpha_eq":
+                return "alpha_eq_model"
+            case "flux/energy":
+                return "energy_channels"
+            case "flux/alpha_local":
+                return "alpha_local"
+            case "position/xGEO":
+                return "xGEO"
+            case _ if var_name == f"position/{mag_field}/MLT":
+                return "MLT"
+            case _ if var_name == f"position/{mag_field}/R0":
+                return "R0"
+            case _ if var_name == f"position/{mag_field}/Lstar":
+                return "Lstar"
+            case _ if var_name == f"position/{mag_field}/Lm":
+                return "Lm"
+            case _ if var_name == f"mag_field/{mag_field}/B_local":
+                return "B_total"
+            case "psd/PSD":
+                return "PSD"
+            case _ if var_name == f"psd/{mag_field}/inv_mu":
+                return "InvMu"
+            case _ if var_name == f"psd/{mag_field}/inv_K":
+                return "InvK"
+            case "density/density_local":
+                return "density"
+            case _:
+                return None
+
     def get_loaded_variables(self) -> list[str]:
         """Get a list of currently loaded variable names."""
         loaded_vars = []
         for var in VariableEnum:
-            if hasattr(self, var.var_name):
+            if var.var_name in self.__dict__:
                 loaded_vars.append(var.var_name)
         return loaded_vars
 
