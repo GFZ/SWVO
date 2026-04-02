@@ -223,7 +223,7 @@ class DSTWDC(BaseIO):
            WDC Dst data.
         """
 
-        if start_time >= end_time:
+        if start_time > end_time:
             msg = "start_time must be before end_time"
             logger.error(msg)
             raise ValueError(msg)

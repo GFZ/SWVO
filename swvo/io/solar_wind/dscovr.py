@@ -185,7 +185,7 @@ class DSCOVR(BaseIO):
         AssertionError
             Raises `AssertionError` if the start time is before the end time.
         """
-        if start_time >= end_time:
+        if start_time > end_time:
             msg = "start_time must be before end_time"
             logger.error(msg)
             raise ValueError(msg)

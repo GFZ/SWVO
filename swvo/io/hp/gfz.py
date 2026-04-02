@@ -189,7 +189,7 @@ class HpGFZ(BaseIO):
         :class:`pandas.DataFrame`
             HpGFZ data for the given time range.
         """
-        if start_time >= end_time:
+        if start_time > end_time:
             msg = "start_time must be before end_time"
             logger.error(msg)
             raise ValueError(msg)

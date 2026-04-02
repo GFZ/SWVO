@@ -62,7 +62,7 @@ def read_f107_from_multiple_models(
         A data frame containing data for the requested
         period.
     """
-    if start_time >= end_time:
+    if start_time > end_time:
         msg = "start_time must be before end_time"
         raise ValueError(msg)
 

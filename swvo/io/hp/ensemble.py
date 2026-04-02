@@ -117,7 +117,7 @@ class HpEnsemble:
         start_date = start_time.replace(microsecond=0, minute=0, second=0)
         str_date = start_date.strftime("%Y%m%dT%H0000")
 
-        if start_time >= end_time:
+        if start_time > end_time:
             msg = "start_time must be before end_time"
             logger.error(msg)
             raise ValueError(msg)
@@ -203,7 +203,7 @@ class HpEnsemble:
         if end_time is not None:
             end_time = enforce_utc_timezone(end_time)
 
-        if start_time >= end_time:
+        if start_time > end_time:
             msg = "start_time must be before end_time"
             logger.error(msg)
             raise ValueError(msg)

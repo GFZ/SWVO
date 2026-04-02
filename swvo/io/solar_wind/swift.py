@@ -118,7 +118,7 @@ class SWSWIFTEnsemble:
             logger.info("Shifting start day by -1 day to account for propagation")
             start_time = start_time - timedelta(days=1)
 
-        if start_time >= end_time:
+        if start_time > end_time:
             msg = "start_time must be before end_time"
             logger.error(msg)
             raise ValueError(msg)

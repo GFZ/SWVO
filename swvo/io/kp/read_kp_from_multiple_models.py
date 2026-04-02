@@ -78,7 +78,7 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
         A data frame or a list of data frames containing data for the requested period.
 
     """
-    if start_time >= end_time:
+    if start_time > end_time:
         msg = "start_time must be before end_time"
         raise ValueError(msg)
 

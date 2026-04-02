@@ -153,7 +153,7 @@ class OMNIHighRes(BaseIO):
             "Only 1 or 5 minute cadence can be chosen for high resolution omni data."
         )
 
-        if start_time >= end_time:
+        if start_time > end_time:
             msg = "start_time must be before end_time"
             logger.error(msg)
             raise ValueError(msg)

@@ -211,7 +211,7 @@ class F107SWPC(BaseIO):
             Raises ValueError if `start_time` is `after end_time`.
         """
 
-        if start_time >= end_time:
+        if start_time > end_time:
             msg = "start_time must be before end_time"
             logger.error(msg)
             raise ValueError(msg)

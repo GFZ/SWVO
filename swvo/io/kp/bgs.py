@@ -160,7 +160,7 @@ class KpBGS(BaseIO):
         if end_time is None:
             end_time = datetime.now(timezone.utc) + timedelta(days=2)
 
-        if start_time >= end_time:
+        if start_time > end_time:
             msg = "start_time must be before end_time"
             logger.error(msg)
             raise ValueError(msg)
