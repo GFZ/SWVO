@@ -80,7 +80,9 @@ class TestHpEnsemble:
             )
 
             filename = f"FORECAST_{index_name.title()}_{str_date}_ensemble_{i + 1}.csv"
-            file_path = instance.data_dir / filename
+            file_path_yyyy_mm_dd = instance.data_dir / str_date[:4] / str_date[4:6] / str_date[6:8]
+            file_path_yyyy_mm_dd.mkdir(parents=True, exist_ok=True)
+            file_path = file_path_yyyy_mm_dd / filename
             df.to_csv(file_path, index=False, header=False)
 
         data = instance.read(current_time, current_time + timedelta(days=1))
@@ -135,8 +137,11 @@ class TestHpEnsemble:
         times = pd.date_range(start.replace(tzinfo=None), periods=10, freq=f"{instance.index_number}min")
         values = np.arange(10)
 
+        tmp_path_yyyy_mm_dd = ensemble_dir / str(start.year) / str(start.month).zfill(2) / str(start.day).zfill(2)
+        tmp_path_yyyy_mm_dd.mkdir(parents=True, exist_ok=True)
+
         self.make_csv_file(
-            ensemble_dir,
+            tmp_path_yyyy_mm_dd,
             f"FORECAST_{index_name.title()}_{str_date}_ensemble_0.csv",
             times,
             values,
@@ -168,11 +173,14 @@ class TestHpEnsemble:
         values1 = np.arange(10)
         values2 = np.arange(10, 20)
 
+        tmp_path_yyyy_mm_dd = ensemble_dir / str(start.year) / str(start.month).zfill(2) / str(start.day).zfill(2)
+        tmp_path_yyyy_mm_dd.mkdir(parents=True, exist_ok=True)
+
         self.make_csv_file(
-            ensemble_dir, f"FORECAST_{index_name.title()}_{str_date}_ensemble_0.csv", times, values1, index_name
+            tmp_path_yyyy_mm_dd, f"FORECAST_{index_name.title()}_{str_date}_ensemble_0.csv", times, values1, index_name
         )
         self.make_csv_file(
-            ensemble_dir, f"FORECAST_{index_name.title()}_{str_date}_ensemble_1.csv", times, values2, index_name
+            tmp_path_yyyy_mm_dd, f"FORECAST_{index_name.title()}_{str_date}_ensemble_1.csv", times, values2, index_name
         )
 
         result = instance.read_with_horizon(start, end, horizon)
@@ -280,7 +288,7 @@ class TestHpEnsemble:
         start = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
         end = start + timedelta(hours=1)
         horizon = 1.0 if instance_type == "hp30" else 1
-
+        ensemble_dir = ensemble_dir / str(start.year) / str(start.month).zfill(2) / str(start.day).zfill(2)
         for existing_file in ensemble_dir.glob("FORECAST_*.csv"):
             existing_file.unlink()
 

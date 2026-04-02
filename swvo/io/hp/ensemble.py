@@ -137,6 +137,9 @@ class HpEnsemble:
             hp_df.index = hp_df["t"]
             hp_df = hp_df.drop(labels=["t"], axis=1)
 
+            hp_df["file_name"] = file
+            hp_df.loc[hp_df[self.index].isna(), "file_name"] = None
+
             hp_df = hp_df.truncate(
                 before=start_time - timedelta(minutes=int(self.index_number) - 0.01),
                 after=end_time + timedelta(minutes=int(self.index_number) + 0.01),
@@ -166,12 +169,16 @@ class HpEnsemble:
         """
 
         file_list_old_name = sorted(
-            self.data_dir.glob(f"FORECAST_{self.index.title()}_{str_date}_ensemble_*.csv"),
+            self.data_dir.glob(
+                f"{str_date[:4]}/{str_date[4:6]}/{str_date[6:8]}/FORECAST_{self.index.title()}_{str_date}_ensemble_*.csv"
+            ),
             key=lambda x: int(x.stem.split("_")[-1]),
         )
 
         file_list_new_name = sorted(
-            self.data_dir.glob(f"FORECAST_{self.index.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_*.csv"),
+            self.data_dir.glob(
+                f"{str_date[:4]}/{str_date[4:6]}/{str_date[6:8]}/FORECAST_{self.index.upper()}_SWIFT_DRIVEN_swift_{str_date}_ensemble_*.csv"
+            ),
             key=lambda x: int(x.stem.split("_")[-1]),
         )
 

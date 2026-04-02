@@ -180,7 +180,7 @@ class KpEnsemble:
         )
 
         file_list_new_name = sorted(
-            self.data_dir.glob(f"FORECAST_Kp_{str_date}_ensemble_*.csv"),
+            self.data_dir.glob(f"{str_date[:4]}/{str_date[4:6]}/{str_date[6:8]}/FORECAST_Kp_{str_date}_ensemble_*.csv"),
             key=lambda x: int(x.stem.split("_")[-1]),
         )
 

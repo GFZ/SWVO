@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+
 import os
 import shutil
 from datetime import datetime, timedelta, timezone
@@ -68,10 +69,19 @@ class TestKpEnsemble:
             )
 
             filename = f"FORECAST_Kp_{str_date}_ensemble_{i + 1}.csv"
-            file_path = kp_ensemble_instance.data_dir / filename
+            file_path_yyyy_mm_dd = (
+                kp_ensemble_instance.data_dir
+                / str(current_time.year)
+                / str(current_time.month).zfill(2)
+                / str(current_time.day).zfill(2)
+            )
+            file_path_yyyy_mm_dd.mkdir(parents=True, exist_ok=True)
+            file_path = file_path_yyyy_mm_dd / filename
+            print(file_path)
             df.to_csv(file_path, index=False, header=False)
 
         data = kp_ensemble_instance.read(current_time, current_time + timedelta(days=1))
+        print(data)
 
         assert isinstance(data, list)
         assert len(data) == 3
@@ -97,7 +107,13 @@ class TestKpEnsemble:
             }
         )
         filename = f"FORECAST_Kp_{str_date}_ensemble_1.csv"
-        file_path = kp_ensemble_instance.data_dir / filename
+        file_path = (
+            kp_ensemble_instance.data_dir
+            / str(current_time.year)
+            / str(current_time.month).zfill(2)
+            / str(current_time.day).zfill(2)
+            / filename
+        )
         df.to_csv(file_path, index=False, header=False)
 
         data = kp_ensemble_instance.read(None, None)
@@ -126,8 +142,11 @@ class TestKpEnsemble:
         times = pd.date_range(start.replace(tzinfo=None), periods=10, freq="3h")
         values = np.arange(10)
 
+        tmp_path_yyyy_mm_dd = tmp_path / str(start.year) / str(start.month).zfill(2) / str(start.day).zfill(2)
+        tmp_path_yyyy_mm_dd.mkdir(parents=True, exist_ok=True)
+
         self.make_csv_file(
-            tmp_path,
+            tmp_path_yyyy_mm_dd,
             f"FORECAST_Kp_{str_date}_ensemble_0.csv",
             times,
             values,
@@ -154,8 +173,11 @@ class TestKpEnsemble:
         values1 = np.arange(10)
         values2 = np.arange(10, 20)
 
-        self.make_csv_file(tmp_path, f"FORECAST_Kp_{str_date}_ensemble_0.csv", times, values1)
-        self.make_csv_file(tmp_path, f"FORECAST_Kp_{str_date}_ensemble_1.csv", times, values2)
+        tmp_path_yyyy_mm_dd = tmp_path / str(start.year) / str(start.month).zfill(2) / str(start.day).zfill(2)
+        tmp_path_yyyy_mm_dd.mkdir(parents=True, exist_ok=True)
+
+        self.make_csv_file(tmp_path_yyyy_mm_dd, f"FORECAST_Kp_{str_date}_ensemble_0.csv", times, values1)
+        self.make_csv_file(tmp_path_yyyy_mm_dd, f"FORECAST_Kp_{str_date}_ensemble_1.csv", times, values2)
 
         result = kp_ensemble_instance.read_with_horizon(start, end, horizon)
 
@@ -185,7 +207,9 @@ class TestKpEnsemble:
         str_date = start.strftime("%Y%m%dT%H0000")
         times = pd.date_range(start.replace(tzinfo=None), periods=10, freq="3h")
         values = np.arange(10)
-        self.make_csv_file(tmp_path, f"FORECAST_Kp_{str_date}_ensemble_0.csv", times, values)
+        tmp_path_yyyy_mm_dd = tmp_path / str(start.year) / str(start.month).zfill(2) / str(start.day).zfill(2)
+        tmp_path_yyyy_mm_dd.mkdir(parents=True, exist_ok=True)
+        self.make_csv_file(tmp_path_yyyy_mm_dd, f"FORECAST_Kp_{str_date}_ensemble_0.csv", times, values)
 
         result = kp_ensemble_instance.read_with_horizon(start, end, horizon)
 
@@ -208,8 +232,10 @@ class TestKpEnsemble:
             times = pd.date_range(start.replace(tzinfo=None), periods=50, freq="3h")
             values = np.arange(len(times)) + horizon
 
+            tmp_path_yyyy_mm_dd = tmp_path / f"{str_date[:4]}/{str_date[4:6]}/{str_date[6:8]}"
+            tmp_path_yyyy_mm_dd.mkdir(parents=True, exist_ok=True)
             self.make_csv_file(
-                tmp_path,
+                tmp_path_yyyy_mm_dd,
                 f"FORECAST_Kp_{str_date}_ensemble_0.csv",
                 times,
                 values,
