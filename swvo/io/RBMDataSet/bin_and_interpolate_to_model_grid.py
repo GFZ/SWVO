@@ -152,6 +152,10 @@ def _bin_in_time(
         ),
         np.nan,
     )
+
+    if isinstance(data_time[0], np.ndarray):
+        data_time = [t[0] for t in data_time]
+
     sim_timestamps = [t.timestamp() for t in sim_time]
     data_timestamps = [t.timestamp() for t in data_time]
     time_indices = _get_time_indices(data_timestamps, _get_time_bins(sim_timestamps))
