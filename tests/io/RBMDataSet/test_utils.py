@@ -23,27 +23,27 @@ def test_join_var():
 def test_get_file_path_any_format_single_match(tmp_path: Path):
     file = tmp_path / "file.pickle"
     file.touch()
-    result = utils.get_file_path_any_format(tmp_path, "file", "pickle")
+    result = utils.get_file_path_any_format(tmp_path, "file", "pickle", nc_mode=True)
     assert result == file
 
 
 def test_get_file_path_any_format_multiple_match(tmp_path: Path):
     (tmp_path / "file.pickle").touch()
     (tmp_path / "file.mat").touch()
-    result_pickle = utils.get_file_path_any_format(tmp_path, "file", "pickle")
-    result_mat = utils.get_file_path_any_format(tmp_path, "file", "mat")
+    result_pickle = utils.get_file_path_any_format(tmp_path, "file", "pickle", nc_mode=True)
+    result_mat = utils.get_file_path_any_format(tmp_path, "file", "mat", nc_mode=True)
     assert result_pickle.name == "file.pickle"
     assert result_mat.name == "file.mat"
 
 
 def test_get_file_path_any_format_no_match(tmp_path: Path):
     (tmp_path / "nonexistent").touch()
-    result = utils.get_file_path_any_format(tmp_path, "nonexistent", "pickle")
+    result = utils.get_file_path_any_format(tmp_path, "nonexistent", "pickle", nc_mode=True)
     assert result is None
 
 
 def test_get_file_path_any_format_no_file(tmp_path: Path):
-    result = utils.get_file_path_any_format(tmp_path, "nonexistent", "pickle")
+    result = utils.get_file_path_any_format(tmp_path, "nonexistent", "pickle", nc_mode=False)
     assert result is None
 
 

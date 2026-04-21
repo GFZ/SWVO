@@ -9,13 +9,11 @@
 from __future__ import annotations
 
 import datetime as dt
-import typing
 from datetime import timedelta, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import distance
-import netCDF4
 import numpy as np
 from dateutil.relativedelta import relativedelta
 from numpy.typing import NDArray
@@ -43,44 +41,9 @@ from swvo.io.RBMDataSet.utils import (
     join_var,
     load_file_any_format,
     matlab2python,
+    read_all_datasets_netcdf,
 )
 from swvo.io.utils import enforce_utc_timezone
-
-
-def _read_all_datasets_netcdf(file_path: str | Path) -> dict[str, Any]:
-    """Reads all datasets (variables) from a NetCDF file, including those in groups.
-
-    This function recursively traverses all groups and variables in a NetCDF-4
-    file and stores their data in a dictionary. The key for each dataset is its
-    full hierarchical path.
-
-    Args:
-        file_path (str | Path): The path to the NetCDF file.
-
-    Returns:
-        Dict[str, Any]: A dictionary where keys are the full variable paths
-                        and values are the corresponding NumPy arrays.
-    """
-    datasets: dict[str, Any] = {}
-    file_path = Path(file_path)
-
-    def _read_all_recursively(group: netCDF4.Group | netCDF4.Dataset, path: str = ""):
-        for var_name, var_obj in group.variables.items():
-            full_path = f"{path}/{var_name}" if path else var_name
-            datasets[full_path] = var_obj[:]
-
-        for group_name, group_obj in group.groups.items():
-            new_path = f"{path}/{group_name}" if path else group_name
-            _read_all_recursively(group_obj, new_path)
-
-    if not file_path.exists():
-        print(f"File not found: {file_path}")
-        return {}
-
-    with netCDF4.Dataset(file_path, "r") as nc_file:
-        _read_all_recursively(nc_file)
-
-    return datasets
 
 
 class RBMDataSet:
@@ -139,7 +102,7 @@ class RBMDataSet:
 
     """
 
-    _preferred_ext: str
+    _preferred_ext: Literal["mat", "pickle", "nc"]
 
     datetime: list[dt.datetime]
     time: NDArray[np.float64]
@@ -223,6 +186,7 @@ class RBMDataSet:
             self._folder_path = Path(folder_path)
             self._folder_type = self._satellite.folder_type
             self._file_path_stem = self._create_file_path_stem()
+            self._is_nc_dataset = self._check_if_nc_dataset()
             self._file_name_stem = self._create_file_name_stem()
             self._file_cadence = self._satellite.file_cadence
             self._date_of_files = self._create_date_list()
@@ -364,6 +328,18 @@ class RBMDataSet:
     def get_var(self, var: VariableEnum) -> NDArray[np.float64]:
         return getattr(self, var.var_name)
 
+    def _check_if_nc_dataset(self) -> bool:
+        does_processed_mat_files_folder_exist = (self._file_path_stem / "Processed_Mat_Files").exists()
+
+        if does_processed_mat_files_folder_exist and self._preferred_ext in ["mat", "pickle"]:
+            return False
+        elif does_processed_mat_files_folder_exist and self._preferred_ext == "nc":
+            # if any .nc files are stored in the file_path_stem, we switch to nc mode
+            return next(self._file_path_stem.glob("*.nc"), None) is not None
+        else:
+            # if the Processed_Mat_Files folder does not exist, it is safe to assume nc mode
+            return True
+
     def _create_date_list(self) -> list[dt.datetime]:
         match self._file_cadence:
             case FileCadenceEnum.Daily:
@@ -384,12 +360,7 @@ class RBMDataSet:
     def _create_file_path_stem(self) -> Path:
         """Create the file path stem based on format and folder type."""
         if self._folder_type == FolderTypeEnum.DataServer:
-            if self._preferred_ext == "nc":
-                # NetCDF files use a different path structure
-                return self._folder_path / self._satellite.mission / self._satellite.sat_name
-            else:
-                # .mat and .pickle files use Processed_Mat_Files subdirectory
-                return self._folder_path / self._satellite.mission / self._satellite.sat_name / "Processed_Mat_Files"
+            return self._folder_path / self._satellite.mission / self._satellite.sat_name
 
         if self._folder_type == FolderTypeEnum.SingleFolder:
             return self._folder_path
@@ -424,183 +395,114 @@ class RBMDataSet:
         return self._satellite.sat_name + " " + self._instrument.instrument_name
 
     def _load_variable(self, var: Variable | VariableEnum) -> None:
-        """Load variable using format-specific loading logic."""
-        if self._preferred_ext == "nc":
-            self._load_variable_netcdf(var)
-        else:
-            self._load_variable_mat_pickle(var)
-
-    def _load_variable_mat_pickle(self, var: Variable | VariableEnum) -> None:
-        """Load variable from .mat or .pickle files."""
+        """Load variable from .mat, .pickle, or .nc files."""
         loaded_var_arrs: dict[str, NDArray[np.number]] = {}
-        var_names_storred: list[str] = []
+        var_names_stored: list[str] = []
 
-        # computed values
-        if isinstance(var, VariableEnum) and var == VariableEnum.INV_V:
-            inv_K_repeated = np.repeat(self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1)
-            self.InvV = self.InvMu * (inv_K_repeated + 0.5) ** 2
-            return
+        # 1. Handle Computed Values
+        if isinstance(var, VariableEnum):
+            if var == VariableEnum.INV_V:
+                inv_K_repeated = np.repeat(self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1)
+                self.InvV = self.InvMu * (inv_K_repeated + 0.5) ** 2
+                return
+            if var == VariableEnum.P:
+                self.P = ((self.MLT + 12) / 12 * np.pi) % (2 * np.pi)
+                return
 
-        if isinstance(var, VariableEnum) and var == VariableEnum.P:
-            self.P = ((self.MLT + 12) / 12 * np.pi) % (2 * np.pi)
-            return
-
+        # 2. Iterate through date ranges
         for date in self._date_of_files:
-            if self._folder_type == FolderTypeEnum.DataServer:
-                start_month = date.replace(day=1)
-                next_month = start_month + relativedelta(months=1, days=-1)
-                date_str = start_month.strftime("%Y%m%d") + "to" + next_month.strftime("%Y%m%d")
+            if self._folder_type != FolderTypeEnum.DataServer:
+                raise NotImplementedError("Only DataServer folder type is currently supported.")
 
-                file_name_no_format = self._file_name_stem + date_str + "_" + var.mat_file_prefix
+            # Construct date string
+            start_month = date.replace(day=1)
+            next_month = start_month + relativedelta(months=1, days=-1)
+            date_str = f"{start_month.strftime('%Y%m%d')}to{next_month.strftime('%Y%m%d')}"
 
-                if var.mat_has_B:
-                    file_name_no_format += "_n4_4_" + self._mfm.mfm_name
-
-                file_name_no_format += "_ver4"
+            # 3. Handle File Pathing & Loading based on format
+            if self._is_nc_dataset:
+                file_name = f"{self._file_name_stem}{date_str}_{self._mfm.mfm_name}.nc"
+                full_file_path = self._file_path_stem / file_name
+                file_content = self._get_cached_datasets_netcdf(full_file_path)
             else:
-                raise NotImplementedError
+                file_name_no_format = f"{self._file_name_stem}{date_str}_{var.mat_file_prefix}"
+                if var.mat_has_B:
+                    file_name_no_format += f"_n4_4_{self._mfm.mfm_name}"
+                file_name_no_format += "_ver4"
 
-            full_file_path = get_file_path_any_format(self._file_path_stem, file_name_no_format, self._preferred_ext)
+                full_file_path = get_file_path_any_format(
+                    self._file_path_stem, file_name_no_format, self._preferred_ext, self._is_nc_dataset
+                )
+                if full_file_path is None:
+                    print(f"File not found: {file_name_no_format}")
+                    continue
 
-            if full_file_path is None:
-                print(f"File not found: {self._file_path_stem}, {file_name_no_format}")
+                if self._verbose:
+                    print(f"\tLoading {full_file_path}")
+                file_content = load_file_any_format(full_file_path)
+
+            if not file_content:
                 continue
 
-            if self._verbose:
-                print(f"\tLoading {full_file_path}")
+            # 4. Process Datetimes
+            raw_times = file_content["time"]
+            if self._is_nc_dataset:
+                # NetCDF timestamp logic
+                datetimes = np.asarray(
+                    [dt.datetime.fromtimestamp(t.astype(np.int64), tz=dt.timezone.utc) for t in raw_times]
+                )
+            else:
+                # Matlab logic
+                datetimes = np.asarray([matlab2python(t) for t in raw_times])
 
-            file_content = load_file_any_format(full_file_path)
-
-            # also store python datetimes for binning
-            datetimes = typing.cast(
-                NDArray[np.object_],
-                np.asarray([matlab2python(t) for t in file_content["time"]]),
-            )
             file_content["datetime"] = datetimes
-
-            # limit in time
             correct_time_idx = (datetimes >= self._start_time) & (datetimes <= self._end_time)
 
-            for key in file_content:
-                var_arr = file_content[key]
-                if ((not isinstance(var_arr, np.ndarray)) or (not np.issubdtype(var_arr.dtype, np.number))) and (
-                    key != "datetime"
+            # 5. Filter and Join Arrays
+            for key, var_arr in file_content.items():
+                # Skip non-numeric metadata (excluding our new datetime)
+                if key != "datetime" and (
+                    not isinstance(var_arr, np.ndarray) or not np.issubdtype(var_arr.dtype, np.number)
                 ):
-                    # var represents some strings or metadata objects; don't read them
                     continue
-                var_arr = typing.cast(NDArray[np.number], var_arr)
 
-                # check if var is time dependent
+                var_arr = cast("NDArray[np.number]", var_arr)
+
+                # Time-dependent trimming
                 if var_arr.shape[0] == correct_time_idx.shape[0]:
                     var_arr = var_arr[correct_time_idx.reshape(-1), ...]
-
                     joined_value = join_var(loaded_var_arrs[key], var_arr) if key in loaded_var_arrs else var_arr
                 else:
                     joined_value = var_arr
 
-                loaded_var_arrs[key] = joined_value  # ty:ignore[invalid-assignment]
-
-                if key not in var_names_storred:
-                    var_names_storred.append(key)
-
-        # not a single file was found
-        if var.var_name not in var_names_storred:
-            setattr(self, var.var_name, np.asarray([]))
-
-        for var_name in var_names_storred:
-            if var_name == "datetime":
-                loaded_var_arrs[var_name] = list(loaded_var_arrs[var_name])  # type: ignore
-
-            setattr(self, var_name, loaded_var_arrs[var_name])
-
-    def _load_variable_netcdf(self, var: Variable | VariableEnum) -> None:
-        """Load variable from NetCDF files."""
-        loaded_var_arrs: dict[str, NDArray[np.number]] = {}
-        var_names_stored: list[str] = []
-
-        # computed values
-        if isinstance(var, VariableEnum) and var == VariableEnum.INV_V:
-            inv_K_repeated = np.repeat(self.InvK[:, np.newaxis, :], self.InvMu.shape[1], axis=1)
-            self.InvV = self.InvMu * (inv_K_repeated + 0.5) ** 2
-            return
-
-        if isinstance(var, VariableEnum) and var == VariableEnum.P:
-            self.P = ((self.MLT + 12) / 12 * np.pi) % (2 * np.pi)
-            return
-
-        for date in self._date_of_files:
-            if self._folder_type == FolderTypeEnum.DataServer:
-                start_month = date.replace(day=1)
-                next_month = start_month + relativedelta(months=1, days=-1)
-                date_str = start_month.strftime("%Y%m%d") + "to" + next_month.strftime("%Y%m%d")
-
-                file_name = self._file_name_stem + date_str + "_" + self._mfm.mfm_name + ".nc"
-            else:
-                raise NotImplementedError
-
-            file_path = self._file_path_stem / file_name
-            datasets = self._get_cached_datasets_netcdf(file_path)
-
-            if datasets == {}:
-                continue
-
-            # also store python datetimes for binning
-            datetimes = typing.cast(
-                NDArray[np.object_],
-                np.asarray(
-                    [dt.datetime.fromtimestamp(t.astype(np.int64), tz=dt.timezone.utc) for t in datasets["time"]]
-                ),
-            )
-            datasets["datetime"] = datetimes
-
-            # limit in time
-            correct_time_idx = (datetimes >= self._start_time) & (datetimes <= self._end_time)
-
-            for key, var_arr in datasets.items():
-                if ((not isinstance(var_arr, np.ndarray)) or (not np.issubdtype(var_arr.dtype, np.number))) and (
-                    key != "datetime"
-                ):
-                    # var represents some strings or metadata objects; don't read them
-                    continue
-                var_arr = typing.cast("NDArray[np.number]", var_arr)
-
-                # check if var is time dependent
-                if var_arr.shape[0] == correct_time_idx.shape[0]:
-                    var_arr_trimmed = var_arr[correct_time_idx.reshape(-1), ...]
-
-                    joined_value = (
-                        join_var(loaded_var_arrs[key], var_arr_trimmed) if key in loaded_var_arrs else var_arr_trimmed
-                    )
-                else:
-                    joined_value = var_arr
-
-                loaded_var_arrs[key] = joined_value  # ty:ignore[invalid-assignment]
-
+                loaded_var_arrs[key] = joined_value  # type: ignore
                 if key not in var_names_stored:
                     var_names_stored.append(key)
 
-        # not a single file was found
+        # 6. Final Assignment to Self
         if var.var_name not in var_names_stored:
             setattr(self, var.var_name, np.asarray([]))
 
         for var_name in var_names_stored:
-            if var_name == "datetime":
-                loaded_var_arrs[var_name] = list(loaded_var_arrs[var_name])  # ty:ignore[invalid-assignment]
+            val = list(loaded_var_arrs[var_name]) if var_name == "datetime" else loaded_var_arrs[var_name]
 
-            rbm_var_names = self._get_rbm_name_for_nc(var_name, self._mfm.mfm_name)  # ty:ignore[invalid-argument-type]
-
-            if rbm_var_names is not None:
-                if isinstance(rbm_var_names, list):
-                    for name in rbm_var_names:
-                        setattr(self, name, loaded_var_arrs[var_name])
-                else:
-                    setattr(self, rbm_var_names, loaded_var_arrs[var_name])
+            if self._is_nc_dataset:
+                # NetCDF name mapping logic
+                rbm_names = self._get_rbm_name_for_nc(var_name, self._mfm.mfm_name)  # type: ignore
+                if rbm_names:
+                    for name in rbm_names if isinstance(rbm_names, list) else [rbm_names]:
+                        setattr(self, name, val)
+            else:
+                setattr(self, var_name, val)
 
     def _get_cached_datasets_netcdf(self, file_path: Path) -> dict[str, Any]:
         """Return cached parsed NetCDF content for a monthly file."""
         file_path = Path(file_path)
         if file_path not in self._netcdf_dataset_cache:
-            self._netcdf_dataset_cache[file_path] = _read_all_datasets_netcdf(file_path)
+            if self._verbose:
+                print(f"\tLoading {file_path}")
+
+            self._netcdf_dataset_cache[file_path] = read_all_datasets_netcdf(file_path)
         return self._netcdf_dataset_cache[file_path]
 
     @classmethod

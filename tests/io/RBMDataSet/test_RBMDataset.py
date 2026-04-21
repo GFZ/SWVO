@@ -221,7 +221,7 @@ def test_file_name_stem_generation(mock_dataset: RBMDataSet):
 
 def test_file_path_stem_dataserver(mock_dataset: RBMDataSet):
     """Test correct file path stem for DataServer folder type."""
-    expected_path = Path("/mock/path/RBSP/rbspa/Processed_Mat_Files")
+    expected_path = Path("/mock/path/RBSP/rbspa")
     assert mock_dataset._create_file_path_stem() == expected_path
 
 
@@ -1089,7 +1089,7 @@ def test_load_variable_netcdf_caches_file_reads(mock_dataset_nc: RBMDataSet):
     }
 
     with mock.patch(
-        "swvo.io.RBMDataSet.RBMDataSet._read_all_datasets_netcdf",
+        "swvo.io.RBMDataSet.RBMDataSet.read_all_datasets_netcdf",
         return_value=datasets,
     ) as mock_read:
         mock_dataset_nc._load_variable(VariableEnum.ALPHA_LOCAL)
@@ -1109,3 +1109,61 @@ def test_get_loaded_variables_includes_computed_variables_nc(mock_dataset_nc: RB
 
     assert "P" in loaded_variables
     assert "InvV" in loaded_variables
+
+
+def test_is_nc_dataset(tmp_path: Path):
+    """Test if _check_if_nc_dataset is correct"""
+
+    rbm_ds = RBMDataSet(
+        "RBSPA",
+        "hope",
+        "T89",
+        dt.datetime(2013, 1, 1, tzinfo=timezone.utc),
+        dt.datetime(2013, 1, 2, tzinfo=timezone.utc),
+        folder_path=tmp_path,
+    )
+    assert rbm_ds._is_nc_dataset  # type: ignore
+
+    (rbm_ds._file_path_stem / "Processed_Mat_Files").mkdir(exist_ok=True, parents=True)  # type: ignore
+    rbm_ds = RBMDataSet(
+        "RBSPA",
+        "hope",
+        "T89",
+        dt.datetime(2013, 1, 1, tzinfo=timezone.utc),
+        dt.datetime(2013, 1, 2, tzinfo=timezone.utc),
+        folder_path=tmp_path,
+    )
+    assert not rbm_ds._is_nc_dataset  # type: ignore
+
+    (rbm_ds._file_path_stem / "file.nc").touch()  # type: ignore
+    rbm_ds = RBMDataSet(
+        "RBSPA",
+        "hope",
+        "T89",
+        dt.datetime(2013, 1, 1, tzinfo=timezone.utc),
+        dt.datetime(2013, 1, 2, tzinfo=timezone.utc),
+        folder_path=tmp_path,
+    )
+    assert not rbm_ds._is_nc_dataset  # type: ignore
+
+    rbm_ds = RBMDataSet(
+        "RBSPA",
+        "hope",
+        "T89",
+        dt.datetime(2013, 1, 1, tzinfo=timezone.utc),
+        dt.datetime(2013, 1, 2, tzinfo=timezone.utc),
+        folder_path=tmp_path,
+        preferred_extension="nc",
+    )
+    assert rbm_ds._is_nc_dataset  # type: ignore
+
+    (rbm_ds._file_path_stem / "Processed_Mat_Files").rmdir()  # type: ignore
+    rbm_ds = RBMDataSet(
+        "RBSPA",
+        "hope",
+        "T89",
+        dt.datetime(2013, 1, 1, tzinfo=timezone.utc),
+        dt.datetime(2013, 1, 2, tzinfo=timezone.utc),
+        folder_path=tmp_path,
+    )
+    assert rbm_ds._is_nc_dataset  # type: ignore
