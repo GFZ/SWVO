@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+import netCDF4
 import numpy as np
 import pandas as pd
 from mat73 import loadmat
@@ -28,8 +29,12 @@ def join_var(var1: NDArray[np.generic], var2: NDArray[np.generic]) -> NDArray[np
     return np.concatenate((var1, var2), axis=0)
 
 
-def get_file_path_any_format(folder_path: Path, file_stem: str, preferred_ext: str) -> Path | None:
+def get_file_path_any_format(folder_path: Path, file_stem: str, preferred_ext: str, nc_mode: bool) -> Path | None:
     """Get the file path for a given file stem and preferred extension."""
+
+    if not nc_mode:
+        folder_path = folder_path / "Processed_Mat_Files"
+
     pattern = re.compile(fnmatch.translate(file_stem + ".*"), re.IGNORECASE)
     try:
         all_files = [p for p in folder_path.iterdir() if pattern.match(p.name)]
@@ -69,6 +74,42 @@ def get_file_path_any_format(folder_path: Path, file_stem: str, preferred_ext: s
         )
 
     return None
+
+
+def read_all_datasets_netcdf(file_path: str | Path) -> dict[str, Any]:
+    """Reads all datasets (variables) from a NetCDF file, including those in groups.
+
+    This function recursively traverses all groups and variables in a NetCDF-4
+    file and stores their data in a dictionary. The key for each dataset is its
+    full hierarchical path.
+
+    Args:
+        file_path (str | Path): The path to the NetCDF file.
+
+    Returns:
+        Dict[str, Any]: A dictionary where keys are the full variable paths
+                        and values are the corresponding NumPy arrays.
+    """
+    datasets: dict[str, Any] = {}
+    file_path = Path(file_path)
+
+    def _read_all_recursively(group: netCDF4.Group | netCDF4.Dataset, path: str = ""):
+        for var_name, var_obj in group.variables.items():
+            full_path = f"{path}/{var_name}" if path else var_name
+            datasets[full_path] = var_obj[:]
+
+        for group_name, group_obj in group.groups.items():
+            new_path = f"{path}/{group_name}" if path else group_name
+            _read_all_recursively(group_obj, new_path)
+
+    if not file_path.exists():
+        print(f"File not found: {file_path}")
+        return {}
+
+    with netCDF4.Dataset(file_path, "r") as nc_file:
+        _read_all_recursively(nc_file)
+
+    return datasets
 
 
 def load_file_any_format(file_path: Path) -> dict[str, Any]:
