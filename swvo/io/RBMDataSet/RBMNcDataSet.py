@@ -122,7 +122,6 @@ class RBMNcDataSet(RBMDataSet):
             "position/xGEO": "xGEO",
             "psd/PSD": "PSD",
             "density/density_local": "density",
-
             f"position/{mfm_str}/MLT": "MLT",
             f"position/{mfm_str}/R0": "R0",
             f"position/{mfm_str}/Lstar": "Lstar",

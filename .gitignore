@@ -30,3 +30,4 @@ docs/_build/*
 docs/api/*
 .nfs*
 .env
+uv.lock

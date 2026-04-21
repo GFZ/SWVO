@@ -262,6 +262,7 @@ def test_load_variable_real_file():
     assert isinstance(dataset.alpha_local, np.ndarray), "'alpha_local' should be a NumPy array."
     assert hasattr(dataset, "FEDU")
 
+
 def test_all_variables_in_dir(mock_dataset: RBMNcDataSet):
     vars = [
         "datetime",
