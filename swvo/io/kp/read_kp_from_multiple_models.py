@@ -267,9 +267,9 @@ def _read_latest_ensemble_files(
         A list of data frames containing ensemble data for the specified range.
     """
     target_time = historical_data_cutoff_time
-    data_one_model = pd.DataFrame(data={"kp": []})
+    data_one_model = [pd.DataFrame(data={"kp": []})]
 
-    while target_time > (historical_data_cutoff_time - timedelta(days=3)):
+    while target_time > (historical_data_cutoff_time - timedelta(days=3)) and target_time < end_time:
         target_time = target_time.replace(minute=0, second=0)
         try:
             with warnings.catch_warnings():

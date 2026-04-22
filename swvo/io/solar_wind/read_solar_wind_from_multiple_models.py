@@ -341,7 +341,7 @@ def _read_latest_ensemble_files(
     target_time = min(historical_data_cutoff_time, end_time)
     data_one_model = []
 
-    while target_time > (historical_data_cutoff_time - timedelta(days=5)):
+    while target_time > (historical_data_cutoff_time - timedelta(days=5)) and target_time < end_time:
         try:
             data_one_model = model.read(target_time, end_time)
         except Exception as e:

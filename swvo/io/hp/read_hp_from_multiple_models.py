@@ -235,9 +235,9 @@ def _read_latest_ensemble_files(
     """
     target_time = historical_data_cutoff_time
 
-    data_one_model = pd.DataFrame(data={hp_index: []})
+    data_one_model = [pd.DataFrame(data={hp_index: []})]
 
-    while target_time > (historical_data_cutoff_time - timedelta(days=3)):
+    while target_time > (historical_data_cutoff_time - timedelta(days=3)) and target_time < end_time:
         # ONLY READ MIDNIGHT FILE FOR NOW; OTHER FILES BREAK
         target_time = target_time.replace(hour=0, minute=0, second=0)
 
