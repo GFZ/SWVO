@@ -103,9 +103,8 @@ To install the package, run the following command:
 `uv venv`
 
 ```bash
-source .venv/bin/activate
-python -m ensurepip --upgrade
-uv pip install --upgrade pip
+uv venv venv --python 3.11 --seed
+source venv/bin/activate
 uv pip install -e .
 ```
 
