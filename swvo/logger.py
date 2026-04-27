@@ -46,20 +46,19 @@ def setup_logging(level: str = "INFO", log_file: Optional[Path] = None, file_mod
 
     # Configure root logger so all loggers inherit the formatting
     root_logger = logging.getLogger()
+    root_logger.setLevel(level)
 
-    # Check if already configured
-    if any(isinstance(h, logging.StreamHandler) for h in root_logger.handlers):
-        return
-
-    # Console handler with colors
     log_format = "[%(levelname)-8s] %(asctime)s - %(name)s:%(lineno)d - %(message)s"
     datefmt = "%Y-%m-%d %H:%M:%S"
 
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(_ColorFormatter(log_format, datefmt=datefmt))
-
-    root_logger.setLevel(level)
-    root_logger.addHandler(console_handler)
+    if any(
+        isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler) for h in root_logger.handlers
+    ):
+        pass
+    else:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(_ColorFormatter(log_format, datefmt=datefmt))
+        root_logger.addHandler(console_handler)
 
     if log_file:
         file_handler = logging.FileHandler(log_file, mode=file_mode)
