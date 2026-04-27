@@ -353,6 +353,10 @@ def _read_latest_ensemble_files(
             target_time -= timedelta(days=1)
             continue
 
+        elif len(data_one_model) == 1:
+            target_time -= timedelta(days=1)
+            continue
+
         data_one_model = _interpolate_to_common_indices(
             target_time, end_time, historical_data_cutoff_time, data_one_model
         )
