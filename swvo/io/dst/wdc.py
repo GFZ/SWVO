@@ -8,7 +8,6 @@ Module for handling WDC Dst data.
 
 import logging
 import re
-import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
@@ -92,6 +91,9 @@ class DSTWDC(BaseIO):
             try:
                 logger.debug(f"Downloading file {URL} ...")
                 response = requests.get(URL)
+                if response.status_code == 404:
+                    logger.warning(f"WDC Dst data not found at {URL}")
+                    continue
                 response.raise_for_status()
                 data = response.text.splitlines()
                 with open(temporary_dir / filename, "w") as file:
@@ -249,8 +251,12 @@ class DSTWDC(BaseIO):
                 if download:
                     self.download_and_process(start_time, end_time)
                 else:
-                    warnings.warn(f"File {file_path} not found")
+                    logger.warning(f"File {file_path} not found")
                     continue
+
+            if not file_path.exists():
+                logger.warning(f"File {file_path} not found, filling with NaNs")
+                continue
 
             df_one_file = self._read_single_file(file_path)
             data_out = df_one_file.combine_first(data_out)

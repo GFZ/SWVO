@@ -84,8 +84,14 @@ def read_dst_from_multiple_models(
             raise ModelError(f"Unknown or incompatible model: {type(model).__name__}")
         logger.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
         data_one_model = model.read(start_time, end_time, download=download)
-        index_range = pd.date_range(start=historical_data_cutoff_time, end=end_time, freq="h", name="t")
-        data_one_model = data_one_model.reindex(data_one_model.index.union(index_range))
+        data_one_model = data_one_model.loc[~data_one_model.index.duplicated(keep="first")]
+        index_range = pd.date_range(
+            start=pd.Timestamp(start_time).ceil("h"),
+            end=pd.Timestamp(end_time).floor("h"),
+            freq="h",
+            name="t",
+        )
+        data_one_model = data_one_model.reindex(index_range)
 
         data_one_model.loc[data_one_model.index > historical_data_cutoff_time, "dst"] = np.nan
         data_one_model = data_one_model.fillna({"file_name": np.nan})

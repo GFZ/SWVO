@@ -79,6 +79,21 @@ class TestReadDSTFromMultipleModels:
         assert data.index.min() >= start
         assert data.index.max() <= end
 
+    def test_non_hourly_cutoff_does_not_add_timestamps(self, sample_times):
+        start = datetime(2024, 11, 22, 6, tzinfo=timezone.utc)
+        end = datetime(2024, 11, 22, 12, tzinfo=timezone.utc)
+        cutoff = datetime(2024, 11, 22, 8, 17, 1, 881581, tzinfo=timezone.utc)
+
+        data = read_dst_from_multiple_models(
+            start_time=start,
+            end_time=end,
+            model_order=[DSTOMNI(), DSTWDC()],
+            historical_data_cutoff_time=cutoff,
+        )
+
+        expected_index = pd.date_range(start=start, end=end, freq="h", name="t")
+        pd.testing.assert_index_equal(data.index, expected_index)
+
     def test_invalid_time_range(self, sample_times):
         with pytest.raises(ValueError):
             read_dst_from_multiple_models(

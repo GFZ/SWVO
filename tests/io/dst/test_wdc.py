@@ -4,9 +4,9 @@
 
 # ruff: noqa: S101
 
+import logging
 import os
 import shutil
-import warnings
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
@@ -82,6 +82,22 @@ DAY
         data = pd.read_csv(expected_files[0])
         assert "dst" in data.columns
 
+    def test_download_and_process_warns_on_404(self, dst_instance, caplog):
+        class MockResponse:
+            status_code = 404
+            text = ""
+
+            def raise_for_status(self):
+                raise AssertionError("raise_for_status should not be called for 404 responses")
+
+        with patch("swvo.io.dst.wdc.requests.get", return_value=MockResponse()):
+            with caplog.at_level(logging.WARNING, logger="py.warnings"):
+                dst_instance.download_and_process(datetime(2025, 1, 1), datetime(2025, 1, 2))
+
+        assert "WDC Dst data not found" in caplog.text
+        expected_file = MOCK_DATA_PATH / "2025" / "WDC_DST_202501.csv"
+        assert not expected_file.exists()
+
     def test_process_single_file(self, dst_instance, sample_dst_data):
         test_file = MOCK_DATA_PATH / "test_dst.txt"
         test_file.parent.mkdir(exist_ok=True)
@@ -95,18 +111,32 @@ DAY
         assert "dst" in data.columns
         assert len(data) == 72
 
-    def test_read_with_no_data(self, dst_instance):
+    def test_read_with_no_data(self, dst_instance, caplog):
         start_time = datetime(2020, 1, 1)
         end_time = datetime(2020, 12, 31)
 
-        with warnings.catch_warnings(record=True) as w:
+        with caplog.at_level(logging.WARNING, logger="py.warnings"):
             df = dst_instance.read(start_time, end_time, download=False)
 
-            assert "WDC_DST_202012.csv not found" in str(w[-1].message)
-            assert isinstance(df, pd.DataFrame)
-            assert len(df) == 8761
-            assert all(df["dst"].isna())
-            assert all(df["file_name"].isnull())
+        assert "WDC_DST_202012.csv not found" in caplog.text
+        assert isinstance(df, pd.DataFrame)
+        assert len(df) == 8761
+        assert all(df["dst"].isna())
+        assert all(df["file_name"].isnull())
+
+    def test_read_with_download_missing_file_fills_nans(self, dst_instance, caplog):
+        start_time = datetime(2026, 1, 1)
+        end_time = datetime(2026, 1, 2)
+
+        with patch.object(dst_instance, "download_and_process", return_value=None):
+            with caplog.at_level(logging.WARNING, logger="py.warnings"):
+                df = dst_instance.read(start_time, end_time, download=True)
+
+        assert "filling with NaNs" in caplog.text
+        assert isinstance(df, pd.DataFrame)
+        assert len(df) == 25
+        assert all(df["dst"].isna())
+        assert all(df["file_name"].isnull())
 
     def test_read_invalid_time_range(self, dst_instance):
         start_time = datetime(2020, 12, 31)
@@ -136,9 +166,9 @@ DAY
         assert all(col in data.columns for col in ["dst"])
 
     @pytest.mark.parametrize("test_year", [2019, 2025])
-    def test_read_missing_years_warning(self, dst_instance, test_year):
+    def test_read_missing_years_warning(self, dst_instance, test_year, caplog):
         start_time = datetime(test_year, 1, 1)
         end_time = datetime(test_year, 1, 31)
-        with warnings.catch_warnings(record=True) as w:
+        with caplog.at_level(logging.WARNING, logger="py.warnings"):
             dst_instance.read(start_time, end_time, download=False)
-            assert f"WDC_DST_{test_year}01.csv not found" in str(w[-1].message)
+        assert f"WDC_DST_{test_year}01.csv not found" in caplog.text
