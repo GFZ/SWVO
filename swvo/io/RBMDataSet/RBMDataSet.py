@@ -134,7 +134,7 @@ class RBMDataSet:
         start_time: dt.datetime | None = None,
         end_time: dt.datetime | None = None,
         folder_path: Path | None = None,
-        preferred_extension: Literal["mat", "pickle", "nc"] = "pickle",
+        preferred_extension: Literal["mat", "pickle", "nc"] = "nc",
         *,
         verbose: bool = True,
         enable_dict_loading: bool = False,

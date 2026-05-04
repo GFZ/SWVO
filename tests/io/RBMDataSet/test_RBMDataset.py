@@ -1121,6 +1121,7 @@ def test_is_nc_dataset(tmp_path: Path):
         dt.datetime(2013, 1, 1, tzinfo=timezone.utc),
         dt.datetime(2013, 1, 2, tzinfo=timezone.utc),
         folder_path=tmp_path,
+        preferred_extension="pickle",
     )
     assert rbm_ds._is_nc_dataset  # type: ignore
 
@@ -1132,6 +1133,7 @@ def test_is_nc_dataset(tmp_path: Path):
         dt.datetime(2013, 1, 1, tzinfo=timezone.utc),
         dt.datetime(2013, 1, 2, tzinfo=timezone.utc),
         folder_path=tmp_path,
+        preferred_extension="pickle",
     )
     assert not rbm_ds._is_nc_dataset  # type: ignore
 
@@ -1143,6 +1145,7 @@ def test_is_nc_dataset(tmp_path: Path):
         dt.datetime(2013, 1, 1, tzinfo=timezone.utc),
         dt.datetime(2013, 1, 2, tzinfo=timezone.utc),
         folder_path=tmp_path,
+        preferred_extension="pickle",
     )
     assert not rbm_ds._is_nc_dataset  # type: ignore
 
