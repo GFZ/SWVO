@@ -52,6 +52,7 @@ def mock_dataset():
                 folder_path=Path("/mock/path"),
                 preferred_extension="pickle",
                 verbose=False,
+                dataorg=True,
             )
 
             return dataset
@@ -76,6 +77,7 @@ def test_init_datetime_timezone(mock_module_string):
             end_time=end_time,
             folder_path=Path("/mock/path"),
             preferred_extension="pickle",
+            dataorg=True,
         )
 
         assert dataset._start_time.tzinfo == timezone.utc
@@ -110,6 +112,7 @@ def test_satellite_string_input(mock_module_string):
                     end_time=dt.datetime(2023, 1, 31, tzinfo=timezone.utc),
                     folder_path=Path("/mock/path"),
                     preferred_extension="pickle",
+                    dataorg=True,
                 )
 
                 assert dataset._satellite == SatelliteEnum.RBSPA
@@ -260,6 +263,7 @@ def test_load_variable_real_file():
         folder_path=Path("path/to/real/files"),  # this does not matter for the test
         preferred_extension="pickle",
         verbose=True,
+        dataorg=True,
     )
 
     dataset._load_variable(VariableEnum.ALPHA_LOCAL)
@@ -1111,43 +1115,8 @@ def test_get_loaded_variables_includes_computed_variables_nc(mock_dataset_nc: RB
     assert "InvV" in loaded_variables
 
 
-def test_is_nc_dataset(tmp_path: Path):
+def test_is_monthly_dataset(tmp_path: Path):
     """Test if _check_if_nc_dataset is correct"""
-
-    rbm_ds = RBMDataSet(
-        "RBSPA",
-        "hope",
-        "T89",
-        dt.datetime(2013, 1, 1, tzinfo=timezone.utc),
-        dt.datetime(2013, 1, 2, tzinfo=timezone.utc),
-        folder_path=tmp_path,
-        preferred_extension="pickle",
-    )
-    assert rbm_ds._is_nc_dataset  # type: ignore
-
-    (rbm_ds._file_path_stem / "Processed_Mat_Files").mkdir(exist_ok=True, parents=True)  # type: ignore
-    rbm_ds = RBMDataSet(
-        "RBSPA",
-        "hope",
-        "T89",
-        dt.datetime(2013, 1, 1, tzinfo=timezone.utc),
-        dt.datetime(2013, 1, 2, tzinfo=timezone.utc),
-        folder_path=tmp_path,
-        preferred_extension="pickle",
-    )
-    assert not rbm_ds._is_nc_dataset  # type: ignore
-
-    (rbm_ds._file_path_stem / "file.nc").touch()  # type: ignore
-    rbm_ds = RBMDataSet(
-        "RBSPA",
-        "hope",
-        "T89",
-        dt.datetime(2013, 1, 1, tzinfo=timezone.utc),
-        dt.datetime(2013, 1, 2, tzinfo=timezone.utc),
-        folder_path=tmp_path,
-        preferred_extension="pickle",
-    )
-    assert not rbm_ds._is_nc_dataset  # type: ignore
 
     rbm_ds = RBMDataSet(
         "RBSPA",
@@ -1158,7 +1127,44 @@ def test_is_nc_dataset(tmp_path: Path):
         folder_path=tmp_path,
         preferred_extension="nc",
     )
-    assert rbm_ds._is_nc_dataset  # type: ignore
+    assert rbm_ds._is_monthly_dataset  # type: ignore
+
+    (rbm_ds._file_path_stem / "Processed_Mat_Files").mkdir(exist_ok=True, parents=True)  # type: ignore
+    rbm_ds = RBMDataSet(
+        "RBSPA",
+        "hope",
+        "T89",
+        dt.datetime(2013, 1, 1, tzinfo=timezone.utc),
+        dt.datetime(2013, 1, 2, tzinfo=timezone.utc),
+        folder_path=tmp_path,
+        preferred_extension="pickle",
+        dataorg=True,
+    )
+    assert not rbm_ds._is_monthly_dataset  # type: ignore
+
+    (rbm_ds._file_path_stem / "file.nc").touch()  # type: ignore
+    rbm_ds = RBMDataSet(
+        "RBSPA",
+        "hope",
+        "T89",
+        dt.datetime(2013, 1, 1, tzinfo=timezone.utc),
+        dt.datetime(2013, 1, 2, tzinfo=timezone.utc),
+        folder_path=tmp_path,
+        preferred_extension="pickle",
+        dataorg=True,
+    )
+    assert not rbm_ds._is_monthly_dataset  # type: ignore
+
+    rbm_ds = RBMDataSet(
+        "RBSPA",
+        "hope",
+        "T89",
+        dt.datetime(2013, 1, 1, tzinfo=timezone.utc),
+        dt.datetime(2013, 1, 2, tzinfo=timezone.utc),
+        folder_path=tmp_path,
+        preferred_extension="h5",
+    )
+    assert rbm_ds._is_monthly_dataset  # type: ignore
 
     (rbm_ds._file_path_stem / "Processed_Mat_Files").rmdir()  # type: ignore
     rbm_ds = RBMDataSet(
@@ -1168,5 +1174,6 @@ def test_is_nc_dataset(tmp_path: Path):
         dt.datetime(2013, 1, 1, tzinfo=timezone.utc),
         dt.datetime(2013, 1, 2, tzinfo=timezone.utc),
         folder_path=tmp_path,
+        preferred_extension="cdf",
     )
-    assert rbm_ds._is_nc_dataset  # type: ignore
+    assert rbm_ds._is_monthly_dataset  # type: ignore
