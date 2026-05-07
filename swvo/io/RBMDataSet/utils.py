@@ -51,7 +51,6 @@ def get_file_path_any_format(folder_path: Path, file_stem: str, preferred_ext: s
 
     if len(all_files) >= 1:
         extensions_found = [file.suffix[1:] for file in all_files]
-        print(f"{preferred_ext=}, {extensions_found=}")
         if len(all_files) > 1:
             if preferred_ext in extensions_found:
                 logger.warning(
