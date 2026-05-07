@@ -249,16 +249,17 @@ class RBMDataSet:
             return getattr(self, name)
 
         if not self._file_loading_mode and name in self.possible_variables:
-            raise AttributeError(
-                f"Attribute '{name}' exists in `VariableLiteral` but has not been set. "
-                "Call `update_from_dict()` before accessing it."
-            )
+            msg = f"Attribute '{name}' exists in `VariableLiteral` but has not been set. Call `update_from_dict()` before accessing it."
+            logger.error(msg)
+            raise AttributeError(msg)
 
         if levenstein_info["min_distance"] <= 2:
             msg = f"{self.__class__.__name__} object has no attribute {name}. Maybe you meant {levenstein_info['var_name']}?"
+        elif name == "custom":
+            msg = f"{self.__class__.__name__} object might have custom variables. However, to access them, you first have to load any of the standard variables to trigger the loading process. After that, custom variables can be accessed via `.custom['custom_var_name']`."
         else:
             msg = f"{self.__class__.__name__} object has no attribute {name}"
-
+        logger.error(msg)
         raise AttributeError(msg)
 
     def load(self, name_or_var: str | VariableEnum) -> None:
@@ -482,6 +483,10 @@ class RBMDataSet:
             raw_times = file_content["time"]
             if self._is_monthly_dataset and self._preferred_ext in ["nc", "h5", "cdf", "mat"]:
                 # NetCDF/HDF5/CDF timestamp logic
+                if self._preferred_ext == "mat":
+                    logging.info(
+                        "Assuming time variable in .mat files is in POSIX timestamp format (seconds since 1970-01-01T00:00:00Z)"
+                    )
                 datetimes = np.asarray(
                     [dt.datetime.fromtimestamp(t.astype(np.int64), tz=dt.timezone.utc) for t in raw_times]
                 )
@@ -520,7 +525,17 @@ class RBMDataSet:
         for var_name in var_names_stored:
             val = list(loaded_var_arrs[var_name]) if var_name == "datetime" else loaded_var_arrs[var_name]
 
-            if self._is_monthly_dataset and self._preferred_ext in ["nc", "h5", "cdf"]:
+            if self._is_monthly_dataset and self._preferred_ext in ["nc", "h5", "cdf", "mat"]:
+                if var_name.startswith("custom/"):
+                    custom_key = var_name.split("/", 1)[1]
+                    if custom_key:
+                        custom_dict = self.__dict__.get("custom")
+                        if not isinstance(custom_dict, dict):
+                            custom_dict = {}
+                        custom_dict[custom_key] = val
+                        setattr(self, "custom", custom_dict)
+                    continue
+
                 # NetCDF/HDF5/CDF name mapping logic
                 rbm_names = self._get_rbm_name_for_nc(var_name, self._mfm.mfm_name)  # type: ignore
                 if rbm_names:

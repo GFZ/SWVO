@@ -135,7 +135,7 @@ def interp_flux(
         self.Flux,
         self.energy_channels,
         self.alpha_eq_model,
-        targets,
+        targets,  # ty:ignore[invalid-argument-type]
     )
 
     with Pool(n_threads) as p:
@@ -308,7 +308,7 @@ def interp_psd(self: RBMDataSet,
     _ = self.PSD; _ = self.InvMu; _ = self.InvK
 
     # parallel over time (same pattern as interp_flux)
-    func = partial(_interp_psd_parallel, self.PSD, self.InvMu, self.InvK, targets)
+    func = partial(_interp_psd_parallel, self.PSD, self.InvMu, self.InvK, targets)  # ty:ignore[invalid-argument-type]
 
     with Pool(n_threads) as p:
         rs = p.map_async(func, range(len(self.time)))

@@ -135,7 +135,7 @@ def create_RBSP_line_data(
 
             for i, instrument in enumerate(instruments):
                 energy_offsets[i] = np.nanmin(
-                    np.abs(rbm_data[i].energy_channels_no_time - target_en_single),
+                    np.abs(rbm_data[i].energy_channels_no_time - target_en_single),  # ty:ignore[unsupported-operator]
                     axis=None,
                 )
 
@@ -163,7 +163,7 @@ def create_RBSP_line_data(
                         rbm_data_set_result.line_data_energy = np.empty((len(target_en),))  # ty:ignore[invalid-argument-type, unresolved-attribute]
                         rbm_data_set_result.line_data_alpha_local = np.empty((len(target_al),))  # ty:ignore[invalid-argument-type, unresolved-attribute]
 
-            energy_offsets_relative = energy_offsets / target_en_single
+            energy_offsets_relative = energy_offsets / target_en_single  # ty:ignore[unsupported-operator]
             if np.all(np.abs(energy_offsets_relative) > energy_offset_threshold):
                 raise ValueError(
                     f"For the given energy target ({target_en_single:.2e} MeV), no suitable energy channel was found for a threshold of {energy_offset_threshold:.02f}!"
@@ -178,7 +178,7 @@ def create_RBSP_line_data(
                 )
 
             closest_en_idx = np.nanargmin(
-                np.abs(rbm_data[min_offset_instrument].energy_channels_no_time - target_en_single)
+                np.abs(rbm_data[min_offset_instrument].energy_channels_no_time - target_en_single)  # ty:ignore[unsupported-operator]
             )
             rbm_data_set_result.line_data_energy[e] = rbm_data[min_offset_instrument].energy_channels_no_time[
                 closest_en_idx
@@ -199,7 +199,7 @@ def create_RBSP_line_data(
                 else:
                     rbm_data_set_result.line_data_flux[:, e] = np.squeeze(
                         rbm_data[min_offset_instrument].interp_flux(
-                            target_en_single,
+                            target_en_single,  # ty:ignore[invalid-argument-type]
                             target_al[e],  # ty:ignore[not-subscriptable]
                             TargetType.TargetPairs,
                         )
@@ -208,7 +208,7 @@ def create_RBSP_line_data(
             elif target_type == TargetType.TargetMeshGrid:
                 for a, target_al_single in enumerate(target_al):
                     closest_al_idx = np.nanargmin(
-                        np.abs(rbm_data[min_offset_instrument].alpha_local_no_time - target_al_single)
+                        np.abs(rbm_data[min_offset_instrument].alpha_local_no_time - target_al_single)  # ty:ignore[unsupported-operator]
                     )
                     rbm_data_set_result.line_data_alpha_local[a] = rbm_data[min_offset_instrument].alpha_local_no_time[
                         closest_al_idx
@@ -221,8 +221,8 @@ def create_RBSP_line_data(
                     else:
                         rbm_data_set_result.line_data_flux[:, e, a] = np.squeeze(
                             rbm_data[min_offset_instrument].interp_flux(
-                                target_en_single,
-                                target_al_single,
+                                target_en_single,  # ty:ignore[invalid-argument-type]
+                                target_al_single,  # ty:ignore[invalid-argument-type]
                                 TargetType.TargetPairs,
                             )
                         )

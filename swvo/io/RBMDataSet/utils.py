@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+import cdflib
 import netCDF4
 import numpy as np
 import pandas as pd
@@ -161,19 +162,31 @@ def read_all_datasets_h5(file_path: str | Path) -> dict[str, Any]:
 
 
 def read_all_datasets_cdf(file_path: str | Path) -> dict[str, Any]:
-    """Reads all datasets (variables) from a CDF file, including those in groups.
+    """Reads all datasets (variables) from a CDF file.
 
-    This function recursively traverses all groups and variables in a CDF file
-    and stores their data in a dictionary. The key for each dataset is its full
-    hierarchical path.
+    This function loads all zVariables and rVariables in a CDF file and stores
+    their data in a dictionary keyed by variable name.
 
     Args:
         file_path (str | Path): The path to the CDF file.
     Returns:
-        Dict[str, Any]: A dictionary where keys are the full variable paths
-                        and values are the corresponding NumPy arrays.
+        Dict[str, Any]: A dictionary where keys are the variable names and
+                        values are the corresponding NumPy arrays.
     """
-    pass
+    datasets: dict[str, Any] = {}
+    file_path = Path(file_path)
+
+    if not file_path.exists():
+        logger.warning(f"File not found: {file_path}")
+        return {}
+
+    with cdflib.CDF(file_path) as cdf_file:
+        info = cdf_file.cdf_info()
+        var_names = list(info.zVariables) + list(info.rVariables)
+        for var_name in var_names:
+            datasets[var_name] = cdf_file.varget(var_name)
+
+    return datasets
 
 
 def load_file_any_format(file_path: Path) -> dict[str, Any]:
