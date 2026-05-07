@@ -19,3 +19,6 @@ wget>=3.2
 ty
 ruff
 beautifulsoup4
+h5py
+cdflib
+netcdf4
