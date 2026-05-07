@@ -18,6 +18,7 @@ TEST_DIR = Path("test_data")
 DATA_DIR = TEST_DIR / "mock_kp_sidc"
 
 
+@pytest.mark.skip(reason="SIDC data source is currently unavailable, so these tests cannot be run.")
 class TestKpSIDC:
     @pytest.fixture(scope="session", autouse=True)
     def setup_and_cleanup(self):
