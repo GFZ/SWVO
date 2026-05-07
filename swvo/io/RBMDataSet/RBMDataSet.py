@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+import warnings
 from datetime import timedelta, timezone
 from pathlib import Path
 from typing import Any, Literal, Optional, cast
@@ -164,6 +165,12 @@ class RBMDataSet:
         if isinstance(mfm, str):
             mfm = MfmEnum[mfm.upper()]
 
+        if preferred_extension == "pickle":
+            warnings.warn(
+                "The '.pickle' file format is deprecated and will be removed in a future release",
+                FutureWarning,
+                stacklevel=2,
+            )
         # Validate preferred_extension
         if preferred_extension not in ("mat", "pickle", "nc", "cdf", "h5"):
             msg = f"preferred_extension must be 'mat', 'pickle', 'nc', 'cdf', or 'h5', got '{preferred_extension}'"
