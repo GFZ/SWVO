@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import fnmatch
+import logging
 import pickle
 import re
 import typing
@@ -22,6 +23,8 @@ from numpy.typing import NDArray
 from scipy.io import loadmat as sci_loadmat
 
 from swvo.io.utils import enforce_utc_timezone
+
+logger = logging.getLogger(__name__)
 
 
 def join_var(var1: NDArray[np.generic], var2: NDArray[np.generic]) -> NDArray[np.generic]:
@@ -42,19 +45,19 @@ def get_file_path_any_format(folder_path: Path, file_stem: str, preferred_ext: s
         all_files = []
 
     if len(all_files) == 0:
-        warnings.warn(f"File not found: {folder_path / (file_stem + '.*')}", stacklevel=2)
+        logger.warning(f"File not found: {folder_path / (file_stem + '.*')}")
         return None
 
     if len(all_files) >= 1:
         extensions_found = [file.suffix[1:] for file in all_files]
+        print(f"{preferred_ext=}, {extensions_found=}")
         if len(all_files) > 1:
             if preferred_ext in extensions_found:
-                warnings.warn(
+                logger.warning(
                     (
                         f"Several files found for {folder_path / (file_stem + '.*')} with extensions: {extensions_found}. "
                         f"Choosing: {preferred_ext}."
-                    ),
-                    stacklevel=2,
+                    )
                 )
 
                 return folder_path / (file_stem + "." + preferred_ext)
@@ -66,9 +69,17 @@ def get_file_path_any_format(folder_path: Path, file_stem: str, preferred_ext: s
             raise ValueError(msg)
 
         if len(all_files) == 1:
+            if preferred_ext not in extensions_found:
+                logger.warning(
+                    (
+                        f"Files found for {folder_path / (file_stem + '.*')} with extensions: {extensions_found[0]}. "
+                        f"Preferred extension ({preferred_ext}) is not available! "
+                        f"Choosing: {extensions_found[0]}."
+                    )
+                )
             return all_files[0]
 
-        warnings.warn(
+        logger.warning(
             f"File not found: {folder_path / (file_stem + '.' + preferred_ext)}",
             stacklevel=2,
         )
@@ -103,13 +114,66 @@ def read_all_datasets_netcdf(file_path: str | Path) -> dict[str, Any]:
             _read_all_recursively(group_obj, new_path)
 
     if not file_path.exists():
-        print(f"File not found: {file_path}")
+        logger.warning(f"File not found: {file_path}")
         return {}
 
     with netCDF4.Dataset(file_path, "r") as nc_file:
         _read_all_recursively(nc_file)
 
     return datasets
+
+
+def read_all_datasets_h5(file_path: str | Path) -> dict[str, Any]:
+    """Reads all datasets (variables) from an HDF5 file, including those in groups.
+
+    This function recursively traverses all groups and datasets in an HDF5
+    file and stores their data in a dictionary. The key for each dataset is its
+    full hierarchical path.
+
+    Args:
+        file_path (str | Path): The path to the HDF5 file.
+
+    Returns:
+        Dict[str, Any]: A dictionary where keys are the full dataset paths
+                        and values are the corresponding NumPy arrays.
+    """
+    import h5py
+
+    datasets: dict[str, Any] = {}
+    file_path = Path(file_path)
+
+    def _read_all_recursively(group: h5py.Group, path: str = ""):
+        for name, item in group.items():
+            full_path = f"{path}/{name}" if path else name
+            if isinstance(item, h5py.Dataset):
+                datasets[full_path] = item[()]
+            elif isinstance(item, h5py.Group):
+                _read_all_recursively(item, full_path)
+
+    if not file_path.exists():
+        logger.warning(f"File not found: {file_path}")
+        return {}
+
+    with h5py.File(file_path, "r") as h5_file:
+        _read_all_recursively(h5_file)
+
+    return datasets
+
+
+def read_all_datasets_cdf(file_path: str | Path) -> dict[str, Any]:
+    """Reads all datasets (variables) from a CDF file, including those in groups.
+
+    This function recursively traverses all groups and variables in a CDF file
+    and stores their data in a dictionary. The key for each dataset is its full
+    hierarchical path.
+
+    Args:
+        file_path (str | Path): The path to the CDF file.
+    Returns:
+        Dict[str, Any]: A dictionary where keys are the full variable paths
+                        and values are the corresponding NumPy arrays.
+    """
+    pass
 
 
 def load_file_any_format(file_path: Path) -> dict[str, Any]:

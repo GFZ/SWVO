@@ -9,9 +9,10 @@
 from __future__ import annotations
 
 import datetime as dt
+import logging
 from datetime import timedelta, timezone
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, Literal, Optional, cast
 
 import distance
 import numpy as np
@@ -41,9 +42,13 @@ from swvo.io.RBMDataSet.utils import (
     join_var,
     load_file_any_format,
     matlab2python,
+    read_all_datasets_cdf,
+    read_all_datasets_h5,
     read_all_datasets_netcdf,
 )
 from swvo.io.utils import enforce_utc_timezone
+
+logger = logging.getLogger(__name__)
 
 
 class RBMDataSet:
@@ -67,14 +72,16 @@ class RBMDataSet:
         Start time for file-based loading.
     end_time : dt.datetime, optional
         End time for file-based loading.
-    folder_path : Path, optional
+    folder_path : Optional[Path | str]
         Base folder path for file-based loading.
-    preferred_extension : Literal["mat", "pickle", "nc"], optional
-        Preferred file extension for file-based loading. Default is "pickle".
+    preferred_extension : Literal["mat", "pickle", "nc", "cdf", "h5"], optional
+        Preferred file extension for file-based loading. Default is "nc".
     verbose : bool, optional
-        Whether to print verbose output. Default is True.
+        Whether to log verbose output. Default is True.
     enable_dict_loading : bool, optional
         Enable dictionary-based loading even in file mode. Default is False.
+    dataorg: bool, optional
+        Whether to use the new the files saved using DataOrgStrategy for file loading. Default is False.
 
     Attributes
     ----------
@@ -102,7 +109,7 @@ class RBMDataSet:
 
     """
 
-    _preferred_ext: Literal["mat", "pickle", "nc"]
+    _preferred_ext: Literal["mat", "pickle", "nc", "cdf", "h5"]
 
     datetime: list[dt.datetime]
     time: NDArray[np.float64]
@@ -133,11 +140,12 @@ class RBMDataSet:
         mfm: MfmLike,
         start_time: dt.datetime | None = None,
         end_time: dt.datetime | None = None,
-        folder_path: Path | None = None,
-        preferred_extension: Literal["mat", "pickle", "nc"] = "nc",
+        folder_path: Optional[Path | str] = None,
+        preferred_extension: Literal["mat", "pickle", "nc", "cdf", "h5"] = "nc",
         *,
         verbose: bool = True,
         enable_dict_loading: bool = False,
+        dataorg: bool = False,
     ) -> None:
         self.possible_variables: list[str] = list(VariableLiteral.__args__)
 
@@ -157,8 +165,14 @@ class RBMDataSet:
             mfm = MfmEnum[mfm.upper()]
 
         # Validate preferred_extension
-        if preferred_extension not in ("mat", "pickle", "nc"):
-            msg = f"preferred_extension must be 'mat', 'pickle', or 'nc', got '{preferred_extension}'"
+        if preferred_extension not in ("mat", "pickle", "nc", "cdf", "h5"):
+            msg = f"preferred_extension must be 'mat', 'pickle', 'nc', 'cdf', or 'h5', got '{preferred_extension}'"
+            raise ValueError(msg)
+        if dataorg and preferred_extension in ("nc", "cdf", "h5"):
+            msg = "dataorg = True is only supported with 'mat' or 'pickle' extensions"
+            raise ValueError(msg)
+        if not dataorg and preferred_extension == "pickle":
+            msg = "preferred_extension='pickle' is only supported with dataorg=True"
             raise ValueError(msg)
 
         # Store the original satellite enum for properties and other attributes
@@ -186,13 +200,14 @@ class RBMDataSet:
             self._folder_path = Path(folder_path)
             self._folder_type = self._satellite.folder_type
             self._file_path_stem = self._create_file_path_stem()
-            self._is_nc_dataset = self._check_if_nc_dataset()
+            self._is_dataorg_dataset = dataorg
+            self._is_monthly_dataset = self._check_if_monthly_dataset()
             self._file_name_stem = self._create_file_name_stem()
             self._file_cadence = self._satellite.file_cadence
             self._date_of_files = self._create_date_list()
             self._file_loading_mode = True
             self._enable_dict_loading = enable_dict_loading
-            self._netcdf_dataset_cache: dict[Path, dict[str, Any]] = {}
+            self._monthly_dataset_cache: dict[Path, dict[str, Any]] = {}
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._satellite}, {self._instrument}, {self._mfm})"
@@ -328,16 +343,23 @@ class RBMDataSet:
     def get_var(self, var: VariableEnum) -> NDArray[np.float64]:
         return getattr(self, var.var_name)
 
-    def _check_if_nc_dataset(self) -> bool:
+    def _check_if_monthly_dataset(self) -> bool:
         does_processed_mat_files_folder_exist = (self._file_path_stem / "Processed_Mat_Files").exists()
+
+        if self._is_dataorg_dataset and self._preferred_ext in ["mat", "pickle"]:
+            if not does_processed_mat_files_folder_exist:
+                logger.warning("`dataorg` is set to True but Processed_Mat_Files does not exist. ")
+            return False
+        if not self._is_dataorg_dataset and self._preferred_ext in ["mat", "h5", "nc", "cdf"]:
+            return True
 
         if does_processed_mat_files_folder_exist and self._preferred_ext in ["mat", "pickle"]:
             return False
-        elif does_processed_mat_files_folder_exist and self._preferred_ext == "nc":
-            # if any .nc files are stored in the file_path_stem, we switch to nc mode
-            return next(self._file_path_stem.glob("*.nc"), None) is not None
+        elif does_processed_mat_files_folder_exist and self._preferred_ext in ["nc", "cdf", "h5"]:
+            # if any .nc files are stored in the file_path_stem, we switch to non dataorg mode
+            return next(self._file_path_stem.glob(f"*.{self._preferred_ext}"), None) is not None
         else:
-            # if the Processed_Mat_Files folder does not exist, it is safe to assume nc mode
+            # if the Processed_Mat_Files folder does not exist, it is safe to assume non dataorg mode
             return True
 
     def _create_date_list(self) -> list[dt.datetime]:
@@ -420,10 +442,22 @@ class RBMDataSet:
             date_str = f"{start_month.strftime('%Y%m%d')}to{next_month.strftime('%Y%m%d')}"
 
             # 3. Handle File Pathing & Loading based on format
-            if self._is_nc_dataset:
-                file_name = f"{self._file_name_stem}{date_str}_{self._mfm.mfm_name}.nc"
+            if self._is_monthly_dataset:
+                file_name = f"{self._file_name_stem}{date_str}_{self._mfm.mfm_name}.{self._preferred_ext}"
                 full_file_path = self._file_path_stem / file_name
-                file_content = self._get_cached_datasets_netcdf(full_file_path)
+                if not full_file_path.exists():
+                    logger.warning(f"File not found: {full_file_path}")
+                    file_content = {}
+                elif self._preferred_ext == "nc":
+                    file_content = self._get_cached_datasets_netcdf(full_file_path)
+                elif self._preferred_ext == "h5":
+                    file_content = self._get_cached_datasets_h5(full_file_path)
+                elif self._preferred_ext == "cdf":
+                    file_content = self._get_cached_datasets_cdf(full_file_path)
+                else:
+                    if self._verbose:
+                        logger.info(f"Loading {full_file_path}")
+                    file_content = load_file_any_format(full_file_path)
             else:
                 file_name_no_format = f"{self._file_name_stem}{date_str}_{var.mat_file_prefix}"
                 if var.mat_has_B:
@@ -431,14 +465,14 @@ class RBMDataSet:
                 file_name_no_format += "_ver4"
 
                 full_file_path = get_file_path_any_format(
-                    self._file_path_stem, file_name_no_format, self._preferred_ext, self._is_nc_dataset
+                    self._file_path_stem, file_name_no_format, self._preferred_ext, self._is_monthly_dataset
                 )
                 if full_file_path is None:
-                    print(f"File not found: {file_name_no_format}")
+                    logger.warning(f"File not found: {file_name_no_format}")
                     continue
 
                 if self._verbose:
-                    print(f"\tLoading {full_file_path}")
+                    logger.info(f"Loading {full_file_path}")
                 file_content = load_file_any_format(full_file_path)
 
             if not file_content:
@@ -446,13 +480,13 @@ class RBMDataSet:
 
             # 4. Process Datetimes
             raw_times = file_content["time"]
-            if self._is_nc_dataset:
-                # NetCDF timestamp logic
+            if self._is_monthly_dataset and self._preferred_ext in ["nc", "h5", "cdf", "mat"]:
+                # NetCDF/HDF5/CDF timestamp logic
                 datetimes = np.asarray(
                     [dt.datetime.fromtimestamp(t.astype(np.int64), tz=dt.timezone.utc) for t in raw_times]
                 )
             else:
-                # Matlab logic
+                # Matlab/pickle logic
                 datetimes = np.asarray([matlab2python(t) for t in raw_times])
 
             file_content["datetime"] = datetimes
@@ -486,8 +520,8 @@ class RBMDataSet:
         for var_name in var_names_stored:
             val = list(loaded_var_arrs[var_name]) if var_name == "datetime" else loaded_var_arrs[var_name]
 
-            if self._is_nc_dataset:
-                # NetCDF name mapping logic
+            if self._is_monthly_dataset and self._preferred_ext in ["nc", "h5", "cdf"]:
+                # NetCDF/HDF5/CDF name mapping logic
                 rbm_names = self._get_rbm_name_for_nc(var_name, self._mfm.mfm_name)  # type: ignore
                 if rbm_names:
                     for name in rbm_names if isinstance(rbm_names, list) else [rbm_names]:
@@ -498,12 +532,32 @@ class RBMDataSet:
     def _get_cached_datasets_netcdf(self, file_path: Path) -> dict[str, Any]:
         """Return cached parsed NetCDF content for a monthly file."""
         file_path = Path(file_path)
-        if file_path not in self._netcdf_dataset_cache:
+        if file_path not in self._monthly_dataset_cache:
             if self._verbose:
-                print(f"\tLoading {file_path}")
+                logger.info(f"Loading netCDF {file_path}")
 
-            self._netcdf_dataset_cache[file_path] = read_all_datasets_netcdf(file_path)
-        return self._netcdf_dataset_cache[file_path]
+            self._monthly_dataset_cache[file_path] = read_all_datasets_netcdf(file_path)
+        return self._monthly_dataset_cache[file_path]
+
+    def _get_cached_datasets_h5(self, file_path: Path) -> dict[str, Any]:
+        """Return cached parsed HDF5 content for a monthly file."""
+        file_path = Path(file_path)
+        if file_path not in self._monthly_dataset_cache:
+            if self._verbose:
+                logger.info(f"Loading H5 {file_path}")
+
+            self._monthly_dataset_cache[file_path] = read_all_datasets_h5(file_path)
+        return self._monthly_dataset_cache[file_path]
+
+    def _get_cached_datasets_cdf(self, file_path: Path) -> dict[str, Any]:
+        """Return cached parsed CDF content for a monthly file."""
+        file_path = Path(file_path)
+        if file_path not in self._monthly_dataset_cache:
+            if self._verbose:
+                logger.info(f"Loading CDF {file_path}")
+
+            self._monthly_dataset_cache[file_path] = read_all_datasets_cdf(file_path)
+        return self._monthly_dataset_cache[file_path]
 
     @classmethod
     def _get_rbm_name_for_nc(
