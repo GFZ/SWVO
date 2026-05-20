@@ -67,7 +67,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
         If True, fill missing values using 27-day recurrence from historical models (OMNI, ACE, SWIFT).
         Defaults to False.
     fill_average : bool, optional
-        If True, keep the final dataframe through the requested end time for average-based filling.
+        If True, the entire dataframe after `historical_data_cutoff_time` will be filled with 10-year average values.
         Defaults to False.
     rec_model_order : list[DSCOVR | SWACE | SWOMNI], optional
         The order in which historical models will be used for 27-day recurrence filling.
@@ -173,16 +173,17 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
             if not df.empty:
                 data_out[i] = _recursive_fill_27d_historical(df, download, rec_model_order)
     if fill_average:
-        logging.info("Filling future values with 10-year average values.")
+        logger.info("Filling future values with 10-year average values.")
 
         for i, df in enumerate(data_out):
             if not df.empty:
                 for col, avg_value in AVERAGE_VALUES_TO_FILL.items():
                     if col in df.columns:
                         future_mask = df.index > historical_data_cutoff_time
-                        df.loc[future_mask, col] = avg_value
-                        df.loc[future_mask, "model"] = "10_year_average_filled"
-                        df.loc[future_mask, "file_name"] = "10_year_average_filled"
+                        if df.loc[future_mask, col].isna().all():
+                            df.loc[future_mask, col] = avg_value
+                            df.loc[future_mask, "model"] = "10_year_average_filled"
+                            df.loc[future_mask, "file_name"] = "10_year_average_filled"
                 data_out[i] = df
 
     if len(data_out) == 1:
