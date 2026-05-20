@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import importlib
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -13,6 +14,7 @@ import pytest
 
 from swvo.io.exceptions import ModelError
 from swvo.io.solar_wind import (
+    AVERAGE_VALUES_TO_FILL,
     DSCOVR,
     SWACE,
     SWOMNI,
@@ -26,6 +28,7 @@ from swvo.io.solar_wind.read_solar_wind_from_multiple_models import (
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
+READ_SW_MODULE = importlib.import_module("swvo.io.solar_wind.read_solar_wind_from_multiple_models")
 
 
 class TestReadSolarWindFromMultipleModels:
@@ -204,6 +207,79 @@ class TestReadSolarWindFromMultipleModels:
             assert any("_recurrence_27d" in model for model in recurrence_models["model"].unique())
         assert data.index.is_monotonic_increasing
         assert data.index.freq == "1min"
+
+    @pytest.mark.parametrize(("recurrence", "fill_average"), [(True, False), (False, True)])
+    def test_fill_modes_do_not_truncate_final_dataframe(self, monkeypatch, recurrence, fill_average):
+        start_time = datetime(2024, 11, 25, 0, 0, tzinfo=timezone.utc)
+        historical_data_cutoff_time = start_time + timedelta(minutes=5)
+        end_time = start_time + timedelta(minutes=10)
+        index = pd.date_range(start_time, end_time, freq="1min", tz="UTC")
+        data = pd.DataFrame(
+            {
+                "speed": [400.0] * 6 + [np.nan] * 5,
+                "model": ["omni"] * 6 + [None] * 5,
+                "file_name": ["test_file.txt"] * 6 + [None] * 5,
+            },
+            index=index,
+        )
+
+        monkeypatch.setattr(READ_SW_MODULE, "_read_from_model", lambda *args, **kwargs: data)
+        monkeypatch.setattr(READ_SW_MODULE, "_recursive_fill_27d_historical", lambda df, *_args: df)
+
+        result = read_solar_wind_from_multiple_models(
+            start_time=start_time,
+            end_time=end_time,
+            model_order=[SWOMNI(), SWSWIFTEnsemble()],
+            historical_data_cutoff_time=historical_data_cutoff_time,
+            recurrence=recurrence,
+            fill_average=fill_average,
+        )
+
+        assert result.index.max() == end_time
+
+    def test_average_fill_uses_expected_values(self, monkeypatch):
+        start_time = datetime(2024, 11, 25, 0, 0, tzinfo=timezone.utc)
+        historical_data_cutoff_time = start_time + timedelta(minutes=5)
+        end_time = start_time + timedelta(minutes=10)
+        index = pd.date_range(start_time, end_time, freq="1min", tz="UTC")
+        average_values = AVERAGE_VALUES_TO_FILL
+        data = pd.DataFrame(
+            {
+                **{col: [1.0] * 6 + [np.nan] * 5 for col in average_values},
+                "model": ["omni"] * 6 + [None] * 5,
+                "file_name": ["test_file.txt"] * 6 + [None] * 5,
+            },
+            index=index,
+        )
+
+        monkeypatch.setattr(READ_SW_MODULE, "_read_from_model", lambda *args, **kwargs: data)
+
+        result = read_solar_wind_from_multiple_models(
+            start_time=start_time,
+            end_time=end_time,
+            model_order=[SWOMNI()],
+            historical_data_cutoff_time=historical_data_cutoff_time,
+            fill_average=True,
+        )
+
+        future_mask = result.index > historical_data_cutoff_time
+        assert result.index.max() == end_time
+        for col, avg_value in average_values.items():
+            assert result.loc[historical_data_cutoff_time, col] == 1.0
+            np.testing.assert_allclose(result.loc[future_mask, col].to_numpy(), avg_value)
+        assert (result.loc[future_mask, "model"] == "10_year_average_filled").all()
+        assert (result.loc[future_mask, "file_name"] == "10_year_average_filled").all()
+
+    def test_recurrence_and_average_fill_are_mutually_exclusive(self, sample_times):
+        with pytest.raises(AssertionError, match="Cannot use both recurrence and average filling"):
+            read_solar_wind_from_multiple_models(
+                start_time=sample_times["past_start"],
+                end_time=sample_times["future_end"],
+                model_order=[SWOMNI()],
+                historical_data_cutoff_time=sample_times["test_time_now"],
+                recurrence=True,
+                fill_average=True,
+            )
 
     def test_3_hour_interpolation_with_recurrence(self, sample_times, expected_columns):
         # Use a longer time range to increase chances of gaps that need interpolation

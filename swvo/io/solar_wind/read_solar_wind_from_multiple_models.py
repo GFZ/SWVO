@@ -16,7 +16,7 @@ import pandas as pd
 from scipy.interpolate import UnivariateSpline
 
 from swvo.io.exceptions import ModelError
-from swvo.io.solar_wind import DSCOVR, SWACE, SWOMNI, SWSWIFTEnsemble
+from swvo.io.solar_wind import AVERAGE_VALUES_TO_FILL, DSCOVR, SWACE, SWOMNI, SWSWIFTEnsemble
 from swvo.io.utils import (
     any_nans,
     construct_updated_data_frame,
@@ -39,6 +39,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     *,
     download: bool = False,
     recurrence: bool = False,
+    fill_average: bool = False,
     rec_model_order: list[DSCOVR | SWACE | SWOMNI] | None = None,
     do_interpolation: bool = False,
 ) -> pd.DataFrame | list[pd.DataFrame]:
@@ -65,6 +66,9 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     recurrence : bool, optional
         If True, fill missing values using 27-day recurrence from historical models (OMNI, ACE, SWIFT).
         Defaults to False.
+    fill_average : bool, optional
+        If True, keep the final dataframe through the requested end time for average-based filling.
+        Defaults to False.
     rec_model_order : list[DSCOVR | SWACE | SWOMNI], optional
         The order in which historical models will be used for 27-day recurrence filling.
         Defaults to [DSCOVR, SWACE, SWOMNI].
@@ -86,6 +90,8 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     """
 
     assert reduce_ensemble in (None, "mean", "median"), "reduce_ensemble must be None, `mean` or `median`"
+
+    assert not (recurrence and fill_average), "Cannot use both recurrence and average filling at the same time"
 
     if start_time > end_time:
         msg = "start_time must be before end_time"
@@ -149,15 +155,6 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
         if not any_nans(data_out):
             break
 
-    # Apply 27-day recurrence if requested
-
-    if recurrence:
-        if rec_model_order is None:
-            rec_model_order = [m for m in model_order if isinstance(m, (DSCOVR, SWACE, SWOMNI))]
-        for i, df in enumerate(data_out):
-            if not df.empty:
-                data_out[i] = _recursive_fill_27d_historical(df, download, rec_model_order)
-
     # Ensure continuous dataframe and handle SWIFT unavailability
     data_out = _ensure_continuous_dataframe(
         data_out,
@@ -165,7 +162,28 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
         end_time,
         historical_data_cutoff_time,
         swift_data_available,
+        truncate=not (recurrence or fill_average),
     )
+    # Apply 27-day recurrence if requested
+    if recurrence:
+        logger.info("Applying 27-day recurrence filling to missing values in historical data")
+        if rec_model_order is None:
+            rec_model_order = [m for m in model_order if isinstance(m, (DSCOVR, SWACE, SWOMNI))]
+        for i, df in enumerate(data_out):
+            if not df.empty:
+                data_out[i] = _recursive_fill_27d_historical(df, download, rec_model_order)
+    if fill_average:
+        logging.info("Filling future values with 10-year average values.")
+
+        for i, df in enumerate(data_out):
+            if not df.empty:
+                for col, avg_value in AVERAGE_VALUES_TO_FILL.items():
+                    if col in df.columns:
+                        future_mask = df.index > historical_data_cutoff_time
+                        df.loc[future_mask, col] = avg_value
+                        df.loc[future_mask, "model"] = "10_year_average_filled"
+                        df.loc[future_mask, "file_name"] = "10_year_average_filled"
+                data_out[i] = df
 
     if len(data_out) == 1:
         data_out = data_out[0]
@@ -536,6 +554,7 @@ def _ensure_continuous_dataframe(
     end_time: datetime,
     historical_data_cutoff_time: datetime,
     swift_data_available: bool,
+    truncate: bool = True,
 ) -> list[pd.DataFrame]:
     """
     Ensure the dataframe is continuous from start to end time, handling gaps and SWIFT unavailability.
@@ -573,7 +592,7 @@ def _ensure_continuous_dataframe(
                     break
 
     # Determine actual end time based on SWIFT availability
-    if (not swift_data_available or swift_data_all_nan) and historical_data_cutoff_time < end_time:
+    if ((not swift_data_available or swift_data_all_nan) and (historical_data_cutoff_time < end_time)) and truncate:
         actual_end_time = historical_data_cutoff_time
         logger.info(
             f"Since SWIFT is not available for future dates, final dataframe truncated to {historical_data_cutoff_time}"
