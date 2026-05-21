@@ -404,8 +404,8 @@ def _interpolate_to_common_indices(
         The list of interpolated data frames with a common index.
     """
 
+    data_final_index = min(df.index[-1] for df in data if not df.empty)
     for ie, _ in enumerate(data):
-        data_final_index = data[ie].index[-1]
         df_common_index = pd.DataFrame(
             index=pd.date_range(
                 datetime(
@@ -435,7 +435,7 @@ def _interpolate_to_common_indices(
                 df_common_index[colname] = col.iloc[0]
             else:
                 df_common_index[colname] = np.interp(df_common_index.index, data[ie].index, col)
-        logger.info(f"SWIFT ends at {data_final_index}")
+        logger.info(f"Post interpolation SWIFT ends at {data_final_index}")
         data[ie] = df_common_index
         data[ie] = data[ie].truncate(
             before=historical_data_cutoff_time - timedelta(minutes=0.999999),
