@@ -155,7 +155,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     )
 
     if fill_average:
-        logging.info("Filling future values with 10-year average values.")
+        logger.info("Filling future values with 10-year average values.")
         for i, df in enumerate(data_out):
             if df.empty:
                 continue
