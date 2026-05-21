@@ -47,7 +47,7 @@ class KpNiemegk(BaseIO):
 
     ENV_VAR_NAME = "RT_KP_NIEMEGK_STREAM_DIR"
 
-    URL = "https://kp.gfz.de/app/files/"
+    URL = "https://kp.gfz.de/fileadmin/files_for_gfz_cms/"
     NAME = "Kp_ap_nowcast.txt"
 
     DAYS_TO_SAVE_EACH_FILE = 3
