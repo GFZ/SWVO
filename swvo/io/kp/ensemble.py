@@ -113,7 +113,7 @@ class KpEnsemble:
 
         if len(file_list) == 0:
             msg = f"No ensemble files found for requested date {str_date}"
-            warnings.warn(f"{msg}! Returning NaNs dataframe.")
+            logger.warning(f"{msg}! Returning NaNs dataframe.")
 
             # initialize data frame with NaNs
             t = pd.date_range(

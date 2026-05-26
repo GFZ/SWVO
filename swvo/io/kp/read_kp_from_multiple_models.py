@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import logging
-import warnings
 from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
 from typing import Literal
@@ -40,6 +39,7 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
     download: bool = False,
     recurrence: bool = False,
     rec_model_order: Sequence[KpOMNI | KpNiemegk | KpBGS] | None = None,
+    fill_average: bool = False,
 ) -> pd.DataFrame | list[pd.DataFrame]:
     """Read Kp data from multiple models.
 
@@ -104,19 +104,47 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
             start_time,
             end_time,
             historical_data_cutoff_time,
-            reduce_ensemble,  # ty: ignore[invalid-argument-type]
+            reduce_ensemble,  # ty:ignore[invalid-argument-type]
             download=download,
         )
+        # If an ensemble is already present in `data_out` and the current model is SWPC
+        # which provides a single deterministic forecast, prefer the ensemble and skip
+        # merging SWPC when any timestamp overlaps to avoid mismatched ensemble sizes.
+        if isinstance(model, KpSWPC):
+            temp_list = data_one_model if isinstance(data_one_model, list) else [data_one_model]
+            if isinstance(data_out, list) and len(data_out) > 1 and len(temp_list) == 1:
+                try:
+                    swpc_idx = temp_list[0].index
+                    # if any ensemble member shares an index with the SWPC forecast, keep ensemble
+                    overlap_found = any(len(df.index.intersection(swpc_idx)) > 0 for df in data_out)
+                    if overlap_found:
+                        logger.info("Keeping existing ensemble; discarding SWPC because indices overlap.")
+                        continue
+                except Exception as e:
+                    # If any unexpected issue occurs during index comparison, fall back
+                    # to the default merging behavior.
+                    logger.error(f"Error occurred while comparing indices: {e}")
+                    pass
+
         data_out = construct_updated_data_frame(data_out, data_one_model, model.LABEL)
         if not any_nans(data_out):
             break
 
     if recurrence:
+        logger.info(
+            "Recurrence filling enabled. Filling missing values using 27-day recurrence from historical models."
+        )
         if rec_model_order is None:
             rec_model_order = [m for m in model_order if isinstance(m, (KpOMNI, KpNiemegk, KpBGS))]
         for i, df in enumerate(data_out):
             if not df.empty:
                 data_out[i] = _recursive_fill_27d_historical(df, download, rec_model_order)
+
+    if fill_average:
+        logger.info("Average filling enabled. Filling remaining missing values with average Kp of 4.")
+        for i, df in enumerate(data_out):
+            if not df.empty:
+                data_out[i] = _fill_average(df)
 
     if len(data_out) == 1:
         data_out = data_out[0]
@@ -171,6 +199,11 @@ def _read_from_model(  # noqa: PLR0913
         logger.info(
             f"Reading {model.LABEL} from {historical_data_cutoff_time.replace(hour=0, minute=0, second=0)} to {end_time}\noriginal historical_data_cutoff_time: {historical_data_cutoff_time}"
         )
+        if end_time - historical_data_cutoff_time > timedelta(days=3):
+            end_time = historical_data_cutoff_time + timedelta(days=2, hours=21)
+            logger.warning(
+                f"end_time is more than 3 days after historical_data_cutoff_time, setting end_time to {end_time}"
+            )
         data_one_model = [
             model.read(
                 historical_data_cutoff_time.replace(hour=0, minute=0, second=0),
@@ -268,28 +301,23 @@ def _read_latest_ensemble_files(
     """
     target_time = historical_data_cutoff_time
     data_one_model = [pd.DataFrame(data={"kp": []})]
-
     while target_time > (historical_data_cutoff_time - timedelta(days=3)) and target_time < end_time:
         target_time = target_time.replace(minute=0, second=0)
-        try:
-            with warnings.catch_warnings():
-                warnings.filterwarnings("error", message="No ensemble files found")
-                data_one_model = model.read(target_time, end_time)
-                break
-        except UserWarning as e:
-            if "No ensemble files found" in str(e):
-                target_time -= timedelta(hours=1)
-                continue
-
+        data_one_model = model.read(target_time, end_time)
+        if data_one_model[0]["kp"].isna().all():
+            target_time -= timedelta(hours=1)
+            continue
+        break
     logger.info(f"Read PAGER Kp ensemble from {target_time} to {end_time}")
-
     # Ensure the last index of every DataFrame is the next higher multiple of 3 hours than target_time
     adjusted_data = []
     for df in data_one_model:
-        if not df.empty:
+        if not df.empty or not df.isna().all():
             if df.index[-1] < end_time and (df.index[-1] - end_time) < timedelta(hours=3):
                 df.loc[df.index[-1] + timedelta(hours=3)] = df.loc[df.index[-1]]
         adjusted_data.append(df)
+    else:
+        adjusted_data = data_one_model
     return adjusted_data
 
 
@@ -395,4 +423,15 @@ def _recursive_fill_27d_historical(df, download, historical_models):
         missing = df.index[df[value_col].isna()]
         if not fill_map:
             break
+    return df
+
+
+def _fill_average(df) -> pd.DataFrame:
+    """Recursively fill missing values with average Kp=4"""
+    df = df.copy()
+    value_col = "kp"
+    missing = df.index[df[value_col].isna()]
+    df.loc[missing, value_col] = 4
+    df.loc[missing, "model"] = "average_fill"
+    df.loc[missing, "file_name"] = "average_fill"
     return df

@@ -20,6 +20,7 @@ from swvo.io.kp import (
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
+TMP_DIR = Path(os.path.join(DATA_DIR, "tmp/"))
 
 
 class TestReadKpFromMultipleModels:
@@ -36,7 +37,7 @@ class TestReadKpFromMultipleModels:
             os.environ[key] = ENV_VAR_NAMES[key]
 
     @pytest.fixture
-    def sample_times(self):
+    def sample_times(self) -> dict[str, datetime]:
         now = datetime(2024, 11, 25).replace(tzinfo=timezone.utc, minute=0, second=0, microsecond=0)
         return {
             "past_start": now - timedelta(days=5),
@@ -46,7 +47,7 @@ class TestReadKpFromMultipleModels:
             "test_time_now": now,
         }
 
-    def test_basic_historical_read(self, sample_times):
+    def test_basic_historical_read(self, sample_times: dict[str, datetime]):
         data = read_kp_from_multiple_models(
             start_time=sample_times["past_start"],
             end_time=sample_times["past_end"],
@@ -62,7 +63,7 @@ class TestReadKpFromMultipleModels:
         assert not data["kp"].isna().all()
         assert not data["file_name"].isna().all()
 
-    def test_basic_forecast_read(self, sample_times):
+    def test_basic_forecast_read(self, sample_times: dict[str, datetime]):
         data = read_kp_from_multiple_models(
             start_time=sample_times["future_start"],
             end_time=sample_times["future_end"],
@@ -80,7 +81,7 @@ class TestReadKpFromMultipleModels:
         with pytest.raises(ValueError):
             raise ValueError("This reduction method has not been implemented yet!")
 
-    def test_full_ensemble(self, sample_times):
+    def test_full_ensemble(self, sample_times: dict[str, datetime]):
         data = read_kp_from_multiple_models(
             start_time=sample_times["future_start"],
             end_time=sample_times["future_end"],
@@ -96,7 +97,7 @@ class TestReadKpFromMultipleModels:
         assert all("model" in d.columns for d in data)
         assert all(not d["file_name"].isna().all() for d in data)
 
-    def test_time_ordering_and_transition(self, sample_times):
+    def test_time_ordering_and_transition(self, sample_times: dict[str, datetime]):
         data = read_kp_from_multiple_models(
             start_time=sample_times["past_start"],
             end_time=sample_times["future_end"],
@@ -109,7 +110,20 @@ class TestReadKpFromMultipleModels:
             assert d.loc["2024-11-24 00:00:00+00:00"].model == "niemegk"
             assert d.loc["2024-11-25 03:00:00+00:00"].model == "ensemble"
 
-    def test_forecast_in_past(self, sample_times):
+    def test_time_ordering_and_transition_swpc_should_work_when_swift_is_empty(self, sample_times: dict[str, datetime]):
+        data = read_kp_from_multiple_models(
+            start_time=sample_times["past_start"],
+            end_time=sample_times["future_end"],
+            model_order=[KpOMNI(), KpNiemegk(), KpEnsemble(TMP_DIR), KpSWPC()],
+            historical_data_cutoff_time=sample_times["test_time_now"],
+        )
+
+        assert data.index.is_monotonic_increasing
+        assert data.loc["2024-11-20 00:00:00+00:00"].model == "omni"
+        assert data.loc["2024-11-24 00:00:00+00:00"].model == "niemegk"
+        assert data.loc["2024-11-25 03:00:00+00:00"].model == "swpc"
+
+    def test_forecast_in_past(self, sample_times: dict[str, datetime]):
         data = read_kp_from_multiple_models(
             start_time=sample_times["past_start"],
             end_time=sample_times["future_start"],
@@ -124,7 +138,7 @@ class TestReadKpFromMultipleModels:
         # there should be ensemble in the forecast
         assert all(d.loc["2024-11-23 03:00:00+00:00"].model == "ensemble" for d in data)
 
-    def test_time_boundaries(self, sample_times):
+    def test_time_boundaries(self, sample_times: dict[str, datetime]):
         start = sample_times["past_start"]
         end = sample_times["future_end"]
 
@@ -138,7 +152,7 @@ class TestReadKpFromMultipleModels:
             assert d.index.min() >= start
             assert d.index.max() <= end + timedelta(hours=3)
 
-    def test_invalid_time_range(self, sample_times):
+    def test_invalid_time_range(self, sample_times: dict[str, datetime]):
         with pytest.raises(ValueError):
             read_kp_from_multiple_models(
                 start_time=sample_times["future_end"],
@@ -146,15 +160,31 @@ class TestReadKpFromMultipleModels:
                 model_order=[KpOMNI()],
             )
 
-    def test_date_more_than_3_days_in_future(self, sample_times):
-        with pytest.raises(ValueError, match="We can only read 3 days at a time of Kp SWPC!"):
-            read_kp_from_multiple_models(
-                start_time=sample_times["test_time_now"] - timedelta(days=6),
-                end_time=sample_times["test_time_now"] + timedelta(days=4),
-                historical_data_cutoff_time=sample_times["test_time_now"],
-            )
+    def test_date_more_than_3_days_in_future_with_recurrence(self, sample_times: dict[str, datetime]):
+        """This will not raise any error"""
+        data = read_kp_from_multiple_models(
+            start_time=sample_times["test_time_now"] - timedelta(days=6),
+            end_time=sample_times["test_time_now"] + timedelta(days=4),
+            historical_data_cutoff_time=sample_times["test_time_now"],
+            recurrence=True,
+        )
 
-    def test_kp_value_range(self, sample_times):
+        for d in data:
+            assert set(d.model.unique()) == {"niemegk_recurrence", "omni", "niemegk", "ensemble"}
+
+    def test_date_more_than_3_days_in_future_with_average_fill(self, sample_times: dict[str, datetime]):
+        """This will not raise any error"""
+        data = read_kp_from_multiple_models(
+            start_time=sample_times["test_time_now"] - timedelta(days=6),
+            end_time=sample_times["test_time_now"] + timedelta(days=4),
+            historical_data_cutoff_time=sample_times["test_time_now"],
+            fill_average=True,
+        )
+
+        for d in data:
+            assert set(d.model.unique()) == {"average_fill", "omni", "niemegk", "ensemble"}
+
+    def test_kp_value_range(self, sample_times: dict[str, datetime]):
         data = read_kp_from_multiple_models(
             start_time=sample_times["past_start"],
             end_time=sample_times["future_end"],
@@ -169,7 +199,7 @@ class TestReadKpFromMultipleModels:
         for d in data:
             check_kp_range(d)
 
-    def test_model_transition(self, sample_times):
+    def test_model_transition(self, sample_times: dict[str, datetime]):
         data = read_kp_from_multiple_models(
             start_time=sample_times["past_start"],
             end_time=sample_times["future_end"],
@@ -181,7 +211,7 @@ class TestReadKpFromMultipleModels:
         assert all([df.loc["2024-11-25 00:00:00+00:00"].model == "niemegk" for df in data])
         assert all([df.loc["2024-11-25 03:00:00+00:00"].model == "ensemble" for df in data])
 
-    def test_data_consistency(self, sample_times):
+    def test_data_consistency(self, sample_times: dict[str, datetime]):
         params = {
             "start_time": sample_times["past_start"],
             "end_time": sample_times["past_end"],
@@ -194,7 +224,7 @@ class TestReadKpFromMultipleModels:
 
         pd.testing.assert_frame_equal(data1, data2)
 
-    def test_model_check_with_wrong_class(self, sample_times):
+    def test_model_check_with_wrong_class(self, sample_times: dict[str, datetime]):
         class FakeModel:
             pass
 
@@ -206,7 +236,7 @@ class TestReadKpFromMultipleModels:
                 model_order=[fake],
             )
 
-    def test_recurrence_with_Niemegk_recurr(self, sample_times):
+    def test_recurrence_with_Niemegk_recurr(self, sample_times: dict[str, datetime]):
         """Test basic 27-day recurrence filling functionality."""
         data = read_kp_from_multiple_models(
             start_time=sample_times["past_start"],
@@ -218,7 +248,7 @@ class TestReadKpFromMultipleModels:
         )
         assert data.loc["2024-11-27 00:00:00+00:00":].model.unique()[0] == "niemegk_recurrence"
 
-    def test_recurrence_with_both_recurr(self, sample_times):
+    def test_recurrence_with_both_recurr(self, sample_times: dict[str, datetime]):
         """Test recurrence with custom historical model order."""
         data = read_kp_from_multiple_models(
             start_time=sample_times["past_start"],
@@ -231,7 +261,7 @@ class TestReadKpFromMultipleModels:
         assert data.loc["2024-11-25 15:00:00+00:00":"2024-11-26 00:00:00+00:00"].model.unique()[0] == "omni_recurrence"
         assert data.loc["2024-11-27 00:00:00+00:00":].model.unique()[0] == "niemegk_recurrence"
 
-    def test_recurrence_fills_gaps(self, sample_times):
+    def test_recurrence_fills_gaps(self, sample_times: dict[str, datetime]):
         """Test that recurrence actually fills missing values."""
         data_no_rec = read_kp_from_multiple_models(
             start_time=sample_times["past_start"],
@@ -252,7 +282,7 @@ class TestReadKpFromMultipleModels:
 
         assert nan_count_with_rec <= nan_count_no_rec
 
-    def test_recurrence_preserves_existing_data(self, sample_times):
+    def test_recurrence_preserves_existing_data(self, sample_times: dict[str, datetime]):
         """Test that recurrence doesn't overwrite existing valid data."""
         data_no_rec = read_kp_from_multiple_models(
             start_time=sample_times["past_start"],
