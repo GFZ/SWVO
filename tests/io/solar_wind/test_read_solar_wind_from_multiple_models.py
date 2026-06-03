@@ -2,10 +2,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import importlib
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import Mock
 
 import numpy as np
 import pandas as pd
@@ -13,19 +13,18 @@ import pytest
 
 from swvo.io.exceptions import ModelError
 from swvo.io.solar_wind import (
+    AVERAGE_VALUES_TO_FILL,
     DSCOVR,
     SWACE,
     SWOMNI,
     SWSWIFTEnsemble,
     read_solar_wind_from_multiple_models,
 )
-from swvo.io.solar_wind.read_solar_wind_from_multiple_models import (
-    _interpolate_short_gaps,
-    _recursive_fill_27d_historical,
-)
+from swvo.io.solar_wind.read_solar_wind_from_multiple_models import _interpolate_short_gaps
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
+READ_SW_MODULE = importlib.import_module("swvo.io.solar_wind.read_solar_wind_from_multiple_models")
 
 
 class TestReadSolarWindFromMultipleModels:
@@ -187,25 +186,67 @@ class TestReadSolarWindFromMultipleModels:
                 model_order=[fake],
             )
 
-    def test_27_day_recurrence_basic(self, sample_times, expected_columns):
-        data = read_solar_wind_from_multiple_models(
-            start_time=sample_times["past_start"],
-            end_time=sample_times["past_end"],
-            model_order=[SWOMNI(), DSCOVR(), SWACE()],
-            historical_data_cutoff_time=sample_times["test_time_now"],
-            recurrence=True,
+    @pytest.mark.parametrize(("fill_average"), [False, True])
+    def test_fill_modes_do_not_truncate_final_dataframe(self, monkeypatch, fill_average):
+        start_time = datetime(2024, 11, 25, 0, 0, tzinfo=timezone.utc)
+        historical_data_cutoff_time = start_time + timedelta(minutes=5)
+        end_time = start_time + timedelta(minutes=10)
+        index = pd.date_range(start_time, end_time, freq="1min", tz="UTC")
+        data = pd.DataFrame(
+            {
+                "speed": [400.0] * 6 + [np.nan] * 5,
+                "model": ["omni"] * 6 + [None] * 5,
+                "file_name": ["test_file.txt"] * 6 + [None] * 5,
+            },
+            index=index,
         )
 
-        assert isinstance(data, pd.DataFrame)
-        assert all(col in data.columns for col in expected_columns)
+        monkeypatch.setattr(READ_SW_MODULE, "_read_from_model", lambda *args, **kwargs: data)
 
-        recurrence_models = data[data["model"].str.contains("recurrence", na=False)]
-        if not recurrence_models.empty:
-            assert any("_recurrence_27d" in model for model in recurrence_models["model"].unique())
-        assert data.index.is_monotonic_increasing
-        assert data.index.freq == "1min"
+        result = read_solar_wind_from_multiple_models(
+            start_time=start_time,
+            end_time=end_time,
+            model_order=[SWOMNI(), SWSWIFTEnsemble()],
+            historical_data_cutoff_time=historical_data_cutoff_time,
+            fill_average=fill_average,
+        )
 
-    def test_3_hour_interpolation_with_recurrence(self, sample_times, expected_columns):
+        assert result.index.max() == end_time
+
+    def test_average_fill_uses_expected_values(self, monkeypatch):
+        start_time = datetime(2024, 11, 25, 0, 0, tzinfo=timezone.utc)
+        historical_data_cutoff_time = start_time + timedelta(minutes=5)
+        end_time = start_time + timedelta(minutes=10)
+        index = pd.date_range(start_time, end_time, freq="1min", tz="UTC")
+        average_values = AVERAGE_VALUES_TO_FILL
+        data = pd.DataFrame(
+            {
+                **{col: [1.0] * 6 + [np.nan] * 5 for col in average_values},
+                "model": ["omni"] * 6 + [None] * 5,
+                "file_name": ["test_file.txt"] * 6 + [None] * 5,
+            },
+            index=index,
+        )
+
+        monkeypatch.setattr(READ_SW_MODULE, "_read_from_model", lambda *args, **kwargs: data)
+
+        result = read_solar_wind_from_multiple_models(
+            start_time=start_time,
+            end_time=end_time,
+            model_order=[SWOMNI()],
+            historical_data_cutoff_time=historical_data_cutoff_time,
+            fill_average=True,
+        )
+
+        future_mask = result.index > historical_data_cutoff_time
+        assert result.index.max() == end_time
+        for col, avg_value in average_values.items():
+            assert result.loc[historical_data_cutoff_time, col] == 1.0
+            np.testing.assert_allclose(result.loc[future_mask, col].to_numpy(), avg_value)
+        assert (result.loc[future_mask, "model"] == "10_year_average_filled").all()
+        assert (result.loc[future_mask, "file_name"] == "10_year_average_filled").all()
+
+    def test_3_hour_interpolation(self, sample_times, expected_columns):
         # Use a longer time range to increase chances of gaps that need interpolation
         extended_start = sample_times["past_start"] - timedelta(days=2)
         extended_end = sample_times["past_end"] + timedelta(days=1)
@@ -215,7 +256,6 @@ class TestReadSolarWindFromMultipleModels:
             end_time=extended_end,
             model_order=[SWOMNI(), DSCOVR(), SWACE()],
             historical_data_cutoff_time=sample_times["test_time_now"],
-            recurrence=False,
             download=False,
             do_interpolation=True,
         )
@@ -225,7 +265,6 @@ class TestReadSolarWindFromMultipleModels:
             end_time=extended_end,
             model_order=[SWOMNI(), DSCOVR(), SWACE()],
             historical_data_cutoff_time=sample_times["test_time_now"],
-            recurrence=True,
             download=True,
             do_interpolation=True,
         )
@@ -235,47 +274,6 @@ class TestReadSolarWindFromMultipleModels:
 
         for i in expected_columns:
             assert nan_count_with_rec[i] <= nan_count_no_rec[i]
-
-    def test_recurrence_consistency_t0_and_t0_minus_27(self, monkeypatch):
-        t0 = datetime(2024, 1, 28, 0, 0, tzinfo=timezone.utc)
-        t0_minus_27 = t0 - timedelta(days=27)
-
-        n = 600
-
-        data_t0_minus_27 = pd.DataFrame(
-            {"value": np.random.rand(n), "file_name": ["file_27d"] * n, "model": ["DSCOVR"] * n},
-            index=pd.date_range(t0_minus_27, periods=n, freq="1min", tz="UTC"),
-        )
-
-        data_t0 = pd.DataFrame(
-            {"value": [np.nan] * n, "file_name": [None] * n, "model": [None] * n},
-            index=pd.date_range(t0, periods=n, freq="1min", tz="UTC"),
-        )
-
-        def mock_read(self, start, end, download=False, propagation=True):
-            overlap_start = max(start, t0_minus_27)
-            overlap_end = min(end, t0_minus_27 + timedelta(minutes=n - 1))
-            if overlap_start <= overlap_end:
-                return data_t0_minus_27.loc[overlap_start:overlap_end]
-            if start >= t0:
-                return data_t0
-            return pd.DataFrame(index=pd.date_range(start, end, freq="1min", tz="UTC"))
-
-        monkeypatch.setattr(DSCOVR, "read", mock_read)
-
-        # Call for t0-27 to get base data
-        df_base = read_solar_wind_from_multiple_models(
-            t0_minus_27, t0_minus_27 + timedelta(minutes=n - 1), model_order=[DSCOVR()], recurrence=False
-        )
-
-        df_recurrence = read_solar_wind_from_multiple_models(
-            t0, t0 + timedelta(minutes=n - 1), model_order=[DSCOVR()], recurrence=True
-        )
-
-        expected_values = df_base["value"].tolist()
-        np.testing.assert_array_almost_equal(df_recurrence["value"].tolist(), expected_values)
-        assert all(df_recurrence["model"].str.contains("recurrence_27d"))
-        assert all(df_recurrence["file_name"].str.contains("_recurrence_27d"))
 
     def test_ensemble_reduction_methods(self, sample_times, expected_columns):
         reduction_methods = [None, "mean", "median"]
@@ -460,132 +458,3 @@ class TestRecursiveFill27dHistorical:
         }
         df = pd.DataFrame(data, index=times)
         return df
-
-    def test_27_day_recurrence_basic_functionality(self, sample_dataframe_with_gaps):
-        historical_time = sample_dataframe_with_gaps.index[0] - timedelta(days=27)
-        historical_times = pd.date_range(historical_time, periods=1440, freq="1min", tz=timezone.utc)
-
-        historical_data = pd.DataFrame(
-            {
-                "proton_density": [5.0 + i * 0.001 for i in range(1440)],
-                "speed": [400.0 + i * 0.05 for i in range(1440)],
-                "bavg": [10.0 + i * 0.002 for i in range(1440)],
-                "temperature": [100000.0 + i * 10 for i in range(1440)],
-                "bx_gsm": [1.0 + i * 0.001 for i in range(1440)],
-                "by_gsm": [2.0 + i * 0.001 for i in range(1440)],
-                "bz_gsm": [3.0 + i * 0.001 for i in range(1440)],
-                "model": ["omni"] * 1440,
-                "file_name": ["historical_file.txt"] * 1440,
-            },
-            index=historical_times,
-        )
-
-        mock_omni = Mock(spec=SWOMNI)
-        mock_omni.LABEL = "omni"
-        mock_omni.read.return_value = historical_data
-
-        result = _recursive_fill_27d_historical(
-            sample_dataframe_with_gaps, download=False, historical_models=[mock_omni]
-        )
-
-        assert not result["proton_density"].isna().any()
-        assert not result["speed"].isna().any()
-        assert not result["bavg"].isna().any()
-
-        assert result["proton_density"].iloc[0] == historical_data["proton_density"].iloc[0]
-        assert result["speed"].iloc[0] == historical_data["speed"].iloc[0]
-
-        assert all("omni_recurrence_27d" in model for model in result["model"].dropna())
-        assert all("recurrence_27d" in fname for fname in result["file_name"].dropna())
-
-    def test_27_day_recurrence_same_data_different_times(self):
-        t0 = datetime(2024, 11, 25, tzinfo=timezone.utc)
-        times_t0 = pd.date_range(t0, periods=5, freq="1min", tz=timezone.utc)
-
-        t_minus_27 = t0 - timedelta(days=27)
-        times_t_minus_27 = pd.date_range(t_minus_27, periods=5, freq="1min", tz=timezone.utc)
-
-        historical_values = {
-            "proton_density": [5.1, 5.2, 5.3, 5.4, 5.5],
-            "speed": [401.0, 402.0, 403.0, 404.0, 405.0],
-            "bavg": [10.1, 10.2, 10.3, 10.4, 10.5],
-            "model": ["omni"] * 5,
-            "file_name": ["historical.txt"] * 5,
-        }
-
-        historical_df = pd.DataFrame(historical_values, index=times_t_minus_27)
-
-        current_df = pd.DataFrame(
-            {
-                "proton_density": [np.nan] * 5,
-                "speed": [np.nan] * 5,
-                "bavg": [np.nan] * 5,
-                "model": [None] * 5,
-                "file_name": [None] * 5,
-            },
-            index=times_t0,
-        )
-
-        mock_omni = Mock(spec=SWOMNI)
-        mock_omni.LABEL = "omni"
-        mock_omni.read.return_value = historical_df
-
-        result = _recursive_fill_27d_historical(current_df, download=False, historical_models=[mock_omni])
-
-        np.testing.assert_array_equal(result["proton_density"].values, historical_df["proton_density"].values)
-        np.testing.assert_array_equal(result["speed"].values, historical_df["speed"].values)
-        np.testing.assert_array_equal(result["bavg"].values, historical_df["bavg"].values)
-
-    def test_no_gaps_unchanged(self, sample_dataframe_no_gaps):
-        mock_omni = Mock(spec=SWOMNI)
-        mock_omni.LABEL = "omni"
-
-        result = _recursive_fill_27d_historical(sample_dataframe_no_gaps, download=False, historical_models=[mock_omni])
-
-        pd.testing.assert_frame_equal(result, sample_dataframe_no_gaps)
-
-        mock_omni.read.assert_not_called()
-
-    def test_empty_dataframe(self):
-        empty_df = pd.DataFrame()
-        mock_omni = Mock(spec=SWOMNI)
-
-        result = _recursive_fill_27d_historical(empty_df, download=False, historical_models=[mock_omni])
-
-        assert result.empty
-        pd.testing.assert_frame_equal(result, empty_df)
-
-    def test_multiple_models_priority(self, sample_dataframe_with_gaps):
-        mock_dscovr = Mock(spec=DSCOVR)
-        mock_dscovr.LABEL = "dscovr"
-        mock_dscovr.read.side_effect = Exception("No data available")
-
-        historical_time = sample_dataframe_with_gaps.index[0] - timedelta(days=27)
-        historical_times = pd.date_range(historical_time, periods=1440, freq="1min", tz=timezone.utc)
-
-        historical_data = pd.DataFrame(
-            {
-                "proton_density": [7.0] * 1440,
-                "speed": [450.0] * 1440,
-                "bavg": [12.0] * 1440,
-                "model": ["ace"] * 1440,
-                "file_name": ["ace_file.txt"] * 1440,
-            },
-            index=historical_times,
-        )
-
-        mock_ace = Mock(spec=SWACE)
-        mock_ace.LABEL = "ace"
-        mock_ace.read.return_value = historical_data
-
-        result = _recursive_fill_27d_historical(
-            sample_dataframe_with_gaps,
-            download=False,
-            historical_models=[mock_dscovr, mock_ace],
-        )
-
-        assert not result["proton_density"].isna().any()
-        assert all("ace_recurrence_27d" in model for model in result["model"].dropna())
-
-        mock_dscovr.read.assert_called()
-        mock_ace.read.assert_called()

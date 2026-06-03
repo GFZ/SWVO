@@ -9,6 +9,7 @@ Module for handling OMNI high resolution data.
 import calendar
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
@@ -46,6 +47,8 @@ class OMNIHighRes(BaseIO):
 
     START_YEAR = 1981
     LABEL = "omni"
+    PARALLEL_DOWNLOAD_THRESHOLD = 10
+    MAX_PARALLEL_DOWNLOADS = 10
 
     def download_and_process(
         self,
@@ -83,40 +86,64 @@ class OMNIHighRes(BaseIO):
 
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time, cadence_min)
 
+        download_tasks = []
         for file_path, time_interval in zip(file_paths, time_intervals):
             if file_path.exists() and not reprocess_files:
                 continue
 
-            # Create directory structure if it doesn't exist
-            file_path.parent.mkdir(parents=True, exist_ok=True)
+            download_tasks.append((file_path, time_interval))
 
-            tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
+        if len(download_tasks) > self.PARALLEL_DOWNLOAD_THRESHOLD:
+            max_workers = min(self.MAX_PARALLEL_DOWNLOADS, len(download_tasks))
+            logger.info(f"Downloading {len(download_tasks)} OMNI high resolution files with {max_workers} workers.")
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = [
+                    executor.submit(self._download_and_process_single_file, file_path, time_interval, cadence_min)
+                    for file_path, time_interval in download_tasks
+                ]
+                for future in as_completed(futures):
+                    future.result()
+            return
 
-            try:
-                data = self._get_data_from_omni(
-                    start=time_interval[0],
-                    end=time_interval[1],
-                    cadence=cadence_min,
-                )
+        for file_path, time_interval in download_tasks:
+            self._download_and_process_single_file(file_path, time_interval, cadence_min)
 
-                logger.debug("Processing file ...")
+    def _download_and_process_single_file(
+        self,
+        file_path,
+        time_interval: Tuple[datetime, datetime],
+        cadence_min: int,
+    ) -> None:
+        """Download and process one monthly OMNI High Resolution file."""
 
-                processed_df = self._process_single_month(data, original_end=time_interval[1], cadence_min=cadence_min)
+        # Create directory structure if it doesn't exist
+        file_path.parent.mkdir(parents=True, exist_ok=True)
 
-                # Do not save empty DataFrames — no data available for this interval
-                if processed_df.empty:
-                    logger.warning(f"Skipping save for {file_path}: no data available for this interval.")
-                    continue
+        tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
 
-                processed_df.to_csv(tmp_path, index=True, header=True)
-                tmp_path.replace(file_path)
+        try:
+            data = self._get_data_from_omni(
+                start=time_interval[0],
+                end=time_interval[1],
+                cadence=cadence_min,
+            )
 
-            except Exception as e:
-                logger.error(f"Failed to process {file_path}: {e}")
-                if tmp_path.exists():
-                    tmp_path.unlink()
-                    pass
-                continue
+            logger.debug("Processing file ...")
+
+            processed_df = self._process_single_month(data, original_end=time_interval[1], cadence_min=cadence_min)
+
+            # Do not save empty DataFrames — no data available for this interval
+            if processed_df.empty:
+                logger.warning(f"Skipping save for {file_path}: no data available for this interval.")
+                return
+
+            processed_df.to_csv(tmp_path, index=True, header=True)
+            tmp_path.replace(file_path)
+
+        except Exception as e:
+            logger.error(f"Failed to process {file_path}: {e}")
+            if tmp_path.exists():
+                tmp_path.unlink()
 
     def read(
         self,
