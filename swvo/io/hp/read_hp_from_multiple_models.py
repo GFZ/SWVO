@@ -38,6 +38,7 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
     historical_data_cutoff_time: datetime | None = None,
     *,
     download: bool = False,
+    fill_average: bool = False,
 ) -> pd.DataFrame | list[pd.DataFrame]:
     """
     Read Hp data from multiple models.
@@ -61,6 +62,8 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
         Time, which represents "now". After this time, no data will be taken from historical models (OMNI, Niemegk), defaults to None.
     download : bool, optional
         Flag which decides whether new data should be downloaded, defaults to False.
+    fill_average : bool, optional
+        Flag which decides whether to fill missing values with the average of available data, defaults to False.
 
     Returns
     -------
@@ -109,11 +112,40 @@ def read_hp_from_multiple_models(  # noqa: PLR0913
 
         if not any_nans(data_out):
             break
+    if fill_average:
+        logger.info("Average filling enabled. Filling remaining missing values with average of previous values.")
+        for i, df in enumerate(data_out):
+            if not df.empty:
+                data_out[i] = _fill_average(df, hp_index)
 
     if len(data_out) == 1:
         data_out = data_out[0]
 
     return data_out
+
+
+def _fill_average(df: pd.DataFrame, hp_index: str) -> pd.DataFrame:
+    """Fill missing values in the DataFrame with the average value of combined data.
+
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        The input DataFrame with potential missing values.
+    hp_index : str
+        The index for which to calculate the average.
+
+    Returns:
+    --------
+    pd.DataFrame
+        The DataFrame with missing values filled with the average value of the combined data.
+    """
+    df = df.copy()
+    value_col = hp_index
+    missing = df.index[df[value_col].isna()]
+    df.loc[missing, value_col] = (df[hp_index].mean() * 3).round() / 3
+    df.loc[missing, "model"] = "average_fill"
+    df.loc[missing, "file_name"] = "average_fill"
+    return df
 
 
 def _read_from_model(  # noqa: PLR0913

@@ -70,6 +70,8 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
     rec_model_order : Sequence[KpOMNI | KpNiemegk | KpBGS], optional
         The order in which historical models will be used for 27-day recurrence filling.
         Defaults to [OMNI, Niemegk].
+    fill_average : bool, optional
+        Flag which decides whether to fill missing values with the average Kp=4, defaults to False.
 
 
     Returns
