@@ -90,7 +90,7 @@ class DSTWDC(BaseIO):
 
             try:
                 logger.debug(f"Downloading file {URL} ...")
-                response = requests.get(URL)
+                response = requests.get(URL, timeout=10)
                 if response.status_code == 404:
                     logger.warning(f"WDC Dst data not found at {URL}")
                     continue

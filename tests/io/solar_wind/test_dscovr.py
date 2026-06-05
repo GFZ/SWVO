@@ -81,7 +81,7 @@ class TestDSCOVR:
         test_file = DATA_DIR / DSCOVR.NAME_MAG
         test_file.parent.mkdir(exist_ok=True)
 
-        response = requests.get(DSCOVR.URL + DSCOVR.NAME_MAG)
+        response = requests.get(DSCOVR.URL + DSCOVR.NAME_MAG, timeout=10)
         response.raise_for_status()
         with open(test_file, "wb") as f:
             f.write(response.content)
@@ -95,7 +95,7 @@ class TestDSCOVR:
         test_file = DATA_DIR / DSCOVR.NAME_SWEPAM
         test_file.parent.mkdir(exist_ok=True)
 
-        response = requests.get(DSCOVR.URL + DSCOVR.NAME_SWEPAM)
+        response = requests.get(DSCOVR.URL + DSCOVR.NAME_SWEPAM, timeout=10)
         response.raise_for_status()
         with open(test_file, "wb") as f:
             f.write(response.content)

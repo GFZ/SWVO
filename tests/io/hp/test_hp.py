@@ -162,7 +162,7 @@ class TestHpGFZ:
         expected_url = (
             "https://kp.gfz.de/app/json/?start=2020-01-01T00:00:00Z&end=2020-12-31T00:00:00Z&index=Hp30&status=def"
         )
-        mock_get.assert_called_once_with(expected_url, timeout=30)
+        mock_get.assert_called_once_with(expected_url, timeout=10)
 
     @pytest.fixture
     def sample_csv_data(self):

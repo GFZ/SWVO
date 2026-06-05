@@ -157,7 +157,7 @@ class HpGFZ(BaseIO):
         logger.debug(f"Downloading data from {url} ...")
 
         try:
-            response = requests.get(url, timeout=30)
+            response = requests.get(url, timeout=10)
             response.raise_for_status()
 
             data = response.json()

@@ -115,7 +115,7 @@ class KpNiemegk(BaseIO):
         rmtree(temporary_dir, ignore_errors=True)
 
     def _download(self, temporary_dir):
-        response = requests.get(self.URL + self.NAME)
+        response = requests.get(self.URL + self.NAME, timeout=10)
         response.raise_for_status()
 
         with open(temporary_dir / self.NAME, "w") as f:

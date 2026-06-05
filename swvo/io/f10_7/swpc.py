@@ -151,7 +151,7 @@ class F107SWPC(BaseIO):
         FileNotFoundError
             If the downloaded file is empty.
         """
-        response = requests.get(self.URL + filename)
+        response = requests.get(self.URL + filename, timeout=10)
         response.raise_for_status()
 
         with open(temp_dir / filename, "wb") as f:

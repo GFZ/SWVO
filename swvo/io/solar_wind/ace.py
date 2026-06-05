@@ -147,7 +147,7 @@ class SWACE(BaseIO):
             If the downloaded file is empty.
         """
         logger.debug(f"Downloading file {self.URL + file_name} ...")
-        response = requests.get(self.URL + file_name)
+        response = requests.get(self.URL + file_name, timeout=10)
         response.raise_for_status()
 
         with open(temporary_dir / file_name, "wb") as f:

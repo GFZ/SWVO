@@ -184,7 +184,7 @@ class TestSWACE:
         assert all(col in data.columns for col in SWACE.MAG_FIELDS + SWACE.SWEPAM_FIELDS)
 
     def test_cleanup_after_download(self, swace_instance, sample_mag_data, sample_swepam_data):
-        def mock_get(url):
+        def mock_get(url, **kwargs):
             mock_response = Mock()
             if SWACE.NAME_MAG in url:
                 mock_response.content = sample_mag_data.encode()

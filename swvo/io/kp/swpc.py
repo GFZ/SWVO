@@ -122,7 +122,7 @@ class KpSWPC(BaseIO):
         requests.HTTPError
             If the HTTP request fails.
         """
-        response = requests.get(self.URL + filename)
+        response = requests.get(self.URL + filename, timeout=10)
         response.raise_for_status()
 
         with open(temporary_dir / filename, "wb") as f:

@@ -157,7 +157,7 @@ class OMNILowRes(BaseIO):
         rmtree(temporary_dir, ignore_errors=True)
 
     def _download(self, temporary_dir: Path, filename: str):
-        response = requests.get(self.URL + filename)
+        response = requests.get(self.URL + filename, timeout=10)
         response.raise_for_status()
 
         with open(temporary_dir / filename, "wb") as f:

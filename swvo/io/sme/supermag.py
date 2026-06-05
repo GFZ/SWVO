@@ -102,7 +102,7 @@ class SMESuperMAG(BaseIO):
 
                 logger.debug(f"Downloading data from {url} ...")
 
-                response = requests.get(url)
+                response = requests.get(url, timeout=10)
                 response.raise_for_status()
 
                 data = response.text.splitlines()
