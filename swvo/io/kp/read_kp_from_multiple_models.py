@@ -314,7 +314,7 @@ def _read_latest_ensemble_files(
     # Ensure the last index of every DataFrame is the next higher multiple of 3 hours than target_time
     adjusted_data = []
     for df in data_one_model:
-        if not df.empty or not df.isna().all():
+        if not df.empty or not df.isna().all().all():
             if df.index[-1] < end_time and (df.index[-1] - end_time) < timedelta(hours=3):
                 df.loc[df.index[-1] + timedelta(hours=3)] = df.loc[df.index[-1]]
         adjusted_data.append(df)

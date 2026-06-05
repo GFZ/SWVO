@@ -36,6 +36,14 @@ class TestReadKpFromMultipleModels:
         for key, var in ENV_VAR_NAMES.items():
             os.environ[key] = ENV_VAR_NAMES[key]
 
+    @pytest.fixture(scope="session", autouse=True)
+    def create_tmp_dir(self):
+        if not TMP_DIR.exists():
+            TMP_DIR.mkdir()
+        yield
+        for file in TMP_DIR.glob("*"):
+            file.unlink()
+
     @pytest.fixture
     def sample_times(self) -> dict[str, datetime]:
         now = datetime(2024, 11, 25).replace(tzinfo=timezone.utc, minute=0, second=0, microsecond=0)
