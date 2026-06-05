@@ -90,10 +90,7 @@ class TestF107SWPC:
         assert len(time_intervals) == 3
         assert all(isinstance(interval, tuple) for interval in time_intervals)
 
-    # @patch("wget.download")
     def test_download_and_process(self, f107_instance):
-        # mock_wget.side_effect = mock_download_response
-
         f107_instance.download_and_process()
 
         _ = datetime.now(timezone.utc)
