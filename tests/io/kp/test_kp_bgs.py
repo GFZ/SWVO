@@ -96,7 +96,7 @@ class TestKpBGS:
         file_paths, _ = kp_bgs_instance._get_processed_file_list(past_time, end_time)
 
         for file_path in file_paths:
-            assert not file_path.exists()  # Files are only available for 2 months past, so these should not exist
+            assert file_path.exists()
 
     def test_read_with_download(self, kp_bgs_instance):
         current_time = datetime.now()
