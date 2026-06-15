@@ -123,12 +123,25 @@ class SWSWIFTEnsemble:
             logger.error(msg)
             raise ValueError(msg)
 
-        str_date = start_time.strftime("%Y%m%dt0000")
+        # Try new format first, then fall back to old format
+        str_date_new = start_time.strftime("%Y-%m-%d")
+        str_date_old = start_time.strftime("%Y%m%dt0000")
 
         ensemble_folders = sorted(
-            list((self.data_dir / str_date).glob("*task*")),
+            list((self.data_dir / str_date_new).glob("*task*")),
             key=lambda x: int(x.stem.split("task")[-1]),
         )
+
+        if len(ensemble_folders) > 0:
+            str_date = str_date_new
+            new_layout = True
+        else:
+            ensemble_folders = sorted(
+                list((self.data_dir / str_date_old).glob("*task*")),
+                key=lambda x: int(x.stem.split("task")[-1]),
+            )
+            str_date = str_date_old
+            new_layout = False
 
         logger.info(f"Found {len(ensemble_folders)} SWIFT tasks folders...")
         gsm_s = []
@@ -142,7 +155,7 @@ class SWSWIFTEnsemble:
         for ensemble_folder in ensemble_folders:
             try:
                 logger.info(f"Reading ensemble file: {ensemble_folder}")
-                gsm_path = ensemble_folder / "SWIFT"
+                gsm_path = ensemble_folder if new_layout else ensemble_folder / "SWIFT"
                 json_files = [f for f in (gsm_path).glob("gsm_*") if f.suffix == ".json"]
                 file = json_files[0] if len(json_files) > 0 else []
                 data_gsm = self._read_single_file(file)
