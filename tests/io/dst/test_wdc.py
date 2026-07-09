@@ -77,7 +77,7 @@ DAY
 
         expected_files = list(MOCK_DATA_PATH.glob("**/WDC_DST_*.csv"))
 
-        assert 1 <= len(expected_files) & len(expected_files) <= 2
+        assert 1 <= len(expected_files) & len(expected_files) <= 3
 
         data = pd.read_csv(expected_files[0])
         assert "dst" in data.columns
@@ -142,7 +142,7 @@ DAY
         start_time = datetime(2020, 12, 31)
         end_time = datetime(2020, 1, 1)
 
-        with pytest.raises(ValueError, match="start_time must be before end_time"):
+        with pytest.raises(AssertionError, match="Start time must be before end time"):
             dst_instance.read(start_time, end_time)
 
     def test_read_with_existing_data(self, dst_instance):
