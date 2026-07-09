@@ -66,7 +66,10 @@ class DSTWDC(BaseIO):
         None
         """
 
-        assert start_time < end_time, "Start time must be before end time"
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
+
+        assert start_time < end_time, "Start time must be before end time!"
 
         temporary_dir = Path("./temp_wdc")
         temporary_dir.mkdir(exist_ok=True, parents=True)
@@ -224,11 +227,6 @@ class DSTWDC(BaseIO):
         :class:`pandas.DataFrame`
            WDC Dst data.
         """
-
-        if start_time > end_time:
-            msg = "start_time must be before end_time"
-            logger.error(msg)
-            raise ValueError(msg)
 
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
