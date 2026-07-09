@@ -135,8 +135,8 @@ class DSCOVR(BaseIO):
 
             except Exception as e:
                 logger.error(f"Failed to process file for {date}: {e}")
-                # if tmp_path.exists():
-                # tmp_path.unlink()
+                if tmp_path.exists():
+                    tmp_path.unlink()
                 continue
 
         rmtree(temporary_dir, ignore_errors=True)
