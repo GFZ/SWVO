@@ -48,28 +48,30 @@ class SWACE(BaseIO):
 
     ENV_VAR_NAME = "RT_SW_ACE_STREAM_DIR"
 
-    URL = "https://services.swpc.noaa.gov/text/"
-    NAME_MAG = "ace-magnetometer.txt"
-    NAME_SWEPAM = "ace-swepam.txt"
+    URL = "https://sohoftp.nascom.nasa.gov/sdb/goes/ace/daily/"
+    NAME_MAG = "{date:%Y%m%d}_ace_mag_1m.txt"
+    NAME_SWEPAM = "{date:%Y%m%d}_ace_swepam_1m.txt"
 
     SWEPAM_FIELDS = ["speed", "proton_density", "temperature"]
     MAG_FIELDS = ["bx_gsm", "by_gsm", "bz_gsm", "bavg"]
 
     LABEL = "ace"
 
-    def download_and_process(self, request_time: datetime) -> None:
+    def download_and_process(self, start_time: datetime, end_time: datetime) -> None:
         """
         Download and process ACE data, splitting data across midnight into appropriate day files.
 
         Parameters
         ----------
-        request_time : datetime
-            The time for which the data is requested. Must be in the past and within the last two hours.
+        start_time : datetime
+            Start time of the data to download. Must be timezone-aware.
+        end_time : datetime
+            End time of the data to download. Must be timezone-aware.
 
         Raises
         ------
         AssertionError
-            If the request_time is in the future.
+            If the requested interval is invalid or extends into a future UTC date.
         FileNotFoundError
             If the downloaded files are empty.
 
@@ -78,56 +80,28 @@ class SWACE(BaseIO):
         None
         """
 
-        current_time = datetime.now(timezone.utc)
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
 
-        assert request_time < current_time, (
-            f"Request time: {request_time} cannot be in the future. Current time: {current_time}!"
-        )
-        # assert request_time < (datetime.now(timezone.utc).replace(second=0, microsecond=0) - timedelta(minutes = 121)), "Request time cannot be in the past!"
-
-        if current_time - request_time > timedelta(hours=2):
-            logger.debug("We can only download and process ACE RT data for the last two hours!")
-            return
+        assert start_time < end_time, "Start time must be before end time!"
 
         temporary_dir = Path("./temp_sw_ace_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
-        self._download(temporary_dir, self.NAME_MAG)
-        self._download(temporary_dir, self.NAME_SWEPAM)
-        logger.debug("Processing file ...")
-        processed_df = self._process_single_file(temporary_dir)
+        try:
+            for date in pd.date_range(start=start_time.date(), end=end_time.date(), freq="D"):
+                request_date = date.to_pydatetime().replace(tzinfo=timezone.utc)
+                mag_file_name = self._dated_file_name(self.NAME_MAG, request_date)
+                swepam_file_name = self._dated_file_name(self.NAME_SWEPAM, request_date)
 
-        unique_dates = np.unique(processed_df.index.date)  # ty: ignore[unresolved-attribute]
+                self._download(temporary_dir, mag_file_name)
+                self._download(temporary_dir, swepam_file_name)
 
-        for date in unique_dates:
-            file_path = self.data_dir / date.strftime("%Y/%m") / f"ACE_SW_NOWCAST_{date.strftime('%Y%m%d')}.csv"
-            tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
-
-            try:
-                day_start = enforce_utc_timezone(datetime.combine(date, datetime.min.time()))
-                day_end = enforce_utc_timezone(datetime.combine(date, datetime.max.time()))
-
-                day_data = processed_df[(processed_df.index >= day_start) & (processed_df.index <= day_end)]
-
-                if file_path.exists():
-                    logger.debug(f"Found previous file for {date}. Loading and combining ...")
-                    previous_df = self._read_single_file(file_path)
-
-                    previous_df.drop("file_name", axis=1, inplace=True)
-                    day_data = day_data.combine_first(previous_df)
-
-                logger.debug(f"Saving processed file for {date}")
-                file_path.parent.mkdir(parents=True, exist_ok=True)
-                day_data.to_csv(tmp_path, index=True, header=True)
-                tmp_path.replace(file_path)
-
-            except Exception as e:
-                logger.error(f"Failed to process file for {date}: {e}")
-                if tmp_path.exists():
-                    tmp_path.unlink()
-                continue
-
-        rmtree(temporary_dir, ignore_errors=True)
+                logger.debug(f"Processing ACE source files for {request_date.date()} ...")
+                processed_df = self._process_single_file(temporary_dir, mag_file_name, swepam_file_name)
+                self._save_processed_data(processed_df)
+        finally:
+            rmtree(temporary_dir, ignore_errors=True)
 
     def _download(self, temporary_dir: Path, file_name: str) -> None:
         """Download a file from ACE server.
@@ -155,6 +129,10 @@ class SWACE(BaseIO):
 
         if (temporary_dir / file_name).stat().st_size == 0:
             raise FileNotFoundError(f"Error while downloading file: {self.URL + file_name}!")
+
+    def _dated_file_name(self, template: str, request_time: datetime) -> str:
+        request_time = enforce_utc_timezone(request_time)
+        return template.format(date=request_time)
 
     def read(
         self,
@@ -184,8 +162,8 @@ class SWACE(BaseIO):
 
         Raises
         ------
-        AssertionError
-            Raises `AssertionError` if the start time is before the end time.
+        ValueError
+            Raises `ValueError` if the start time is after the end time.
         """
 
         if start_time > end_time:
@@ -197,9 +175,8 @@ class SWACE(BaseIO):
         end_time = enforce_utc_timezone(end_time)
 
         if propagation:
-            logger.info("Shiting start day by -1 day to account for propagation")
+            logger.info("Shifting start day by -1 day to account for propagation")
             start_time = start_time - timedelta(days=1)
-
         file_paths, _ = self._get_processed_file_list(start_time, end_time)
 
         t = pd.date_range(
@@ -222,16 +199,13 @@ class SWACE(BaseIO):
             },
         )
 
-        for file_path in file_paths:
-            if not file_path.exists() and download:
-                file_date = enforce_utc_timezone(datetime.strptime(file_path.stem.split("_")[-1], "%Y%m%d"))
-                hour_now = datetime.now(timezone.utc).hour
-                file_date = file_date.replace(hour=hour_now, minute=0, second=0, microsecond=0)
-                try:
-                    self.download_and_process(file_date)
-                except AssertionError as e:
-                    logger.error(f"`download_and_process` failed because: {e}")
+        if download and any(not file_path.exists() for file_path in file_paths):
+            try:
+                self.download_and_process(start_time, end_time)
+            except AssertionError as e:
+                logger.error(f"`download_and_process` failed because: {e}")
 
+        for file_path in file_paths:
             if not file_path.exists():
                 warnings.warn(f"File {file_path} not found")
                 continue
@@ -327,7 +301,43 @@ class SWACE(BaseIO):
 
         return df
 
-    def _process_single_file(self, temporary_dir: Path) -> pd.DataFrame:
+    def _save_processed_data(self, processed_df: pd.DataFrame) -> None:
+        unique_dates = np.unique(processed_df.index.date)  # ty: ignore[unresolved-attribute]
+
+        for date in unique_dates:
+            file_path = self.data_dir / date.strftime("%Y/%m") / f"ACE_SW_NOWCAST_{date.strftime('%Y%m%d')}.csv"
+            tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
+
+            try:
+                day_start = enforce_utc_timezone(datetime.combine(date, datetime.min.time()))
+                day_end = enforce_utc_timezone(datetime.combine(date, datetime.max.time()))
+
+                day_data = processed_df[(processed_df.index >= day_start) & (processed_df.index <= day_end)]
+
+                if file_path.exists():
+                    logger.debug(f"Found previous file for {date}. Loading and combining ...")
+                    previous_df = self._read_single_file(file_path)
+
+                    previous_df.drop("file_name", axis=1, inplace=True)
+                    day_data = day_data.combine_first(previous_df)
+
+                logger.debug(f"Saving processed file for {date}")
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                day_data.to_csv(tmp_path, index=True, header=True)
+                tmp_path.replace(file_path)
+
+            except Exception as e:
+                logger.error(f"Failed to process file for {date}: {e}")
+                if tmp_path.exists():
+                    tmp_path.unlink()
+                continue
+
+    def _process_single_file(
+        self,
+        temporary_dir: Path,
+        mag_file_name: str | None = None,
+        swepam_file_name: str | None = None,
+    ) -> pd.DataFrame:
         """Process mag and swepam ACE file to a DataFrame.
 
         Returns
@@ -335,14 +345,14 @@ class SWACE(BaseIO):
         pd.DataFrame
             ACE data.
         """
-        data_mag = self._process_mag_file(temporary_dir)
-        data_swepam = self._process_swepam_file(temporary_dir)
+        data_mag = self._process_mag_file(temporary_dir, mag_file_name)
+        data_swepam = self._process_swepam_file(temporary_dir, swepam_file_name)
 
         data = pd.concat([data_swepam, data_mag], axis=1)
 
         return data
 
-    def _process_mag_file(self, temporary_dir: Path) -> pd.DataFrame:
+    def _process_mag_file(self, temporary_dir: Path, file_name: str | None = None) -> pd.DataFrame:
         """
         Reads magnetic instrument last available real time ACE data.
 
@@ -369,8 +379,9 @@ class SWACE(BaseIO):
             "lon",
         ]
 
+        data_file = self._resolve_data_file(temporary_dir, file_name, "*_ace_mag_1m.txt")
         data_mag = pd.read_csv(
-            temporary_dir / self.NAME_MAG,
+            data_file,
             comment="#",
             skiprows=2,
             sep=r"\s+",
@@ -402,7 +413,7 @@ class SWACE(BaseIO):
 
         return data_mag
 
-    def _process_swepam_file(self, temporary_dir: Path) -> pd.DataFrame:
+    def _process_swepam_file(self, temporary_dir: Path, file_name: str | None = None) -> pd.DataFrame:
         """
         This method reads faraday cup SWEPAM instrument daily file from ACE original data.
 
@@ -427,8 +438,9 @@ class SWACE(BaseIO):
             "temperature",
         ]
 
+        data_file = self._resolve_data_file(temporary_dir, file_name, "*_ace_swepam_1m.txt")
         data_sw = pd.read_csv(
-            temporary_dir / self.NAME_SWEPAM,
+            data_file,
             comment="#",
             skiprows=2,
             sep=r"\s+",
@@ -453,6 +465,17 @@ class SWACE(BaseIO):
         data_sw["pdyn"] = 2e-6 * data_sw["proton_density"].values * data_sw["speed"].values ** 2
 
         return data_sw
+
+    def _resolve_data_file(self, temporary_dir: Path, file_name: str | None, pattern: str) -> Path:
+        if file_name is not None:
+            return temporary_dir / file_name
+
+        matches = sorted(temporary_dir.glob(pattern))
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise ValueError(f"Found multiple ACE source files matching {pattern} in {temporary_dir}")
+        raise FileNotFoundError(f"No ACE source file matching {pattern} found in {temporary_dir}")
 
     def _to_date(self, x) -> datetime:
         """
