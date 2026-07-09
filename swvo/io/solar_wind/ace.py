@@ -83,6 +83,10 @@ class SWACE(BaseIO):
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
 
+        current_time = datetime.now(timezone.utc)
+
+        assert end_time < current_time, f"End time: {end_time} cannot be in the future. Current time: {current_time}!"
+
         assert start_time < end_time, "Start time must be before end time!"
 
         temporary_dir = Path("./temp_sw_ace_wget")
@@ -100,6 +104,11 @@ class SWACE(BaseIO):
                 logger.debug(f"Processing ACE source files for {request_date.date()} ...")
                 processed_df = self._process_single_file(temporary_dir, mag_file_name, swepam_file_name)
                 self._save_processed_data(processed_df)
+        except Exception as e:
+            logger.error(f"Failed to download and process: {e}")
+            if temporary_dir.exists():
+                rmtree(temporary_dir, ignore_errors=True)
+            raise
         finally:
             rmtree(temporary_dir, ignore_errors=True)
 

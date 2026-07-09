@@ -118,9 +118,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
             )
         except ValueError as e:
             if not isinstance(model, DSCOVR):
-                raise
-
-            logger.warning(f"Failed to read DSCOVR data because: {e}. Falling back to ACE.")
+                logger.warning(f"Failed to read DSCOVR data because: {e}. Falling back to ACE.")
             # switch to SWACE if SWACE is already in the model_order, otherwise create a new instance of SWACE with "./data" as the data directory
             # also log this fallback action
             active_model = next((m for m in model_order if isinstance(m, SWACE)), None)
