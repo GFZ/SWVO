@@ -174,6 +174,65 @@ class TestReadSolarWindFromMultipleModels:
         for d1, d2 in zip(data1, data2):
             pd.testing.assert_frame_equal(d1, d2)
 
+    def test_dscovr_value_error_falls_back_to_ace(self, monkeypatch):
+        start_time = datetime(2026, 6, 29, 23, 58, tzinfo=timezone.utc)
+        end_time = datetime(2026, 6, 30, 0, 1, tzinfo=timezone.utc)
+        index = pd.date_range(start_time, end_time, freq="1min", tz="UTC")
+        ace_data = pd.DataFrame(
+            {
+                "speed": [400.0] * len(index),
+                "proton_density": [5.0] * len(index),
+                "bavg": [7.0] * len(index),
+                "temperature": [100000.0] * len(index),
+                "bx_gsm": [1.0] * len(index),
+                "by_gsm": [2.0] * len(index),
+                "bz_gsm": [-1.0] * len(index),
+                "file_name": ["ace_file"] * len(index),
+            },
+            index=index,
+        )
+        ace_calls = []
+
+        def raise_dscovr_value_error(self, *args, **kwargs):
+            raise ValueError("DSCOVR data is only available until 2026-06-29 23:59:59 UTC.")
+
+        def read_ace(self, read_start, read_end, *, download=False, propagation=False):
+            ace_calls.append(
+                {
+                    "model": self,
+                    "start_time": read_start,
+                    "end_time": read_end,
+                    "download": download,
+                    "propagation": propagation,
+                }
+            )
+            return ace_data
+
+        monkeypatch.setattr(DSCOVR, "read", raise_dscovr_value_error)
+        monkeypatch.setattr(SWACE, "read", read_ace)
+
+        ace_model = SWACE()
+        data = read_solar_wind_from_multiple_models(
+            start_time=start_time,
+            end_time=end_time,
+            model_order=[DSCOVR(), ace_model],
+            historical_data_cutoff_time=end_time,
+            download=True,
+        )
+
+        assert len(ace_calls) == 1
+        assert ace_calls[0] == {
+            "model": ace_model,
+            "start_time": start_time,
+            "end_time": end_time,
+            "download": True,
+            "propagation": True,
+        }
+        assert isinstance(data, pd.DataFrame)
+        assert (data["model"] == "ace").all()
+        assert (data["file_name"] == "ace_file").all()
+        assert data.loc[start_time, "speed"] == 400.0
+
     def test_model_check_with_wrong_class(self, sample_times):
         class FakeModel:
             pass

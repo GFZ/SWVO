@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Literal, Optional
 
 import numpy as np
@@ -96,7 +97,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
 
     if model_order is None:
         model_order = [SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble()]
-        logger.warning("No model order specified, using default order: OMNI, ACE, SWIFT ensemble")
+        logger.warning("No model order specified, using default order: SWOMNI, DSCOVR, SWACE, SWSWIFTEnsemble")
 
     data_out = [pd.DataFrame()]
     swift_data_available = True
@@ -104,18 +105,43 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
     for model in model_order:
         if not isinstance(model, SWModel):
             raise ModelError(f"Unknown or incompatible model: {type(model).__name__}")
-        data_one_model = _read_from_model(
-            model,
-            start_time,
-            end_time,
-            historical_data_cutoff_time,
-            reduce_ensemble,  # ty: ignore[invalid-argument-type]
-            download=download,
-            do_interpolation=do_interpolation,
-        )
+        active_model = model
+        try:
+            data_one_model = _read_from_model(
+                model,
+                start_time,
+                end_time,
+                historical_data_cutoff_time,
+                reduce_ensemble,  # ty: ignore[invalid-argument-type]
+                download=download,
+                do_interpolation=do_interpolation,
+            )
+        except ValueError as e:
+            if not isinstance(model, DSCOVR):
+                raise
+
+            logger.warning(f"Failed to read DSCOVR data because: {e}. Falling back to ACE.")
+            # switch to SWACE if SWACE is already in the model_order, otherwise create a new instance of SWACE with "./data" as the data directory
+            # also log this fallback action
+            active_model = next((m for m in model_order if isinstance(m, SWACE)), None)
+
+            if active_model is not None:
+                logger.info("Falling back to SWACE model in the model order.")
+            else:
+                active_model = SWACE(Path("./data"))
+                logger.info("Falling back to a new instance of SWACE model with default data directory './data'.")
+            data_one_model = _read_from_model(
+                active_model,
+                start_time,
+                end_time,
+                historical_data_cutoff_time,
+                reduce_ensemble,  # ty: ignore[invalid-argument-type]
+                download=download,
+                do_interpolation=do_interpolation,
+            )
 
         # Check if SWIFT ensemble returned empty data
-        if isinstance(model, SWSWIFTEnsemble):
+        if isinstance(active_model, SWSWIFTEnsemble):
             if (isinstance(data_one_model, list) and len(data_one_model) == 0) or (
                 isinstance(data_one_model, pd.DataFrame) and data_one_model.empty
             ):
@@ -140,7 +166,7 @@ def read_solar_wind_from_multiple_models(  # noqa: PLR0913
                     swift_data_available = False
                     logger.info("SWIFT ensemble data contains only NaN values for future dates")
 
-        data_out = construct_updated_data_frame(data_out, data_one_model, model.LABEL)
+        data_out = construct_updated_data_frame(data_out, data_one_model, active_model.LABEL)
         if not any_nans(data_out):
             break
 
