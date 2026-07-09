@@ -38,35 +38,20 @@ class TestSWACE:
     @pytest.fixture
     def sample_mag_data(self):
         """Sample magnetometer data"""
-        return """
+        return """:Data_list: 20240315_ace_mag_1m.txt
+:Created: 2024 Mar 15 0102 UT
 
-    2024 03 15 0100    -1.0000000   3   2.31   1.42  -0.89   2.84  31.42  31.63
-    2024 03 15 0101    -1.0000000   3   2.28   1.39  -0.87   2.80  31.38  31.59"""
+    2024 03 15 0100    60384   3600   0   1.42  -0.89   2.84   3.31  31.42  31.63
+    2024 03 15 0101    60384   3660   0   1.39  -0.87   2.80   3.26  31.38  31.59"""
 
     @pytest.fixture
     def sample_swepam_data(self):
         """Sample SWEPAM data"""
-        return """
+        return """:Data_list: 20240315_ace_swepam_1m.txt
+:Created: 2024 Mar 15 0102 UT
 
-    2024 03 15 0100    -1.0000000   3      4.2     380      145000
-    2024 03 15 0101    -1.0000000   3      4.1     375      144000"""
-
-    @pytest.fixture
-    def mock_download_response(self, sample_mag_data, sample_swepam_data):
-        def mock_download(url, output):
-            output_path = Path(output)
-            if SWACE.NAME_MAG in url:
-                file_path = output_path / SWACE.NAME_MAG
-                content = sample_mag_data
-            else:
-                file_path = output_path / SWACE.NAME_SWEPAM
-                content = sample_swepam_data
-
-            with open(file_path, "w") as f:
-                f.write(content)
-            return file_path
-
-        return mock_download
+    2024 03 15 0100    60384   3600   0      4.2     380      145000
+    2024 03 15 0101    60384   3660   0      4.1     375      144000"""
 
     def test_initialization_with_env_var(self):
         with patch.dict("os.environ", {SWACE.ENV_VAR_NAME: str(DATA_DIR)}):
@@ -96,21 +81,84 @@ class TestSWACE:
         assert len(time_intervals) == 366
         assert all(isinstance(interval, tuple) for interval in time_intervals)
 
-    def test_download_and_process(self, swace_instance):
-        current_time = datetime.now(timezone.utc)
-        swace_instance.download_and_process(current_time)
+    def test_dated_source_file_names(self, swace_instance):
+        request_time = datetime(2024, 3, 15, 1, 0, tzinfo=timezone.utc)
 
-        expected_file = (
-            DATA_DIR / current_time.strftime("%Y/%m") / f"ACE_SW_NOWCAST_{current_time.strftime('%Y%m%d')}.csv"
-        )
+        assert swace_instance._dated_file_name(swace_instance.NAME_MAG, request_time) == "20240315_ace_mag_1m.txt"
+        assert swace_instance._dated_file_name(swace_instance.NAME_SWEPAM, request_time) == "20240315_ace_swepam_1m.txt"
+
+    def test_download_and_process(self, swace_instance, sample_mag_data, sample_swepam_data):
+        start_time = datetime(2024, 3, 15, 1, 0, tzinfo=timezone.utc)
+        end_time = datetime(2024, 3, 15, 1, 1, tzinfo=timezone.utc)
+        mag_file_name = swace_instance._dated_file_name(swace_instance.NAME_MAG, start_time)
+        swepam_file_name = swace_instance._dated_file_name(swace_instance.NAME_SWEPAM, start_time)
+
+        def mock_get(url, **kwargs):
+            mock_response = Mock()
+            if url.endswith(mag_file_name):
+                mock_response.content = sample_mag_data.encode()
+            else:
+                mock_response.content = sample_swepam_data.encode()
+            mock_response.raise_for_status = Mock()
+            return mock_response
+
+        with patch("requests.get", side_effect=mock_get) as mock_requests_get:
+            swace_instance.download_and_process(start_time, end_time)
+
+        expected_file = DATA_DIR / "2024/03" / "ACE_SW_NOWCAST_20240315.csv"
         assert expected_file.exists()
 
         data = pd.read_csv(expected_file)
-        assert len(data) > 0
+        assert len(data) == 2
         assert all(field in data.columns for field in SWACE.MAG_FIELDS + SWACE.SWEPAM_FIELDS)
+        assert data["speed"].iloc[0] == 380.0
+        assert data["pdyn"].iloc[0] == pytest.approx(2e-6 * 4.2 * 380.0**2)
+        assert mock_requests_get.call_args_list[0].args[0] == SWACE.URL + mag_file_name
+        assert mock_requests_get.call_args_list[1].args[0] == SWACE.URL + swepam_file_name
+
+    def test_download_and_process_multiple_days(self, swace_instance):
+        start_time = datetime(2024, 3, 15, 23, 0, tzinfo=timezone.utc)
+        end_time = datetime(2024, 3, 16, 1, 0, tzinfo=timezone.utc)
+
+        def mag_data(date: datetime):
+            return f""":Data_list: {date:%Y%m%d}_ace_mag_1m.txt
+:Created: {date:%Y} Mar {date:%d} 0102 UT
+
+    {date:%Y %m %d} 0000    60384      0   0   1.42  -0.89   2.84   3.31  31.42  31.63
+    {date:%Y %m %d} 0001    60384     60   0   1.39  -0.87   2.80   3.26  31.38  31.59"""
+
+        def swepam_data(date: datetime):
+            return f""":Data_list: {date:%Y%m%d}_ace_swepam_1m.txt
+:Created: {date:%Y} Mar {date:%d} 0102 UT
+
+    {date:%Y %m %d} 0000    60384      0   0      4.2     380      145000
+    {date:%Y %m %d} 0001    60384     60   0      4.1     375      144000"""
+
+        def mock_get(url, **kwargs):
+            file_name = Path(url).name
+            file_date = datetime.strptime(file_name.split("_", maxsplit=1)[0], "%Y%m%d").replace(tzinfo=timezone.utc)
+            mock_response = Mock()
+            mock_response.content = (
+                mag_data(file_date) if "_ace_mag_" in file_name else swepam_data(file_date)
+            ).encode()
+            mock_response.raise_for_status = Mock()
+            return mock_response
+
+        with patch("requests.get", side_effect=mock_get) as mock_requests_get:
+            swace_instance.download_and_process(start_time, end_time)
+
+        assert (DATA_DIR / "2024/03" / "ACE_SW_NOWCAST_20240315.csv").exists()
+        assert (DATA_DIR / "2024/03" / "ACE_SW_NOWCAST_20240316.csv").exists()
+        assert [call.args[0] for call in mock_requests_get.call_args_list] == [
+            SWACE.URL + "20240315_ace_mag_1m.txt",
+            SWACE.URL + "20240315_ace_swepam_1m.txt",
+            SWACE.URL + "20240316_ace_mag_1m.txt",
+            SWACE.URL + "20240316_ace_swepam_1m.txt",
+        ]
 
     def test_process_mag_file(self, swace_instance, sample_mag_data):
-        test_file = DATA_DIR / SWACE.NAME_MAG
+        request_time = datetime(2024, 3, 15, 1, 0, tzinfo=timezone.utc)
+        test_file = DATA_DIR / swace_instance._dated_file_name(swace_instance.NAME_MAG, request_time)
         test_file.parent.mkdir(exist_ok=True)
 
         with open(test_file, "w") as f:
@@ -124,7 +172,8 @@ class TestSWACE:
         assert data["bx_gsm"].iloc[0] == 1.42
 
     def test_process_swepam_file(self, swace_instance, sample_swepam_data):
-        test_file = DATA_DIR / SWACE.NAME_SWEPAM
+        request_time = datetime(2024, 3, 15, 1, 0, tzinfo=timezone.utc)
+        test_file = DATA_DIR / swace_instance._dated_file_name(swace_instance.NAME_SWEPAM, request_time)
         test_file.parent.mkdir(exist_ok=True)
 
         with open(test_file, "w") as f:
@@ -135,7 +184,8 @@ class TestSWACE:
         assert isinstance(data, pd.DataFrame)
         assert all(field in data.columns for field in SWACE.SWEPAM_FIELDS)
         assert len(data) == 2
-        assert data["speed"].iloc[0] == 145000.0
+        assert data["speed"].iloc[0] == 380.0
+        assert data["temperature"].iloc[0] == 145000.0
 
     def test_read_with_no_data(self, swace_instance):
         start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
@@ -184,9 +234,13 @@ class TestSWACE:
         assert all(col in data.columns for col in SWACE.MAG_FIELDS + SWACE.SWEPAM_FIELDS)
 
     def test_cleanup_after_download(self, swace_instance, sample_mag_data, sample_swepam_data):
+        start_time = datetime(2024, 3, 15, 1, 0, tzinfo=timezone.utc)
+        end_time = datetime(2024, 3, 15, 1, 1, tzinfo=timezone.utc)
+        mag_file_name = swace_instance._dated_file_name(swace_instance.NAME_MAG, start_time)
+
         def mock_get(url, **kwargs):
             mock_response = Mock()
-            if SWACE.NAME_MAG in url:
+            if url.endswith(mag_file_name):
                 mock_response.content = sample_mag_data.encode()
             else:
                 mock_response.content = sample_swepam_data.encode()
@@ -194,8 +248,7 @@ class TestSWACE:
             return mock_response
 
         with patch("requests.get", side_effect=mock_get):
-            current_time = datetime.now(timezone.utc)
-            swace_instance.download_and_process(current_time)
+            swace_instance.download_and_process(start_time, end_time)
 
         temp_dir = Path("./temp_sw_ace_wget")
         assert not temp_dir.exists(), "Temporary directory should be cleaned up"
