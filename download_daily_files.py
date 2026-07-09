@@ -86,7 +86,7 @@ def main():
 
     logger.info("SW ACE RT...")
     try:
-        SWACE().download_and_process(time_now)
+        SWACE().download_and_process(date_yesterday_start, time_now)
     except Exception:
         logger.error("Encountered error while downloading ACE RT solar wind. Traceback:")
         logger.error(traceback.format_exc())
@@ -100,7 +100,7 @@ def main():
 
     logger.info("SW DSCOVR...")
     try:
-        DSCOVR().download_and_process(time_now)
+        DSCOVR().download_and_process(date_yesterday_start, time_now)
     except Exception:
         logger.error("Encountered error while downloading DSCOVR solar wind. Traceback:")
         logger.error(traceback.format_exc())
