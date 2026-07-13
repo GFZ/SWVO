@@ -91,7 +91,7 @@ def read_f107_from_multiple_models(
             data_one_model = data_one_model.reindex(data_one_model.index.union(index_range))
 
             data_one_model.loc[historical_data_cutoff_time:end_time, "f107"] = np.nan
-            data_one_model = data_one_model.fillna({"file_name": np.nan})
+            data_one_model.loc[historical_data_cutoff_time:end_time, "file_name"] = np.nan
             logger.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
 
         if isinstance(model, F107SWPC):
