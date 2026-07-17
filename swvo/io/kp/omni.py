@@ -49,15 +49,16 @@ class KpOMNI(OMNILowRes):
             Kp data from OMNI Low Resolution data.
         """
 
-        if start_time > end_time:
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
+
+        if start_time >= end_time:
             msg = "start_time must be before end_time"
             logger.error(msg)
             raise ValueError(msg)
 
         data_out = super().read(start_time, end_time, download=download, variables="kp")
         kp_df = pd.DataFrame(index=data_out.index)
-        start_time = enforce_utc_timezone(start_time)
-        end_time = enforce_utc_timezone(end_time)
 
         kp_df["kp"] = data_out["kp"]
         kp_df["file_name"] = data_out["file_name"]

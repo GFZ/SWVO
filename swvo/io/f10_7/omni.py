@@ -51,13 +51,13 @@ class F107OMNI(OMNILowRes):
             F10.7 from OMNI Low Resolution data.
         """
 
-        if start_time > end_time:
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
+
+        if start_time >= end_time:
             msg = "start_time must be before end_time"
             logger.error(msg)
             raise ValueError(msg)
-
-        start_time = enforce_utc_timezone(start_time)
-        end_time = enforce_utc_timezone(end_time)
 
         data_out = super().read(start_time, end_time, download=download, variables="f107")
 

@@ -72,7 +72,10 @@ class OMNILowRes(BaseIO):
 
         if not file_path.exists():
             return False
-        columns = set(pd.read_csv(file_path, nrows=0).columns)
+        try:
+            columns = set(pd.read_csv(file_path, nrows=0).columns)
+        except (OSError, UnicodeDecodeError, pd.errors.ParserError, pd.errors.EmptyDataError):
+            return False
         return set(variable_names).issubset(columns)
 
     def download_and_process(self, start_time: datetime, end_time: datetime, reprocess_files: bool = False) -> None:
@@ -90,7 +93,17 @@ class OMNILowRes(BaseIO):
         Returns
         -------
         None
+
+        Raises
+        ------
+        ValueError
+            If ``start_time`` is not before ``end_time``.
         """
+
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
+        if start_time >= end_time:
+            raise ValueError("start_time must be before end_time")
 
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
         complete_schema = [variable.name for variable in LOW_RES_VARIABLES]
@@ -182,7 +195,10 @@ class OMNILowRes(BaseIO):
             Yearly OMNI Low Resolution data.
         """
 
-        data = pd.read_csv(file_path, sep=r"\s+", header=None)
+        try:
+            data = pd.read_csv(file_path, sep=r"\s+", header=None)
+        except (pd.errors.ParserError, pd.errors.EmptyDataError) as error:
+            raise ValueError(f"Cannot parse OMNI2 source file {file_path}: {error}") from error
         variable_count = data.shape[1] - len(self.TIME_COLUMNS)
         supported_counts = {len(LOW_RES_VARIABLES) - 2, len(LOW_RES_VARIABLES)}
         if variable_count not in supported_counts:
@@ -192,9 +208,19 @@ class OMNILowRes(BaseIO):
 
         present_variables = list(LOW_RES_VARIABLES[:variable_count])
         data.columns = [*self.TIME_COLUMNS, *(variable.name for variable in present_variables)]
+        try:
+            data = data.apply(pd.to_numeric)
+        except (TypeError, ValueError) as error:
+            raise ValueError(f"OMNI2 source file {file_path} contains nonnumeric fields: {error}") from error
+
+        invalid_time = ~data["day"].between(1, 366) | ~data["hour"].between(0, 23)
+        if invalid_time.any():
+            raise ValueError("OMNI2 returned an invalid day-of-year or hour field.")
 
         year_and_day = data["year"].astype(int).astype(str) + data["day"].astype(int).astype(str).str.zfill(3)
         data["timestamp"] = pd.to_datetime(year_and_day, format="%Y%j", utc=True)
+        if not (data["timestamp"].dt.year == data["year"]).all():
+            raise ValueError("OMNI2 returned an invalid day-of-year for its record year.")
         data["timestamp"] += pd.to_timedelta(data["hour"], unit="h")
         data.set_index("timestamp", inplace=True)
 
@@ -250,8 +276,8 @@ class OMNILowRes(BaseIO):
         Raises
         ------
         ValueError
-            If a variable is unknown, or an existing partial cache cannot
-            satisfy the request while ``download`` is false.
+            If the time range is invalid, a variable is unknown, or an existing
+            partial or unreadable cache cannot satisfy the request.
         """
         START_YEAR = 1963
         variable_names = resolve_variable_names(
@@ -260,13 +286,13 @@ class OMNILowRes(BaseIO):
             LOW_RES_DEFAULT_VARIABLES,
         )
 
-        if start_time > end_time:
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
+
+        if start_time >= end_time:
             msg = "start_time must be before end_time"
             logger.error(msg)
             raise ValueError(msg)
-
-        start_time = enforce_utc_timezone(start_time)
-        end_time = enforce_utc_timezone(end_time)
 
         if start_time < datetime(START_YEAR, 1, 1, tzinfo=timezone.utc):
             logger.warning(
@@ -275,7 +301,8 @@ class OMNILowRes(BaseIO):
             )
             start_time = datetime(START_YEAR, 1, 1, tzinfo=timezone.utc)
 
-        assert start_time < end_time
+        if start_time >= end_time:
+            raise ValueError(f"Requested time range ends before OMNI data begin in {START_YEAR}.")
 
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
         t = pd.date_range(
@@ -295,7 +322,20 @@ class OMNILowRes(BaseIO):
                     warnings.warn(f"File {file_path} not found")
                     continue
 
-            df_one_file = self._read_single_file(file_path)
+            try:
+                df_one_file = self._read_single_file(file_path)
+            except (OSError, UnicodeDecodeError, ValueError, KeyError, pd.errors.ParserError) as error:
+                if not download:
+                    raise ValueError(f"Cannot read processed OMNI file {file_path}: {error}") from error
+                logger.info(f"Replacing unreadable OMNI cache {file_path}")
+                self.download_and_process(time_interval[0], time_interval[1], reprocess_files=True)
+                try:
+                    df_one_file = self._read_single_file(file_path)
+                except (OSError, UnicodeDecodeError, ValueError, KeyError, pd.errors.ParserError) as retry_error:
+                    raise ValueError(
+                        f"Processed OMNI file {file_path} remains unreadable after attempted cache upgrade: "
+                        f"{retry_error}"
+                    ) from retry_error
             missing = [name for name in variable_names if name not in df_one_file.columns]
             if missing and download:
                 logger.info(f"Upgrading partial OMNI cache {file_path} for variables: {', '.join(missing)}")

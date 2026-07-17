@@ -56,6 +56,14 @@ upgrades, UTC indices, provenance, atomic writes, and all OMNI-derived readers.
 The full variable metadata tables are also checked for their expected 42, 45,
 and 54 row counts.
 
+The expanded edge-case matrix additionally covers registry uniqueness,
+generators and invalid selection types, equal/reversed/mixed-timezone ranges,
+mission-start clipping, month/year neighbor selection, malformed HTML and
+corrected-range retry loops, absent headers, incorrect and mixed record widths,
+nonnumeric values, invalid time words, corrupt-cache recovery and failed
+recovery, fill-boundary behavior, Kp thirds, OS temporary-directory cleanup,
+atomic replacement, and parallel worker failure propagation.
+
 Large mandatory live downloads were removed from unit tests. An opt-in one-day
 OMNIWeb request remains as a pre-delivery smoke check; run it with
 `SWVO_RUN_LIVE_TESTS=1` so external service availability cannot make the normal
@@ -66,17 +74,23 @@ test suite nondeterministic.
 Checks were run on 2026-07-17 on macOS with Python 3.12.12:
 
 - Ruff lint and formatting: passed for the complete repository.
-- Deterministic OMNI and derived-reader tests: 93 passed, 2 opt-in live
+- Deterministic OMNI and derived-reader tests: 118 passed, 2 opt-in live
   checks skipped.
 - Opt-in NASA OMNIWeb smoke checks: 2 passed, covering all 42 one-minute
   fields and all 45 five-minute fields for one day.
 - Production-size NASA check: a complete one-minute month produced 44,640
-  rows and 42 fields, with UTC timestamps and no residual temporary file.
+  rows and 42 fields, while a complete five-minute month produced 8,928 rows
+  and 45 fields (including all three cadence-specific proton-flux fields).
+  Both had UTC timestamps and left no residual temporary file.
 - Live hourly check: NASA's 2024 55-word file produced 8,784 rows and all 54
   output fields; the two unavailable historic fields were `NaN`.
-- Full `tests/io` run: 506 passed and 12 skipped. The only failure was the
+- Full repository test run: 586 passed and 12 skipped. The only failure was the
   unrelated live SuperMAG download test; repeat runs alternated malformed JSON
-  between its two requested days. All 95 OMNI and OMNI-derived tests passed.
+  between its two requested days. All 120 OMNI and OMNI-derived tests passed.
+- A second complete repository run, deselecting only that exact external
+  SuperMAG request, finished with 586 passed, 12 skipped, 1 deselected, and no
+  failures. This separates the reproducible local result from the availability
+  of an unrelated third-party endpoint.
 - Ty: no new diagnostics. The same two RBMDataSet diagnostics occur on an
   untouched archive of `upstream/main` and on this branch.
 - Sphinx: the standalone OMNI guide passed with warnings treated as errors.

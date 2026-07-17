@@ -159,7 +159,17 @@ def resolve_variable_names(
     default_names: Sequence[str],
     cadence: int | None = None,
 ) -> list[str]:
-    """Resolve user input to unique canonical variable names."""
+    """Resolve user input to unique canonical variable names.
+
+    Aliases are normalized, duplicates are removed while preserving the first
+    occurrence, and ``"all"`` is restricted to the requested cadence.
+
+    Raises
+    ------
+    ValueError
+        If the selection is empty, not an iterable of strings, contains an
+        unknown name, or requests a variable unavailable at ``cadence``.
+    """
 
     by_name = {variable.name: variable for variable in registry}
     aliases = {alias: variable.name for variable in registry for alias in variable.aliases}
@@ -173,10 +183,15 @@ def resolve_variable_names(
             else [variables]
         )
     else:
-        requested = list(variables)
+        try:
+            requested = list(variables)
+        except TypeError as error:
+            raise ValueError("variables must be a variable name or an iterable of variable names") from error
 
     if not requested:
         raise ValueError("variables must contain at least one OMNI variable name")
+    if not all(isinstance(name, str) for name in requested):
+        raise ValueError("OMNI variable names must be strings")
 
     resolved: list[str] = []
     invalid: list[str] = []

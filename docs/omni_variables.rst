@@ -212,7 +212,16 @@ existing conversion from OMNI's integer tenths to conventional thirds. The
 file and is null when every selected variable is missing for a row.
 
 Errors are raised before network access for unknown names, empty selections,
-and one-minute requests for the five-minute-only proton fluxes.
+non-string selections, invalid or equal time ranges, and one-minute requests
+for the five-minute-only proton fluxes. Source records with missing headers,
+unexpected word counts, nonnumeric fields, or invalid day/hour/minute values
+are rejected instead of being silently shifted or partially interpreted.
+
+An unreadable processed cache raises a path-specific ``ValueError`` when
+``download=False``. With ``download=True`` SWVO attempts one atomic replacement;
+if the replacement cannot be read, the error states that the cache remains
+unreadable. OMNIWeb corrected-range responses are followed only when the
+suggested end date shortens the request, preventing retry loops.
 
 Data source and acknowledgement
 -------------------------------

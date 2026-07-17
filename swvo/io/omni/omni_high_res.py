@@ -96,7 +96,10 @@ class OMNIHighRes(BaseIO):
 
         if not file_path.exists():
             return False
-        columns = set(pd.read_csv(file_path, nrows=0).columns)
+        try:
+            columns = set(pd.read_csv(file_path, nrows=0).columns)
+        except (OSError, UnicodeDecodeError, pd.errors.ParserError, pd.errors.EmptyDataError):
+            return False
         return set(variable_names).issubset(columns)
 
     def download_and_process(
@@ -127,9 +130,15 @@ class OMNIHighRes(BaseIO):
         ------
         AssertionError
             Raises `AssertionError` if the cadence is not 1 or 5 minutes.
+        ValueError
+            If ``start_time`` is not before ``end_time``.
         """
 
         self._validate_cadence(cadence_min)
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
+        if start_time >= end_time:
+            raise ValueError("start_time must be before end_time")
 
         complete_schema = resolve_variable_names(
             HIGH_RES_VARIABLES,
@@ -248,9 +257,9 @@ class OMNIHighRes(BaseIO):
         AssertionError
             Raises `AssertionError` if the cadence is not 1 or 5 minutes.
         ValueError
-            If a variable is unknown or unavailable at the selected cadence, or
-            an existing partial cache cannot satisfy the request while
-            ``download`` is false.
+            If the time range is invalid, a variable is unknown or unavailable
+            at the selected cadence, or an existing partial or unreadable cache
+            cannot satisfy the request.
         """
         self._validate_cadence(cadence_min)
         variable_names = resolve_variable_names(
@@ -260,13 +269,13 @@ class OMNIHighRes(BaseIO):
             cadence=cadence_min,
         )
 
-        if start_time > end_time:
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
+
+        if start_time >= end_time:
             msg = "start_time must be before end_time"
             logger.error(msg)
             raise ValueError(msg)
-
-        start_time = enforce_utc_timezone(start_time)
-        end_time = enforce_utc_timezone(end_time)
 
         if start_time < datetime(self.START_YEAR, 1, 1, tzinfo=timezone.utc):
             logger.warning(
@@ -275,7 +284,8 @@ class OMNIHighRes(BaseIO):
             )
             start_time = datetime(self.START_YEAR, 1, 1, tzinfo=timezone.utc)
 
-        assert start_time < end_time
+        if start_time >= end_time:
+            raise ValueError(f"Requested time range ends before OMNI data begin in {self.START_YEAR}.")
 
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time, cadence_min)
 
@@ -295,7 +305,20 @@ class OMNIHighRes(BaseIO):
                 logger.warning(f"File {file_path} not available after download attempt, skipping.")
                 continue
 
-            df = self._read_single_file(file_path)
+            try:
+                df = self._read_single_file(file_path)
+            except (OSError, UnicodeDecodeError, ValueError, KeyError, pd.errors.ParserError) as error:
+                if not download:
+                    raise ValueError(f"Cannot read processed OMNI file {file_path}: {error}") from error
+                logger.info(f"Replacing unreadable OMNI cache {file_path}")
+                self._download_and_process_single_file(file_path, time_interval, cadence_min)
+                try:
+                    df = self._read_single_file(file_path)
+                except (OSError, UnicodeDecodeError, ValueError, KeyError, pd.errors.ParserError) as retry_error:
+                    raise ValueError(
+                        f"Processed OMNI file {file_path} remains unreadable after attempted cache upgrade: "
+                        f"{retry_error}"
+                    ) from retry_error
             missing = [name for name in variable_names if name not in df.columns]
             if missing and download:
                 logger.info(f"Upgrading partial OMNI cache {file_path} for variables: {', '.join(missing)}")
@@ -442,6 +465,7 @@ class OMNIHighRes(BaseIO):
         if not data:
             if original_end is None:
                 return pd.DataFrame(columns=columns)
+            original_end = enforce_utc_timezone(original_end)
             # Build a NaN-filled DataFrame with the correct timestamps up to original_end
             index = pd.date_range(
                 start=original_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0),
@@ -451,7 +475,8 @@ class OMNIHighRes(BaseIO):
             )
             return pd.DataFrame(pd.NA, index=index, columns=columns)
 
-        next(line for line in data if line.strip().startswith("YYYY"))
+        if not any(line.strip().startswith("YYYY") for line in data):
+            raise ValueError("OMNIWeb response does not contain the expected YYYY data header.")
 
         # OMNIWeb wraps records in HTML and its parameter list contains lines
         # such as ``19 Vx Velocity``. Require all four leading time fields so
@@ -476,8 +501,14 @@ class OMNIHighRes(BaseIO):
         df = pd.DataFrame(rows, columns=raw_columns)
         df = df.apply(pd.to_numeric)
 
+        invalid_time = ~df["DOY"].between(1, 366) | ~df["HR"].between(0, 23) | ~df["MN"].between(0, 59)
+        if invalid_time.any():
+            raise ValueError("OMNIWeb returned an invalid day-of-year, hour, or minute field.")
+
         year_and_day = df["YYYY"].astype(int).astype(str) + df["DOY"].astype(int).astype(str).str.zfill(3)
         df["timestamp"] = pd.to_datetime(year_and_day, format="%Y%j", utc=True)
+        if not (df["timestamp"].dt.year == df["YYYY"]).all():
+            raise ValueError("OMNIWeb returned an invalid day-of-year for its record year.")
         df["timestamp"] += pd.to_timedelta(df["HR"], unit="h") + pd.to_timedelta(df["MN"], unit="m")
 
         df.drop(columns=["YYYY", "HR", "MN", "DOY"], inplace=True)
@@ -536,6 +567,8 @@ class OMNIHighRes(BaseIO):
         """
 
         self._validate_cadence(cadence)
+        start = enforce_utc_timezone(start)
+        end = enforce_utc_timezone(end)
         selected_names = resolve_variable_names(
             HIGH_RES_VARIABLES,
             list(variable_names) if variable_names is not None else None,
@@ -558,37 +591,43 @@ class OMNIHighRes(BaseIO):
         response.raise_for_status()
         data = response.text.splitlines()
 
-        if data and "Error" in data[0]:
+        correct_range_line = next((line for line in data if "correct range" in line.lower()), None)
+        has_error = any(re.search(r"\berror\b", line, flags=re.IGNORECASE) for line in data)
+        if correct_range_line is not None or has_error:
             logger.warning("Received an error response from the server.")
 
-            for line in data:
-                if "correct range" in line:
-                    # Use regex to find the valid date range (e.g., YYYYMMDD - YYYYMMDD)
-                    match = re.search(r"correct range: \d{8} - (\d{8})", line)
-                    if match:
-                        new_end_date_str = match.group(1)
-                        new_end_date = datetime.strptime(new_end_date_str, "%Y%m%d").replace(tzinfo=timezone.utc)
+            if correct_range_line is not None:
+                # Use regex to find the valid date range (e.g., YYYYMMDD - YYYYMMDD)
+                match = re.search(r"correct range:\s*\d{8}\s*-\s*(\d{8})", correct_range_line, re.IGNORECASE)
+                if match:
+                    new_end_date_str = match.group(1)
+                    new_end_date = datetime.strptime(new_end_date_str, "%Y%m%d").replace(tzinfo=timezone.utc)
 
+                    logger.warning(
+                        f"Invalid date range detected. Found suggested end date: {new_end_date.strftime('%Y-%m-%d')}"
+                    )
+
+                    # If the suggested end date is before the start date, no data is available
+                    # for this range — return an empty list to signal an empty DataFrame
+                    if new_end_date < start:
                         logger.warning(
-                            f"Invalid date range detected. Found suggested end date: {new_end_date.strftime('%Y-%m-%d')}"
+                            f"Suggested end date {new_end_date.strftime('%Y-%m-%d')} is before "
+                            f"start date {start.strftime('%Y-%m-%d')}. No data available for this range."
+                        )
+                        return []
+
+                    if new_end_date >= end:
+                        raise ValueError(
+                            "OMNIWeb returned an invalid corrected end date that would not shorten the request."
                         )
 
-                        # If the suggested end date is before the start date, no data is available
-                        # for this range — return an empty list to signal an empty DataFrame
-                        if new_end_date < start:
-                            logger.warning(
-                                f"Suggested end date {new_end_date.strftime('%Y-%m-%d')} is before "
-                                f"start date {start.strftime('%Y-%m-%d')}. No data available for this range."
-                            )
-                            return []
-
-                        # Recursively call the function with the original start date and the new end date
-                        return self._get_data_from_omni(
-                            start=start,
-                            end=new_end_date,
-                            cadence=cadence,
-                            variable_names=selected_names,
-                        )
+                    # Recursively call the function with the original start date and the new end date
+                    return self._get_data_from_omni(
+                        start=start,
+                        end=new_end_date,
+                        cadence=cadence,
+                        variable_names=selected_names,
+                    )
             msg = f"An unspecified error occurred: {data}"
             logger.error(msg)
             raise ValueError(msg)

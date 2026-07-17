@@ -4,13 +4,14 @@
 import os
 import shutil
 from concurrent.futures import Future
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 import pytest
+import requests
 
 from swvo.io.omni.omni_high_res import OMNIHighRes
 from swvo.io.omni.variables import HIGH_RES_DEFAULT_VARIABLES, HIGH_RES_VARIABLES
@@ -253,7 +254,7 @@ class TestOMNIHighRes:
 
     def test_process_single_month_raises_on_missing_header(self, omni_high_res):
         data = ["2020 1 0 0 5.1 1.2 2.3 3.4 400 5.5 1000000 -15"]
-        with pytest.raises(StopIteration):
+        with pytest.raises(ValueError, match="expected YYYY data header"):
             omni_high_res._process_single_month(data)
 
     def test_available_variables_cover_both_cadences(self, omni_high_res):
@@ -389,6 +390,272 @@ class TestOMNIHighRes:
         )
 
         assert output.read_text() == "original-cache\n"
+        assert not output.with_suffix(".csv.tmp").exists()
+
+    @pytest.mark.parametrize("method", ["read", "download_and_process"])
+    @pytest.mark.parametrize(
+        "start,end",
+        [
+            (datetime(2020, 1, 1), datetime(2020, 1, 1)),
+            (datetime(2020, 1, 2), datetime(2020, 1, 1)),
+        ],
+    )
+    def test_equal_and_reversed_ranges_raise_value_error(self, omni_high_res, method, start, end):
+        with pytest.raises(ValueError, match="start_time must be before end_time"):
+            getattr(omni_high_res, method)(start, end)
+
+    def test_mixed_naive_and_aware_times_are_normalized_before_comparison(self, tmp_path):
+        reader = OMNIHighRes(data_dir=tmp_path)
+        output = tmp_path / "2020/OMNI_HIGH_RES_1min_202001.csv"
+        output.parent.mkdir(parents=True)
+        pd.DataFrame(
+            {name: [1.0] for name in HIGH_RES_DEFAULT_VARIABLES},
+            index=pd.DatetimeIndex(["2020-01-01T00:00:00Z"], name="timestamp"),
+        ).to_csv(output)
+
+        result = reader.read(
+            datetime(2020, 1, 1),
+            datetime(2020, 1, 1, 0, 1, tzinfo=timezone.utc),
+        )
+
+        assert str(result.index.tz) == "UTC"
+
+    @pytest.mark.parametrize(
+        "doy,hour,minute,error",
+        [
+            (0, 0, 0, "invalid day-of-year, hour, or minute"),
+            (367, 0, 0, "invalid day-of-year, hour, or minute"),
+            (1, 24, 0, "invalid day-of-year, hour, or minute"),
+            (1, 0, 60, "invalid day-of-year, hour, or minute"),
+            (366, 0, 0, "invalid day-of-year for its record year"),
+        ],
+    )
+    def test_rejects_invalid_time_fields(self, omni_high_res, doy, hour, minute, error):
+        row = " ".join("1" for _ in HIGH_RES_DEFAULT_VARIABLES)
+        data = ["YYYY DOY HR MN", f"2021 {doy} {hour} {minute} {row}"]
+
+        with pytest.raises(ValueError, match=error):
+            omni_high_res._process_single_month(data)
+
+    def test_rejects_malformed_width_and_non_numeric_values(self, omni_high_res):
+        with pytest.raises(ValueError, match="record widths"):
+            omni_high_res._process_single_month(["YYYY DOY HR MN", "2020 1 0 0 1 2"])
+
+        values = ["1" for _ in HIGH_RES_DEFAULT_VARIABLES]
+        values[2] = "not-a-number"
+        with pytest.raises(ValueError, match="Unable to parse|string"):
+            omni_high_res._process_single_month(["YYYY DOY HR MN", f"2020 1 0 0 {' '.join(values)}"])
+
+    def test_missing_header_has_public_value_error(self, omni_high_res):
+        with pytest.raises(ValueError, match="expected YYYY data header"):
+            omni_high_res._process_single_month(["2020 1 0 0 " + " ".join("1" for _ in range(9))])
+
+    def test_empty_response_builds_utc_cadence_grid(self, omni_high_res):
+        result = omni_high_res._process_single_month(
+            [],
+            original_end=datetime(2020, 1, 1, 0, 10),
+            cadence_min=5,
+        )
+
+        assert len(result) == 3
+        assert result.index.tolist() == list(pd.date_range("2020-01-01", periods=3, freq="5min", tz="UTC"))
+        assert result.isna().all().all()
+
+    def test_empty_response_without_end_preserves_requested_schema(self, omni_high_res):
+        result = omni_high_res._process_single_month([], variable_names=["speed", "sym_h"])
+
+        assert result.empty
+        assert list(result.columns) == ["speed", "sym-h"]
+
+    def test_values_below_fill_sentinel_are_preserved(self, omni_high_res):
+        variables = [variable for variable in HIGH_RES_VARIABLES if 1 in variable.cadences]
+        values = [float(variable.fill_value) - 0.01 for variable in variables]
+        data = ["YYYY DOY HR MN", "2020 1 0 0 " + " ".join(map(str, values))]
+
+        result = omni_high_res._process_single_month(
+            data,
+            cadence_min=1,
+            variable_names=[variable.name for variable in variables],
+        )
+
+        assert result.notna().all().all()
+
+    def test_provenance_depends_only_on_selected_fields(self, tmp_path):
+        reader = OMNIHighRes(data_dir=tmp_path)
+        output = tmp_path / "2020/OMNI_HIGH_RES_1min_202001.csv"
+        output.parent.mkdir(parents=True)
+        index = pd.DatetimeIndex(["2020-01-01T00:00Z", "2020-01-01T00:01Z"], name="timestamp")
+        pd.DataFrame({"speed": [np.nan, 400.0], "ae": [20.0, np.nan]}, index=index).to_csv(output)
+
+        result = reader.read(
+            index[0].to_pydatetime(), (index[1] + timedelta(minutes=1)).to_pydatetime(), variables="speed"
+        )
+
+        assert pd.isna(result["file_name"].iloc[0])
+        assert result["file_name"].iloc[1] == output
+
+    def test_complete_cache_is_skipped_but_partial_and_reprocess_are_downloaded(self, tmp_path, mocker):
+        reader = OMNIHighRes(data_dir=tmp_path)
+        output = tmp_path / "2020/OMNI_HIGH_RES_1min_202001.csv"
+        output.parent.mkdir(parents=True)
+        all_names = [variable.name for variable in HIGH_RES_VARIABLES if 1 in variable.cadences]
+        pd.DataFrame(columns=all_names).to_csv(output)
+        download = mocker.patch.object(reader, "_download_and_process_single_file")
+        start = datetime(2020, 1, 1)
+        end = datetime(2020, 1, 31)
+
+        reader.download_and_process(start, end)
+        download.assert_not_called()
+
+        pd.DataFrame(columns=HIGH_RES_DEFAULT_VARIABLES).to_csv(output)
+        reader.download_and_process(start, end)
+        assert download.call_count == 1
+
+        download.reset_mock()
+        pd.DataFrame(columns=all_names).to_csv(output)
+        reader.download_and_process(start, end, reprocess_files=True)
+        assert download.call_count == 1
+
+    def test_corrupt_cache_is_reported_or_replaced(self, tmp_path, mocker):
+        reader = OMNIHighRes(data_dir=tmp_path)
+        output = tmp_path / "2020/OMNI_HIGH_RES_1min_202001.csv"
+        output.parent.mkdir(parents=True)
+        output.write_bytes(b"\xff\xfe\x00broken")
+        start = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        end = datetime(2020, 1, 1, 0, 1, tzinfo=timezone.utc)
+
+        with pytest.raises(ValueError, match="Cannot read processed OMNI file"):
+            reader.read(start, end, variables="speed")
+
+        def replace_cache(file_path, _interval, _cadence):
+            pd.DataFrame(
+                {"speed": [401.0]},
+                index=pd.DatetimeIndex([start], name="timestamp"),
+            ).to_csv(file_path)
+
+        replacement = mocker.patch.object(reader, "_download_and_process_single_file", side_effect=replace_cache)
+        result = reader.read(start, end, download=True, variables="speed")
+
+        replacement.assert_called_once()
+        assert result["speed"].iloc[0] == 401.0
+
+    def test_unreadable_cache_after_failed_upgrade_has_clear_error(self, tmp_path, mocker):
+        reader = OMNIHighRes(data_dir=tmp_path)
+        output = tmp_path / "2020/OMNI_HIGH_RES_1min_202001.csv"
+        output.parent.mkdir(parents=True)
+        output.write_bytes(b"\xff\xfe")
+        mocker.patch.object(reader, "_download_and_process_single_file")
+
+        with pytest.raises(ValueError, match="remains unreadable after attempted cache upgrade"):
+            reader.read(
+                datetime(2020, 1, 1, tzinfo=timezone.utc),
+                datetime(2020, 1, 1, 0, 1, tzinfo=timezone.utc),
+                download=True,
+                variables="speed",
+            )
+
+    def test_html_wrapped_correct_range_retries_with_suggested_end(self, omni_high_res, mocker):
+        first = mocker.Mock()
+        first.text = "<HTML>\n<H1>Error</H1>\nCorrect range: 20200101 - 20200102"
+        first.raise_for_status = mocker.Mock()
+        second = mocker.Mock()
+        second.text = "YYYY DOY HR MN"
+        second.raise_for_status = mocker.Mock()
+        post = mocker.patch("requests.post", side_effect=[first, second])
+
+        result = omni_high_res._get_data_from_omni(
+            datetime(2020, 1, 1),
+            datetime(2020, 1, 31),
+        )
+
+        assert result == ["YYYY DOY HR MN"]
+        assert post.call_count == 2
+        assert post.call_args_list[1].kwargs["data"]["end_date"] == "20200102"
+
+    def test_correct_range_before_start_returns_empty(self, omni_high_res, mocker):
+        response = mocker.Mock()
+        response.text = "<HTML>\nError\ncorrect range: 20190101 - 20191231"
+        response.raise_for_status = mocker.Mock()
+        mocker.patch("requests.post", return_value=response)
+
+        result = omni_high_res._get_data_from_omni(datetime(2020, 1, 1), datetime(2020, 1, 2))
+
+        assert result == []
+
+    def test_unspecified_html_error_and_http_error_propagate(self, omni_high_res, mocker):
+        response = mocker.Mock()
+        response.text = "<HTML>\n<H1>Error while processing request</H1>"
+        response.raise_for_status = mocker.Mock()
+        mocker.patch("requests.post", return_value=response)
+        with pytest.raises(ValueError, match="unspecified error"):
+            omni_high_res._get_data_from_omni(datetime(2020, 1, 1), datetime(2020, 1, 2))
+
+        response.raise_for_status.side_effect = requests.HTTPError("503")
+        with pytest.raises(requests.HTTPError):
+            omni_high_res._get_data_from_omni(datetime(2020, 1, 1), datetime(2020, 1, 2))
+
+    def test_parallel_worker_exception_is_not_silenced(self, tmp_path, mocker):
+        reader = OMNIHighRes(data_dir=tmp_path)
+        mocker.patch.object(reader, "_download_and_process_single_file", side_effect=RuntimeError("worker failed"))
+
+        with pytest.raises(RuntimeError, match="worker failed"):
+            reader.download_and_process(datetime(2020, 1, 1), datetime(2020, 12, 31))
+
+    def test_range_entirely_before_mission_start_has_clear_error(self, omni_high_res):
+        with pytest.raises(ValueError, match="ends before OMNI data begin in 1981"):
+            omni_high_res.read(datetime(1970, 1, 1), datetime(1971, 1, 1))
+
+    @pytest.mark.parametrize(
+        "cadence,end,expected_months",
+        [
+            (1, datetime(2020, 1, 31, 23, 58, 59, tzinfo=timezone.utc), ["202001"]),
+            (1, datetime(2020, 1, 31, 23, 59, tzinfo=timezone.utc), ["202001", "202002"]),
+            (5, datetime(2020, 1, 31, 23, 55, tzinfo=timezone.utc), ["202001", "202002"]),
+        ],
+    )
+    def test_month_boundary_neighbor_selection(self, tmp_path, cadence, end, expected_months):
+        reader = OMNIHighRes(data_dir=tmp_path)
+
+        paths, intervals = reader._get_processed_file_list(
+            datetime(2020, 1, 1, tzinfo=timezone.utc),
+            end,
+            cadence,
+        )
+
+        assert [path.stem[-6:] for path in paths] == expected_months
+        assert all(interval[0].tzinfo is not None and interval[1].tzinfo is not None for interval in intervals)
+
+    def test_corrected_range_that_does_not_shorten_request_is_rejected(self, omni_high_res, mocker):
+        response = mocker.Mock()
+        response.text = "<HTML>\nError\ncorrect range: 20200101 - 20200131"
+        response.raise_for_status = mocker.Mock()
+        post = mocker.patch("requests.post", return_value=response)
+
+        with pytest.raises(ValueError, match="would not shorten"):
+            omni_high_res._get_data_from_omni(datetime(2020, 1, 1), datetime(2020, 1, 31))
+
+        post.assert_called_once()
+
+    def test_successful_reprocessing_replaces_cache_atomically(self, tmp_path, mocker):
+        reader = OMNIHighRes(data_dir=tmp_path)
+        output = tmp_path / "2020/OMNI_HIGH_RES_1min_202001.csv"
+        output.parent.mkdir(parents=True)
+        output.write_text("old-cache\n")
+        all_names = [variable.name for variable in HIGH_RES_VARIABLES if 1 in variable.cadences]
+        processed = pd.DataFrame(
+            {name: [1.0] for name in all_names},
+            index=pd.DatetimeIndex(["2020-01-01T00:00Z"], name="timestamp"),
+        )
+        mocker.patch.object(reader, "_get_data_from_omni", return_value=[])
+        mocker.patch.object(reader, "_process_single_month", return_value=processed)
+
+        reader._download_and_process_single_file(
+            output,
+            (datetime(2020, 1, 1, tzinfo=timezone.utc), datetime(2020, 1, 31, tzinfo=timezone.utc)),
+            1,
+        )
+
+        assert pd.read_csv(output)["speed"].iloc[0] == 1.0
         assert not output.with_suffix(".csv.tmp").exists()
 
     @pytest.mark.skipif(
