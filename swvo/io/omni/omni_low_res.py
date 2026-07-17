@@ -8,9 +8,10 @@ Module for handling OMNI low resolution data.
 
 import logging
 import warnings
+from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from shutil import rmtree
+from tempfile import TemporaryDirectory
 from typing import List, Tuple
 
 import numpy as np
@@ -18,6 +19,7 @@ import pandas as pd
 import requests
 
 from swvo.io.base import BaseIO
+from swvo.io.omni.variables import LOW_RES_DEFAULT_VARIABLES, LOW_RES_VARIABLES, resolve_variable_names
 from swvo.io.utils import enforce_utc_timezone
 
 logger = logging.getLogger(__name__)
@@ -44,63 +46,34 @@ class OMNILowRes(BaseIO):
     URL = "https://spdf.gsfc.nasa.gov/pub/data/omni/low_res_omni/"
     LABEL = "omni"
 
-    HEADER = [
-        "year",
-        "day",
-        "hour",
-        "BarRotNumber",
-        "id_imf",
-        "id_sw",
-        "%points_imfavg",
-        "%points_plasmaavg",
-        "B_mag_avg",
-        "bavg",
-        "lat_angle_avg_field",
-        "lon_angle_avg_field",
-        "bx_gse_gsm",
-        "by_gse",
-        "bz_gse",
-        "by_gsm",
-        "bz_gsm",
-        "sigma_mod_B",
-        "sigma_B",
-        "sigma_Bx",
-        "sigma_By",
-        "sigma_Bz",
-        "temperature",
-        "proton_density",
-        "speed",
-        "speed_angle_lon",
-        "speed_angle_lat",
-        "alpha_proton_ratio",
-        "flow_pressure",
-        "sigma_T",
-        "sigma_N",
-        "sigma_V",
-        "sigma_phi_V",
-        "sigma_theta_V",
-        "sigma_alpha_proton_ratio",
-        "e",
-        "plasma_beta",
-        "alfven_mach_n",
-        "Kp",
-        "sunspot_n",
-        "dst",
-        "ae",
-        "p_flux_1",
-        "p_flux_2",
-        "p_flux_4",
-        "p_flux_10",
-        "p_flux_30",
-        "p_flux_60",
-        "flag",
-        "ap",
-        "f107",
-        "pc",
-        "al",
-        "au",
-        "magnetosonic_mach_n",
-    ]
+    TIME_COLUMNS = ("year", "day", "hour")
+    HEADER = [*TIME_COLUMNS, *(variable.name for variable in LOW_RES_VARIABLES)]
+
+    @classmethod
+    def available_variables(cls) -> pd.DataFrame:
+        """Return metadata for every hourly OMNI2 output variable."""
+
+        return pd.DataFrame(
+            [
+                {
+                    "name": variable.name,
+                    "description": variable.description,
+                    "unit": variable.unit,
+                    "fill_value": variable.fill_value,
+                    "aliases": variable.aliases,
+                }
+                for variable in LOW_RES_VARIABLES
+            ]
+        )
+
+    @staticmethod
+    def _cache_contains(file_path: Path, variable_names: Iterable[str]) -> bool:
+        """Check a processed file's schema without loading its data."""
+
+        if not file_path.exists():
+            return False
+        columns = set(pd.read_csv(file_path, nrows=0).columns)
+        return set(variable_names).issubset(columns)
 
     def download_and_process(self, start_time: datetime, end_time: datetime, reprocess_files: bool = False) -> None:
         """Download and process OMNI Low Resolution data files.
@@ -119,42 +92,35 @@ class OMNILowRes(BaseIO):
         None
         """
 
-        temporary_dir = Path("./temp_omni_low_res_wget")
-        temporary_dir.mkdir(exist_ok=True, parents=True)
-
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
+        complete_schema = [variable.name for variable in LOW_RES_VARIABLES]
 
-        for file_path, time_interval in zip(file_paths, time_intervals):
-            if file_path.exists() and not reprocess_files:
-                continue
+        with TemporaryDirectory(prefix="swvo-omni-low-res-") as temporary_dir_name:
+            temporary_dir = Path(temporary_dir_name)
+            for file_path, time_interval in zip(file_paths, time_intervals):
+                if not reprocess_files and self._cache_contains(file_path, complete_schema):
+                    continue
 
-            tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
+                tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
 
-            try:
-                filename = "omni2_" + str(time_interval[0].year) + ".dat"
+                try:
+                    filename = f"omni2_{time_interval[0].year}.dat"
 
-                if file_path.exists():
-                    if reprocess_files:
-                        file_path.unlink()
-                    else:
-                        continue
+                    logger.debug(f"Downloading file {self.URL + filename} ...")
 
-                logger.debug(f"Downloading file {self.URL + filename} ...")
+                    self._download(temporary_dir, filename)
 
-                self._download(temporary_dir, filename)
+                    logger.debug("Processing file ...")
 
-                logger.debug("Processing file ...")
+                    processed_df = self._process_single_file(temporary_dir / filename)
+                    processed_df.to_csv(tmp_path, index=True, header=True)
+                    tmp_path.replace(file_path)
 
-                processed_df = self._process_single_file(temporary_dir / filename)
-                processed_df.to_csv(tmp_path, index=True, header=True)
-                tmp_path.replace(file_path)
-
-            except Exception as e:
-                logger.error(f"Failed to process {file_path}: {e}")
-                if tmp_path.exists():
-                    tmp_path.unlink()
-                continue
-        rmtree(temporary_dir, ignore_errors=True)
+                except Exception as e:
+                    logger.error(f"Failed to process {file_path}: {e}")
+                    if tmp_path.exists():
+                        tmp_path.unlink()
+                    continue
 
     def _download(self, temporary_dir: Path, filename: str):
         response = requests.get(self.URL + filename, timeout=10)
@@ -216,24 +182,36 @@ class OMNILowRes(BaseIO):
             Yearly OMNI Low Resolution data.
         """
 
-        data = pd.read_csv(file_path, sep=r"\s+", names=self.HEADER)
-        data["timestamp"] = data["year"].map(str).apply(lambda x: x + "-01-01 ")
-        data["timestamp"] = data["year"].map(str).apply(lambda x: x + "-01-01 ") + data["hour"].map(str).apply(
-            lambda x: x.zfill(2)
-        )
-        data["timestamp"] = pd.to_datetime(data["timestamp"])
-        data["timestamp"] = data["timestamp"] + data["day"].apply(lambda x: timedelta(days=int(x) - 1))
+        data = pd.read_csv(file_path, sep=r"\s+", header=None)
+        variable_count = data.shape[1] - len(self.TIME_COLUMNS)
+        supported_counts = {len(LOW_RES_VARIABLES) - 2, len(LOW_RES_VARIABLES)}
+        if variable_count not in supported_counts:
+            raise ValueError(
+                f"Unsupported OMNI2 record width {data.shape[1]}; expected 55 historic or 57 current fields."
+            )
+
+        present_variables = list(LOW_RES_VARIABLES[:variable_count])
+        data.columns = [*self.TIME_COLUMNS, *(variable.name for variable in present_variables)]
+
+        year_and_day = data["year"].astype(int).astype(str) + data["day"].astype(int).astype(str).str.zfill(3)
+        data["timestamp"] = pd.to_datetime(year_and_day, format="%Y%j", utc=True)
+        data["timestamp"] += pd.to_timedelta(data["hour"], unit="h")
         data.set_index("timestamp", inplace=True)
-        mask = data["dst"] >= 99998
-        data.loc[mask, "dst"] = np.nan
 
-        mask = data["Kp"] == 99
-        data.loc[mask, "Kp"] = np.nan
+        for variable in present_variables:
+            if variable.fill_value is not None:
+                data[variable.name] = data[variable.name].where(
+                    data[variable.name] < variable.fill_value,
+                    other=pd.NA,
+                )
 
-        df = pd.DataFrame(index=data.index)
-        df["dst"] = data["dst"]
-        df["kp"] = data["Kp"] / 10
-        df["f107"] = data["f107"]
+        # NASA added Lyman-alpha and the proton quasi-invariant after the
+        # historic 55-word layout. They remain explicit NaN columns for old data.
+        for variable in LOW_RES_VARIABLES[variable_count:]:
+            data[variable.name] = pd.NA
+
+        df = data.loc[:, [variable.name for variable in LOW_RES_VARIABLES]].copy()
+        df["kp"] = df["kp"] / 10
 
         # change rounded numbers to be equal to 1/3 or 2/3 to be consistent with other Kp products
         df.loc[round(df["kp"] % 1, 2) == 0.7, "kp"] = round(df.loc[round(df["kp"] % 1, 2) == 0.7, "kp"]) - 1 / 3
@@ -241,9 +219,14 @@ class OMNILowRes(BaseIO):
 
         return df
 
-    def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
-        """
-        Read OMNI Low Resolution data for the given time range.
+    def read(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+        download: bool = False,
+        variables: str | Iterable[str] | None = None,
+    ) -> pd.DataFrame:
+        """Read hourly OMNI2 data for a time range.
 
         Parameters
         ----------
@@ -253,13 +236,29 @@ class OMNILowRes(BaseIO):
             End time for the data to be read.
         download : bool, optional
             Download data on the go, defaults to False.
+        variables : str or iterable of str or None, optional
+            Variables to return. ``None`` preserves the legacy ``dst``, ``kp``,
+            and ``f107`` schema, ``"all"`` returns all 54 non-time fields, and
+            a name or iterable selects a subset.
 
         Returns
         -------
         :class:`pandas.DataFrame`
-            OMNI Low Resolution data.
+            Selected OMNI variables plus ``file_name`` provenance. The index is
+            timezone-aware UTC.
+
+        Raises
+        ------
+        ValueError
+            If a variable is unknown, or an existing partial cache cannot
+            satisfy the request while ``download`` is false.
         """
         START_YEAR = 1963
+        variable_names = resolve_variable_names(
+            LOW_RES_VARIABLES,
+            variables,
+            LOW_RES_DEFAULT_VARIABLES,
+        )
 
         if start_time > end_time:
             msg = "start_time must be before end_time"
@@ -278,31 +277,44 @@ class OMNILowRes(BaseIO):
 
         assert start_time < end_time
 
-        file_paths, _ = self._get_processed_file_list(start_time, end_time)
+        file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
         t = pd.date_range(
             datetime(start_time.year, start_time.month, start_time.day),
             datetime(end_time.year, end_time.month, end_time.day, 23, 00, 00),
             freq=timedelta(hours=1),
             tz=timezone.utc,
         )
-        data_out = pd.DataFrame(index=t)
-        data_out["kp"] = np.array([np.nan] * len(t))
-        data_out["dst"] = np.array([np.nan] * len(t))
-        data_out["f107"] = np.array([np.nan] * len(t))
-        data_out["file_name"] = np.array([None] * len(t))
+        data_out = pd.DataFrame(np.nan, index=t, columns=variable_names)
+        data_out["file_name"] = None
 
-        for file_path in file_paths:
+        for file_path, time_interval in zip(file_paths, time_intervals):
             if not file_path.exists():
                 if download:
-                    self.download_and_process(start_time, end_time)
+                    self.download_and_process(time_interval[0], time_interval[1])
                 if not file_path.exists():
                     warnings.warn(f"File {file_path} not found")
                     continue
 
             df_one_file = self._read_single_file(file_path)
-            data_out = df_one_file.combine_first(data_out)
+            missing = [name for name in variable_names if name not in df_one_file.columns]
+            if missing and download:
+                logger.info(f"Upgrading partial OMNI cache {file_path} for variables: {', '.join(missing)}")
+                self.download_and_process(time_interval[0], time_interval[1], reprocess_files=True)
+                df_one_file = self._read_single_file(file_path)
+                missing = [name for name in variable_names if name not in df_one_file.columns]
+            if missing:
+                raise ValueError(
+                    f"Processed OMNI file {file_path} does not contain: {', '.join(missing)}. "
+                    "Call read(..., download=True) or download_and_process(..., reprocess_files=True) "
+                    "to upgrade the cache."
+                )
 
-        return data_out
+            selected = df_one_file.loc[:, variable_names].copy()
+            selected["file_name"] = file_path
+            selected.loc[selected[variable_names].isna().all(axis=1), "file_name"] = None
+            data_out = selected.combine_first(data_out)
+
+        return data_out.loc[:, [*variable_names, "file_name"]]
 
     def _read_single_file(self, file_path: Path) -> pd.DataFrame:
         """Read yearly OMNI Low Resolution file to a DataFrame.
@@ -317,12 +329,7 @@ class OMNILowRes(BaseIO):
         pd.DataFrame
             Data from yearly OMNI Low Resolution file.
         """
-        df = pd.read_csv(file_path)
-
-        df["t"] = pd.to_datetime(df["timestamp"], utc=True)
-        df.index = df["t"]
-
-        df["file_name"] = file_path
-        df.loc[df["kp"].isna(), "file_name"] = None
+        df = pd.read_csv(file_path, index_col="timestamp")
+        df.index = pd.to_datetime(df.index, utc=True)
 
         return df

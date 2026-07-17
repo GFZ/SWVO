@@ -12,6 +12,7 @@ import pandas as pd
 import pytest
 
 from swvo.io.omni.omni_low_res import OMNILowRes
+from swvo.io.omni.variables import LOW_RES_DEFAULT_VARIABLES, LOW_RES_VARIABLES
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
@@ -89,6 +90,9 @@ class TestOMNILowRes:
 
         assert isinstance(df, pd.DataFrame)
         assert all(column in df.columns for column in ["kp", "dst", "f107"])
+        assert len(df.columns) == 54
+        assert df["lyman_alpha"].isna().all()
+        assert df["proton_quasi_invariant"].isna().all()
         assert len(df) > 0
 
     def test_read_single_file(self, omni_low_res):
@@ -123,6 +127,101 @@ class TestOMNILowRes:
             assert all(df["kp"].isna())
             assert all(df["dst"].isna())
             assert all(df["file_name"].isnull())
+
+    def test_available_variables_describe_all_non_time_fields(self, omni_low_res):
+        variables = omni_low_res.available_variables()
+
+        assert len(variables) == 54
+        assert variables["name"].tolist() == [variable.name for variable in LOW_RES_VARIABLES]
+        assert {"name", "description", "unit", "fill_value", "aliases"} == set(variables.columns)
+        assert dict(zip(variables["name"], variables["unit"])) == {
+            variable.name: variable.unit for variable in LOW_RES_VARIABLES
+        }
+
+    def test_fill_values_are_masked_for_every_hourly_field(self, omni_low_res, tmp_path):
+        values = ["0" if variable.fill_value is None else str(variable.fill_value) for variable in LOW_RES_VARIABLES]
+        raw_file = tmp_path / "omni2_fill_values.dat"
+        raw_file.write_text(" ".join(["2020", "1", "0", *values]) + "\n")
+
+        result = omni_low_res._process_single_file(raw_file)
+
+        assert result.drop(columns="magnetospheric_flux_flag").isna().all().all()
+        assert result["magnetospheric_flux_flag"].iloc[0] == 0
+
+    def test_processes_current_57_word_record(self, omni_low_res, tmp_path):
+        historic_line = (Path(TEST_DIR) / "data/omni2_2020.dat").read_text().splitlines()[0]
+        current_file = tmp_path / "omni2_current.dat"
+        current_file.write_text(f"{historic_line} 0.005123 0.4567\n")
+
+        result = omni_low_res._process_single_file(current_file)
+
+        assert len(result.columns) == 54
+        assert result["lyman_alpha"].iloc[0] == pytest.approx(0.005123)
+        assert result["proton_quasi_invariant"].iloc[0] == pytest.approx(0.4567)
+
+    def test_all_and_subset_selection_preserve_public_schema(self, tmp_path):
+        omni_low_res = OMNILowRes(data_dir=tmp_path)
+        processed = omni_low_res._process_single_file(Path(TEST_DIR) / "data/omni2_2020.dat")
+        output = tmp_path / "OMNI_LOW_RES_2020.csv"
+        processed.to_csv(output, index=True)
+        start = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        end = datetime(2020, 1, 1, 1, tzinfo=timezone.utc)
+
+        default = omni_low_res.read(start, end)
+        all_variables = omni_low_res.read(start, end, variables="all")
+        subset = omni_low_res.read(start, end, variables=["pc", "speed", "pcn"])
+
+        assert list(default.columns) == [*LOW_RES_DEFAULT_VARIABLES, "file_name"]
+        assert list(all_variables.columns) == [*[variable.name for variable in LOW_RES_VARIABLES], "file_name"]
+        assert list(subset.columns) == ["pcn", "speed", "file_name"]
+        assert all_variables.index.tz is not None
+        assert subset["file_name"].notna().any()
+
+    def test_rejects_unknown_and_empty_variable_selection(self, omni_low_res):
+        start = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        end = datetime(2020, 1, 2, tzinfo=timezone.utc)
+
+        with pytest.raises(ValueError, match="Unknown OMNI variables"):
+            omni_low_res.read(start, end, variables="not_a_variable")
+        with pytest.raises(ValueError, match="at least one"):
+            omni_low_res.read(start, end, variables=[])
+
+    def test_partial_cache_requires_download_or_is_upgraded(self, tmp_path, mocker):
+        omni_low_res = OMNILowRes(data_dir=tmp_path)
+        output = tmp_path / "OMNI_LOW_RES_2020.csv"
+        index = pd.DatetimeIndex(["2020-01-01"], tz="UTC", name="timestamp")
+        pd.DataFrame({"dst": [-5.0], "kp": [1.0], "f107": [70.0]}, index=index).to_csv(output)
+        start = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        end = datetime(2020, 1, 1, 1, tzinfo=timezone.utc)
+
+        with pytest.raises(ValueError, match="does not contain: speed"):
+            omni_low_res.read(start, end, variables="speed")
+
+        def upgrade(_start, _end, reprocess_files=False):
+            assert reprocess_files
+            pd.DataFrame({"speed": [400.0]}, index=index).to_csv(output)
+
+        upgrade_cache = mocker.patch.object(omni_low_res, "download_and_process", side_effect=upgrade)
+        result = omni_low_res.read(start, end, download=True, variables="speed")
+
+        upgrade_cache.assert_called_once()
+        assert result["speed"].iloc[0] == 400.0
+
+    def test_failed_processing_preserves_existing_cache_and_removes_temporary_file(self, tmp_path, mocker):
+        omni_low_res = OMNILowRes(data_dir=tmp_path)
+        output = tmp_path / "OMNI_LOW_RES_2020.csv"
+        output.write_text("original-cache\n")
+        mocker.patch.object(omni_low_res, "_download")
+        mocker.patch.object(omni_low_res, "_process_single_file", side_effect=ValueError("bad response"))
+
+        omni_low_res.download_and_process(
+            datetime(2020, 1, 1, tzinfo=timezone.utc),
+            datetime(2020, 12, 30, tzinfo=timezone.utc),
+            reprocess_files=True,
+        )
+
+        assert output.read_text() == "original-cache\n"
+        assert not output.with_suffix(".csv.tmp").exists()
 
     def test_remove_processed_file(self):
         os.remove(Path(TEST_DIR) / "data/OMNI_LOW_RES_2020.csv")

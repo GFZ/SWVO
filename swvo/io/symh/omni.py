@@ -27,7 +27,7 @@ class SymhOMNI(OMNIHighRes):
     Inherits the `download_and_process`, other private methods and attributes from OMNIHighRes.
     """
 
-    def read(
+    def read(  # ty: ignore[invalid-method-override]
         self,
         start_time: datetime,
         end_time: datetime,
@@ -61,7 +61,13 @@ class SymhOMNI(OMNIHighRes):
 
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
-        data_out = super().read(start_time, end_time, cadence_min=cadence_min, download=download)
+        data_out = super().read(
+            start_time,
+            end_time,
+            cadence_min=cadence_min,
+            download=download,
+            variables="sym-h",
+        )
 
         symh_df = pd.DataFrame(index=data_out.index)
 

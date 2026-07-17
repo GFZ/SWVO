@@ -96,6 +96,19 @@ This package provides tools to read, process, and analyze several key solar and 
 
 Each index can be accessed via these dedicated reader classes, which handle downloading and read methods. See the code in `swvo/io` or API documentation for details on each index's implementation.
 
+## Expanded OMNI data access
+
+`OMNIHighRes` and `OMNILowRes` preserve their established default columns and
+also support `variables="all"` or an explicit variable-name selection. The
+high-resolution reader exposes all 42 one-minute and 45 five-minute OMNIWeb
+fields; the hourly reader exposes all 54 non-time OMNI2 fields and accepts both
+historic 55-word and current 57-word source records.
+
+Variable metadata can be inspected with `available_variables()` without making
+a network request. See the [complete OMNI variable guide](https://swvo.readthedocs.io/en/latest/omni_variables.html)
+for examples, variable tables, cadence restrictions, cache-upgrade behavior,
+compatibility guarantees, and NASA source acknowledgements.
+
 ## Installation
 
 To install the package, run the following command:

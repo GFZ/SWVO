@@ -31,7 +31,9 @@ class DSTOMNI(OMNILowRes):
     """
 
     # data is downloaded along with OMNI data, check file name in parent class
-    def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
+    def read(  # ty: ignore[invalid-method-override]
+        self, start_time: datetime, end_time: datetime, download: bool = False
+    ) -> pd.DataFrame:
         """
         Read OMNI DST data for the given time range.
 
@@ -102,13 +104,11 @@ class DSTOMNI(OMNILowRes):
         pd.DataFrame
             Data from yearly OMNI DST file.
         """
-        df = pd.read_csv(file_path)
-        df.drop(columns=["kp", "f107"], inplace=True)
+        df = pd.read_csv(file_path, index_col="timestamp")
+        df.index = pd.to_datetime(df.index, utc=True)
 
-        df["t"] = pd.to_datetime(df["timestamp"], utc=True)
-        df.index = df["t"]
+        dst_df = df.loc[:, ["dst"]].copy()
+        dst_df["file_name"] = file_path
+        dst_df.loc[dst_df["dst"].isna(), "file_name"] = None
 
-        df["file_name"] = file_path
-        df.loc[df["dst"].isna(), "file_name"] = None
-
-        return df
+        return dst_df

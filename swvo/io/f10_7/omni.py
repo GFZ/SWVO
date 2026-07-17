@@ -30,7 +30,9 @@ class F107OMNI(OMNILowRes):
     """
 
     # data is downloaded along with OMNI data, check file name in parent class
-    def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
+    def read(  # ty: ignore[invalid-method-override]
+        self, start_time: datetime, end_time: datetime, download: bool = False
+    ) -> pd.DataFrame:
         """
         Extract F10.7 data from OMNI Low Resolution files.
 
@@ -57,7 +59,7 @@ class F107OMNI(OMNILowRes):
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
 
-        data_out = super().read(start_time, end_time, download=download)
+        data_out = super().read(start_time, end_time, download=download, variables="f107")
 
         f107_df = pd.DataFrame(index=data_out.index)
 
@@ -67,6 +69,7 @@ class F107OMNI(OMNILowRes):
         # we return it just every 24 hours
         f107_df = f107_df.drop(f107_df[data_out.index.hour % 24 != 0].index, axis=0)  # ty: ignore[unresolved-attribute]
         f107_df = f107_df.replace(999.9, np.nan)
+        f107_df.loc[f107_df["f107"].isna(), "file_name"] = None
         f107_df = f107_df.truncate(
             before=start_time - timedelta(hours=23.9999),
             after=end_time + timedelta(hours=23.9999),

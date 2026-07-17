@@ -28,7 +28,9 @@ class KpOMNI(OMNILowRes):
     Inherits the :func:`download_and_process`, other private methods and attributes from :class:`OMNILowRes`.
     """
 
-    def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
+    def read(  # ty: ignore[invalid-method-override]
+        self, start_time: datetime, end_time: datetime, download: bool = False
+    ) -> pd.DataFrame:
         """
         Extract Kp data from OMNI Low Resolution files.
 
@@ -52,7 +54,7 @@ class KpOMNI(OMNILowRes):
             logger.error(msg)
             raise ValueError(msg)
 
-        data_out = super().read(start_time, end_time, download=download)
+        data_out = super().read(start_time, end_time, download=download, variables="kp")
         kp_df = pd.DataFrame(index=data_out.index)
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
