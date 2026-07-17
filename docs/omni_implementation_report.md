@@ -98,8 +98,24 @@ Checks were run on 2026-07-17 on macOS with Python 3.12.12:
   excluding the existing notebook/changelog/API inputs; its remaining warnings
   are pre-existing offline intersphinx and `_static` configuration warnings.
 
-GitHub Actions results will be recorded after the verified branch is pushed to
-the fork. No pull request or upstream notification has been created.
+Fork CI was manually dispatched against commit `270a8bf` without creating a
+pull request:
+
+- [REUSE compliance](https://github.com/Simon060899/SWVO/actions/runs/29595951269)
+  passed.
+- In the [SWVO Tests](https://github.com/Simon060899/SWVO/actions/runs/29595949200)
+  matrix, Ruff passed and macOS/Python 3.11 passed all tests. The other seven
+  OS/Python jobs each passed 581 tests, skipped 12, and failed only the existing
+  live SuperMAG download test because its external endpoint returned zero or
+  one of the two requested days. This independently establishes that every
+  OMNI test passed on Ubuntu and macOS with Python 3.11--3.14; the same SuperMAG
+  test also failed intermittently during local verification.
+- The CI Ty job reported exactly the two RBMDataSet diagnostics documented
+  above and reproduced on untouched `upstream/main`. Neither diagnostic is in
+  an OMNI module or a file changed by this branch.
+
+No pull request, release, publication workflow, issue, or upstream notification
+has been created.
 
 ## Known boundaries
 
