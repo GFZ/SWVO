@@ -98,8 +98,7 @@ Checks were run on 2026-07-17 on macOS with Python 3.12.12:
   excluding the existing notebook/changelog/API inputs; its remaining warnings
   are pre-existing offline intersphinx and `_static` configuration warnings.
 
-Fork CI was manually dispatched against commit `270a8bf` without creating a
-pull request:
+Fork CI was manually dispatched against commit `270a8bf`:
 
 - [REUSE compliance](https://github.com/Simon060899/SWVO/actions/runs/29595951269)
   passed.
@@ -113,9 +112,6 @@ pull request:
 - The CI Ty job reported exactly the two RBMDataSet diagnostics documented
   above and reproduced on untouched `upstream/main`. Neither diagnostic is in
   an OMNI module or a file changed by this branch.
-
-No pull request, release, publication workflow, issue, or upstream notification
-has been created.
 
 ## Known boundaries
 
