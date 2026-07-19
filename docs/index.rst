@@ -28,6 +28,5 @@ User Guide
 
    Examples <examples/solar_wind_example>
    Complete OMNI variables <omni_variables>
-   OMNI reviewer report <omni_implementation_report>
    Changelog <changelog>
    Contributing Guide <CONTRIBUTING>
