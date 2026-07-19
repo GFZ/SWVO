@@ -3,6 +3,7 @@ SPDX-FileCopyrightText: 2026 GFZ Helmholtz Centre for Geosciences
 SPDX-FileContributor: Matyas Szabo-Roberts
 SPDX-FileContributor: Ruggero Vasile
 SPDX-FileContributor: Sahil Jhawar
+SPDX-FileContributor: Simon Mischel
 
 SPDX-License-Identifier: Apache-2.0
 -->
