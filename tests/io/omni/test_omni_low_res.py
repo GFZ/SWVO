@@ -139,6 +139,19 @@ class TestOMNILowRes:
             variable.name: variable.unit for variable in LOW_RES_VARIABLES
         }
 
+    def test_available_variables_delegates_to_shared_utility(self, omni_low_res, mocker):
+        expected = pd.DataFrame({"name": ["dst"]})
+        utility = mocker.patch("swvo.io.omni.omni_low_res.get_available_variables", return_value=expected)
+
+        result = omni_low_res.available_variables()
+
+        assert result is expected
+        utility.assert_called_once_with()
+
+    def test_private_cache_helper_is_an_instance_method(self):
+        assert not isinstance(OMNILowRes.__dict__["available_variables"], classmethod)
+        assert not isinstance(OMNILowRes.__dict__["_cache_contains"], staticmethod)
+
     def test_fill_values_are_masked_for_every_hourly_field(self, omni_low_res, tmp_path):
         values = ["0" if variable.fill_value is None else str(variable.fill_value) for variable in LOW_RES_VARIABLES]
         raw_file = tmp_path / "omni2_fill_values.dat"

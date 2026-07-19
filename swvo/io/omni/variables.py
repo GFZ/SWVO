@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Sequence
 
+import pandas as pd
+
 
 @dataclass(frozen=True)
 class OMNIVariable:
@@ -152,6 +154,68 @@ HIGH_RES_DEFAULT_VARIABLES: tuple[str, ...] = (
 )
 
 LOW_RES_DEFAULT_VARIABLES: tuple[str, ...] = ("dst", "kp", "f107")
+
+
+def available_variables(cadence: int | None = None) -> pd.DataFrame:
+    """Return metadata for the OMNI variables available at a cadence.
+
+    Parameters
+    ----------
+    cadence : int | None, optional
+        ``None`` selects the hourly OMNI2 registry. ``1`` and ``5`` select the
+        corresponding high-resolution OMNIWeb registry.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A new metadata table in registry order. Hourly rows contain ``name``,
+        ``description``, ``unit``, ``fill_value``, and ``aliases``. High-
+        resolution rows additionally contain ``nasa_id`` and ``cadences``.
+
+    Raises
+    ------
+    ValueError
+        If ``cadence`` is not ``None``, ``1``, or ``5``.
+
+    Examples
+    --------
+    >>> available_variables(cadence=1)  # one-minute OMNIWeb fields
+    >>> available_variables(cadence=5)  # five-minute OMNIWeb fields
+    >>> available_variables()  # hourly OMNI2 fields
+    """
+
+    if cadence not in (None, 1, 5):
+        raise ValueError("cadence must be None for hourly OMNI2 data, or 1 or 5 minutes for OMNIWeb data")
+
+    if cadence is None:
+        return pd.DataFrame(
+            [
+                {
+                    "name": variable.name,
+                    "description": variable.description,
+                    "unit": variable.unit,
+                    "fill_value": variable.fill_value,
+                    "aliases": variable.aliases,
+                }
+                for variable in LOW_RES_VARIABLES
+            ]
+        )
+
+    return pd.DataFrame(
+        [
+            {
+                "name": variable.name,
+                "nasa_id": variable.nasa_id,
+                "description": variable.description,
+                "unit": variable.unit,
+                "fill_value": variable.fill_value,
+                "cadences": variable.cadences,
+                "aliases": variable.aliases,
+            }
+            for variable in HIGH_RES_VARIABLES
+            if cadence in variable.cadences
+        ]
+    )
 
 
 def resolve_variable_names(

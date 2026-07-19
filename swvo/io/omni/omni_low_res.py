@@ -20,7 +20,12 @@ import pandas as pd
 import requests
 
 from swvo.io.base import BaseIO
-from swvo.io.omni.variables import LOW_RES_DEFAULT_VARIABLES, LOW_RES_VARIABLES, resolve_variable_names
+from swvo.io.omni.variables import (
+    LOW_RES_DEFAULT_VARIABLES,
+    LOW_RES_VARIABLES,
+    resolve_variable_names,
+)
+from swvo.io.omni.variables import available_variables as get_available_variables
 from swvo.io.utils import enforce_utc_timezone
 
 logger = logging.getLogger(__name__)
@@ -55,25 +60,19 @@ class OMNILowRes(BaseIO):
     # policy here lets this parent remain the single owner of normalized times.
     _READ_TIME_PADDING: timedelta | None = None
 
-    @classmethod
-    def available_variables(cls) -> pd.DataFrame:
-        """Return metadata for every hourly OMNI2 output variable."""
+    def available_variables(self) -> pd.DataFrame:
+        """Return metadata for every hourly OMNI2 output variable.
 
-        return pd.DataFrame(
-            [
-                {
-                    "name": variable.name,
-                    "description": variable.description,
-                    "unit": variable.unit,
-                    "fill_value": variable.fill_value,
-                    "aliases": variable.aliases,
-                }
-                for variable in LOW_RES_VARIABLES
-            ]
-        )
+        Returns
+        -------
+        pandas.DataFrame
+            One row per hourly variable with its canonical name, description,
+            unit, fill value, and accepted aliases.
+        """
 
-    @staticmethod
-    def _cache_contains(file_path: Path, variable_names: Iterable[str]) -> bool:
+        return get_available_variables()
+
+    def _cache_contains(self, file_path: Path, variable_names: Iterable[str]) -> bool:
         """Check a processed file's schema without loading its data."""
 
         if not file_path.exists():

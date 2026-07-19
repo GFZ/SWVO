@@ -19,7 +19,12 @@ import pandas as pd
 import requests
 
 from swvo.io.base import BaseIO
-from swvo.io.omni.variables import HIGH_RES_DEFAULT_VARIABLES, HIGH_RES_VARIABLES, resolve_variable_names
+from swvo.io.omni.variables import (
+    HIGH_RES_DEFAULT_VARIABLES,
+    HIGH_RES_VARIABLES,
+    resolve_variable_names,
+)
+from swvo.io.omni.variables import available_variables as get_available_variables
 from swvo.io.utils import enforce_utc_timezone
 
 logger = logging.getLogger(__name__)
@@ -53,13 +58,12 @@ class OMNIHighRes(BaseIO):
     PARALLEL_DOWNLOAD_THRESHOLD = 10
     MAX_PARALLEL_DOWNLOADS = 10
 
-    @classmethod
-    def available_variables(cls, cadence_min: int = 1) -> pd.DataFrame:
+    def available_variables(self, cadence: int = 1) -> pd.DataFrame:
         """Return metadata for variables available at a cadence.
 
         Parameters
         ----------
-        cadence_min : int, optional
+        cadence : int, optional
             OMNI cadence in minutes. Must be ``1`` or ``5``.
 
         Returns
@@ -67,32 +71,21 @@ class OMNIHighRes(BaseIO):
         pandas.DataFrame
             One row per variable with its canonical name, NASA request ID,
             description, unit, supported cadences, and accepted aliases.
+
+        Raises
+        ------
+        AssertionError
+            If ``cadence`` is not ``1`` or ``5``.
         """
 
-        cls._validate_cadence(cadence_min)
-        return pd.DataFrame(
-            [
-                {
-                    "name": variable.name,
-                    "nasa_id": variable.nasa_id,
-                    "description": variable.description,
-                    "unit": variable.unit,
-                    "fill_value": variable.fill_value,
-                    "cadences": variable.cadences,
-                    "aliases": variable.aliases,
-                }
-                for variable in HIGH_RES_VARIABLES
-                if cadence_min in variable.cadences
-            ]
-        )
+        self._validate_cadence(cadence)
+        return get_available_variables(cadence)
 
-    @staticmethod
-    def _validate_cadence(cadence_min: int) -> None:
+    def _validate_cadence(self, cadence_min: int) -> None:
         if cadence_min not in (1, 5):
             raise AssertionError("Only 1 or 5 minute cadence can be chosen for high resolution omni data.")
 
-    @staticmethod
-    def _cache_contains(file_path, variable_names: Iterable[str]) -> bool:
+    def _cache_contains(self, file_path, variable_names: Iterable[str]) -> bool:
         """Check a processed file's schema without loading its data."""
 
         if not file_path.exists():

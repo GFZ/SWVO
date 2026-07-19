@@ -105,8 +105,10 @@ high-resolution reader exposes all 42 one-minute and 45 five-minute OMNIWeb
 fields; the hourly reader exposes all 54 non-time OMNI2 fields and accepts both
 historic 55-word and current 57-word source records.
 
-Variable metadata can be inspected with `available_variables()` without making
-a network request. See the [complete OMNI variable guide](https://swvo.readthedocs.io/en/latest/omni_variables.html)
+Variable metadata can be inspected without making a network request through a
+reader instance's `available_variables()` method or the shared cadence-aware
+`swvo.io.omni.variables.available_variables()` utility. See the
+[complete OMNI variable guide](https://swvo.readthedocs.io/en/latest/omni_variables.html)
 for examples, variable tables, cadence restrictions, cache-upgrade behavior,
 compatibility guarantees, and NASA source acknowledgements.
 

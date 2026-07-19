@@ -259,8 +259,8 @@ class TestOMNIHighRes:
             omni_high_res._process_single_month(data)
 
     def test_available_variables_cover_both_cadences(self, omni_high_res):
-        one_minute = omni_high_res.available_variables(1)
-        five_minute = omni_high_res.available_variables(5)
+        one_minute = omni_high_res.available_variables(cadence=1)
+        five_minute = omni_high_res.available_variables(cadence=5)
 
         assert len(one_minute) == 42
         assert len(five_minute) == 45
@@ -273,6 +273,28 @@ class TestOMNIHighRes:
             variable.name: variable.unit for variable in HIGH_RES_VARIABLES
         }
         assert one_minute.set_index("name").loc["bavg", "fill_value"] == 9999.99
+
+    def test_available_variables_delegates_to_shared_utility(self, omni_high_res, mocker):
+        expected = pd.DataFrame({"name": ["speed"]})
+        utility = mocker.patch("swvo.io.omni.omni_high_res.get_available_variables", return_value=expected)
+
+        result = omni_high_res.available_variables(cadence=5)
+
+        assert result is expected
+        utility.assert_called_once_with(5)
+
+    def test_available_variables_validates_cadence_before_delegating(self, omni_high_res, mocker):
+        utility = mocker.patch("swvo.io.omni.omni_high_res.get_available_variables")
+
+        with pytest.raises(AssertionError, match="Only 1 or 5"):
+            omni_high_res.available_variables(cadence=60)
+
+        utility.assert_not_called()
+
+    def test_private_helpers_are_instance_methods(self):
+        assert not isinstance(OMNIHighRes.__dict__["available_variables"], classmethod)
+        assert not isinstance(OMNIHighRes.__dict__["_validate_cadence"], staticmethod)
+        assert not isinstance(OMNIHighRes.__dict__["_cache_contains"], staticmethod)
 
     @pytest.mark.parametrize("cadence,expected_count", [(1, 42), (5, 45)])
     def test_processes_complete_cadence_schema(self, omni_high_res, cadence, expected_count):

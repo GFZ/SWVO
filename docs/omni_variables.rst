@@ -50,13 +50,21 @@ are normalized to the canonical output name.
    hourly = low_res.read(start, end, download=True, variables=["kp", "dst", "ae"])
 
 The complete machine-readable registries are available without downloading
-data:
+data. Reader instances expose cadence-appropriate discovery methods, and the
+shared utility provides the same metadata without constructing a reader:
 
 .. code-block:: python
 
-   one_minute_metadata = OMNIHighRes.available_variables(cadence_min=1)
-   five_minute_metadata = OMNIHighRes.available_variables(cadence_min=5)
-   hourly_metadata = OMNILowRes.available_variables()
+   from swvo.io.omni.variables import available_variables
+
+   one_minute_metadata = high_res.available_variables(cadence=1)
+   five_minute_metadata = high_res.available_variables(cadence=5)
+   hourly_metadata = low_res.available_variables()
+
+   # Standalone discovery uses None for hourly data and 1 or 5 for OMNIWeb.
+   one_minute_metadata = available_variables(cadence=1)
+   five_minute_metadata = available_variables(cadence=5)
+   hourly_metadata = available_variables(cadence=None)
 
 High-resolution variables
 -------------------------

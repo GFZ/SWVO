@@ -10,6 +10,7 @@ from swvo.io.omni.variables import (
     HIGH_RES_VARIABLES,
     LOW_RES_DEFAULT_VARIABLES,
     LOW_RES_VARIABLES,
+    available_variables,
     resolve_variable_names,
 )
 
@@ -35,6 +36,56 @@ def test_high_resolution_registry_ids_and_cadences_are_complete():
     assert sum(1 in variable.cadences for variable in HIGH_RES_VARIABLES) == 42
     assert sum(5 in variable.cadences for variable in HIGH_RES_VARIABLES) == 45
     assert all(set(variable.cadences).issubset({1, 5}) for variable in HIGH_RES_VARIABLES)
+
+
+@pytest.mark.parametrize(
+    "cadence,expected_count,expected_names",
+    [
+        (None, 54, [variable.name for variable in LOW_RES_VARIABLES]),
+        (1, 42, [variable.name for variable in HIGH_RES_VARIABLES if 1 in variable.cadences]),
+        (5, 45, [variable.name for variable in HIGH_RES_VARIABLES]),
+    ],
+)
+def test_available_variables_resolves_cadence_in_registry_order(cadence, expected_count, expected_names):
+    metadata = available_variables(cadence)
+
+    assert len(metadata) == expected_count
+    assert metadata["name"].tolist() == expected_names
+
+
+def test_available_variables_preserves_cadence_specific_metadata_schemas():
+    hourly = available_variables()
+    one_minute = available_variables(1)
+    five_minute = available_variables(5)
+
+    assert list(hourly.columns) == ["name", "description", "unit", "fill_value", "aliases"]
+    assert list(one_minute.columns) == [
+        "name",
+        "nasa_id",
+        "description",
+        "unit",
+        "fill_value",
+        "cadences",
+        "aliases",
+    ]
+    assert list(five_minute.columns) == list(one_minute.columns)
+    assert one_minute["nasa_id"].tolist() == list(range(4, 46))
+    assert five_minute["nasa_id"].tolist() == list(range(4, 49))
+
+
+def test_available_variables_returns_independent_dataframes():
+    first = available_variables(1)
+    second = available_variables(1)
+
+    first.loc[0, "name"] = "modified"
+
+    assert second.loc[0, "name"] == HIGH_RES_VARIABLES[0].name
+
+
+@pytest.mark.parametrize("cadence", [-1, 0, 2, 60, "1", object()])
+def test_available_variables_rejects_unsupported_cadences(cadence):
+    with pytest.raises(ValueError, match="None.*1 or 5"):
+        available_variables(cadence)
 
 
 @pytest.mark.parametrize(
