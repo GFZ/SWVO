@@ -174,14 +174,8 @@ class OMNILowRes(BaseIO):
         for year in range(start_year, end_year + 1):
             file_path = self.data_dir / f"OMNI_LOW_RES_{year}.csv"
             file_paths.append(file_path)
-            if year == start_year:
-                interval_start = datetime(year, 1, 1, 0, 0, 0)
-            else:
-                interval_start = datetime(year, 1, 1, 0, 0, 0)
-            if year == end_year:
-                interval_end = datetime(year, 12, 31, 23, 59, 59)
-            else:
-                interval_end = datetime(year, 12, 31, 23, 59, 59)
+            interval_start = datetime(year, 1, 1, 0, 0, 0, tzinfo=end_time.tzinfo)
+            interval_end = datetime(year, 12, 31, 23, 59, 59, tzinfo=end_time.tzinfo)
             time_intervals.append((interval_start, interval_end))
 
         return file_paths, time_intervals
