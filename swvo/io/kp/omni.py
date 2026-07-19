@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+# SPDX-FileContributor: Simon Mischel
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -8,18 +9,11 @@ Module holding the reader for reading Kp data from OMNI files.
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime, timedelta
 
 import pandas as pd
 
 from swvo.io.omni import OMNILowRes
-from swvo.io.utils import enforce_utc_timezone
-
-logger = logging.getLogger(__name__)
-
-
-logging.captureWarnings(True)
 
 
 class KpOMNI(OMNILowRes):
@@ -28,7 +22,11 @@ class KpOMNI(OMNILowRes):
     Inherits the :func:`download_and_process`, other private methods and attributes from :class:`OMNILowRes`.
     """
 
-    def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
+    _READ_TIME_PADDING = timedelta(hours=2.9999)
+
+    def read(  # ty: ignore[invalid-method-override]
+        self, start_time: datetime, end_time: datetime, download: bool = False
+    ) -> pd.DataFrame:
         """
         Extract Kp data from OMNI Low Resolution files.
 
@@ -47,23 +45,11 @@ class KpOMNI(OMNILowRes):
             Kp data from OMNI Low Resolution data.
         """
 
-        if start_time > end_time:
-            msg = "start_time must be before end_time"
-            logger.error(msg)
-            raise ValueError(msg)
-
-        data_out = super().read(start_time, end_time, download=download)
+        data_out = super().read(start_time, end_time, download=download, variables="kp")
         kp_df = pd.DataFrame(index=data_out.index)
-        start_time = enforce_utc_timezone(start_time)
-        end_time = enforce_utc_timezone(end_time)
 
         kp_df["kp"] = data_out["kp"]
         kp_df["file_name"] = data_out["file_name"]
         # we return it just every 3 hours
         kp_df = kp_df.drop(kp_df[data_out.index.hour % 3 != 0].index, axis=0)  # ty: ignore[unresolved-attribute]
-        kp_df = kp_df.truncate(
-            before=start_time - timedelta(hours=2.9999),
-            after=end_time + timedelta(hours=2.9999),
-        )
-
         return kp_df  # noqa: RET504

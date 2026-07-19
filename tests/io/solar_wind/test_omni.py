@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+# SPDX-FileContributor: Simon Mischel
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -11,6 +12,7 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
+from swvo.io.omni import OMNIHighRes
 from swvo.io.solar_wind import SWOMNI
 
 TEST_DIR = os.path.dirname(__file__)
@@ -37,13 +39,7 @@ class TestSWOMNI:
             SWOMNI()
 
     def test_download_and_process(self, swomni):
-        start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
-        end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
-        # download this file without mocking
-        swomni.download_and_process(start_time, end_time)
-
-        for file in (DATA_DIR / "OMNI").glob("OMNI_HIGH_RES_1min_2020*.csv"):
-            assert file.exists()
+        assert swomni.download_and_process.__func__ is OMNIHighRes.download_and_process
 
     def test_read_without_download(self, swomni, mocker):
         start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)
@@ -81,12 +77,11 @@ class TestSWOMNI:
         mocker.patch.object(pd.DataFrame, "truncate", return_value=pd.DataFrame())
 
         with patch("logging.Logger.warning") as mock_warning:
-            dfs = swomni.read(start_time, end_time)
+            with pytest.raises(ValueError, match="No OMNI"):
+                swomni.read(start_time, end_time)
             mock_warning.assert_any_call(
                 "Start date chosen falls behind the existing data. Moving start date to first available mission files..."
             )
-
-            assert len(dfs) == 0, "Expected dfs list to be empty since no files are found."
 
     def test_remove_processed_file(self):
         shutil.rmtree(Path(TEST_DIR) / "data/OMNI/2020", ignore_errors=True)

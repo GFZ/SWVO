@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+# SPDX-FileContributor: Simon Mischel
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -11,6 +12,7 @@ import pandas as pd
 import pytest
 
 from swvo.io.dst import DSTOMNI
+from swvo.io.omni import OMNILowRes
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
@@ -78,19 +80,19 @@ class TestdstOMNI:
             assert all(df["file_name"].isnull())
 
     def test_read_with_download(self, dstomni, mock_dstomni_data, mocker):
-        mocker.patch("pathlib.Path.exists", return_value=False)
-        mocker.patch.object(dstomni, "_read_single_file", return_value=mock_dstomni_data)
-        mocker.patch.object(dstomni, "download_and_process")
+        parent_result = mock_dstomni_data.loc[:, ["dst", "file_name"]]
+        parent_read = mocker.patch.object(OMNILowRes, "read", return_value=parent_result)
 
         start_time = datetime(2020, 1, 1)
         end_time = datetime(2020, 12, 31)
 
         df = dstomni.read(start_time, end_time, download=True)
-        dstomni.download_and_process.assert_called_once()
+        parent_read.assert_called_once_with(start_time, end_time, download=True, variables="dst")
 
         assert not df.empty
         assert all(df["dst"] == 150.0)
         assert "dst" in df.columns
+        assert df.index.name == "t"
         assert all(idx.tzinfo is not None for idx in df.index)
         assert all(idx.tzinfo is timezone.utc for idx in df.index)
 

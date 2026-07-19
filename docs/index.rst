@@ -1,5 +1,6 @@
 .. SPDX-FileCopyrightText: 2026 GFZ Helmholtz Centre for Geosciences
 .. SPDX-FileContributor: Sahil Jhawar
+.. SPDX-FileContributor: Simon Mischel
 ..
 .. SPDX-License-Identifier: Apache-2.0
 
@@ -27,5 +28,6 @@ User Guide
    :maxdepth: 1
 
    Examples <examples/solar_wind_example>
+   Complete OMNI variables <omni_variables>
    Changelog <changelog>
    Contributing Guide <CONTRIBUTING>

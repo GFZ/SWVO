@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+# SPDX-FileContributor: Simon Mischel
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -9,6 +10,7 @@ Module for handling OMNI high resolution data.
 import calendar
 import logging
 import re
+from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
@@ -17,6 +19,12 @@ import pandas as pd
 import requests
 
 from swvo.io.base import BaseIO
+from swvo.io.omni.variables import (
+    HIGH_RES_DEFAULT_VARIABLES,
+    HIGH_RES_VARIABLES,
+    resolve_variable_names,
+)
+from swvo.io.omni.variables import available_variables as get_available_variables
 from swvo.io.utils import enforce_utc_timezone
 
 logger = logging.getLogger(__name__)
@@ -50,6 +58,44 @@ class OMNIHighRes(BaseIO):
     PARALLEL_DOWNLOAD_THRESHOLD = 10
     MAX_PARALLEL_DOWNLOADS = 10
 
+    def available_variables(self, cadence: int = 1) -> pd.DataFrame:
+        """Return metadata for variables available at a cadence.
+
+        Parameters
+        ----------
+        cadence : int, optional
+            OMNI cadence in minutes. Must be ``1`` or ``5``.
+
+        Returns
+        -------
+        pandas.DataFrame
+            One row per variable with its canonical name, NASA request ID,
+            description, unit, supported cadences, and accepted aliases.
+
+        Raises
+        ------
+        AssertionError
+            If ``cadence`` is not ``1`` or ``5``.
+        """
+
+        self._validate_cadence(cadence)
+        return get_available_variables(cadence)
+
+    def _validate_cadence(self, cadence_min: int) -> None:
+        if cadence_min not in (1, 5):
+            raise AssertionError("Only 1 or 5 minute cadence can be chosen for high resolution omni data.")
+
+    def _cache_contains(self, file_path, variable_names: Iterable[str]) -> bool:
+        """Check a processed file's schema without loading its data."""
+
+        if not file_path.exists():
+            return False
+        try:
+            columns = set(pd.read_csv(file_path, nrows=0).columns)
+        except (OSError, UnicodeDecodeError, pd.errors.ParserError, pd.errors.EmptyDataError):
+            return False
+        return set(variable_names).issubset(columns)
+
     def download_and_process(
         self,
         start_time: datetime,
@@ -78,17 +124,28 @@ class OMNIHighRes(BaseIO):
         ------
         AssertionError
             Raises `AssertionError` if the cadence is not 1 or 5 minutes.
+        ValueError
+            If ``start_time`` is not before ``end_time``.
         """
 
-        assert cadence_min == 1 or cadence_min == 5, (
-            "Only 1 or 5 minute cadence can be chosen for high resolution omni data."
+        self._validate_cadence(cadence_min)
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
+        if start_time >= end_time:
+            raise ValueError("start_time must be before end_time")
+
+        complete_schema = resolve_variable_names(
+            HIGH_RES_VARIABLES,
+            "all",
+            HIGH_RES_DEFAULT_VARIABLES,
+            cadence=cadence_min,
         )
 
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time, cadence_min)
 
         download_tasks = []
         for file_path, time_interval in zip(file_paths, time_intervals):
-            if file_path.exists() and not reprocess_files:
+            if not reprocess_files and self._cache_contains(file_path, complete_schema):
                 continue
 
             download_tasks.append((file_path, time_interval))
@@ -122,15 +179,27 @@ class OMNIHighRes(BaseIO):
         tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
 
         try:
+            variable_names = resolve_variable_names(
+                HIGH_RES_VARIABLES,
+                "all",
+                HIGH_RES_DEFAULT_VARIABLES,
+                cadence=cadence_min,
+            )
             data = self._get_data_from_omni(
                 start=time_interval[0],
                 end=time_interval[1],
                 cadence=cadence_min,
+                variable_names=variable_names,
             )
 
             logger.debug("Processing file ...")
 
-            processed_df = self._process_single_month(data, original_end=time_interval[1], cadence_min=cadence_min)
+            processed_df = self._process_single_month(
+                data,
+                original_end=time_interval[1],
+                cadence_min=cadence_min,
+                variable_names=variable_names,
+            )
 
             # Do not save empty DataFrames — no data available for this interval
             if processed_df.empty:
@@ -151,9 +220,9 @@ class OMNIHighRes(BaseIO):
         end_time: datetime,
         cadence_min: int = 1,
         download: bool = False,
+        variables: str | Iterable[str] | None = None,
     ) -> pd.DataFrame:
-        """
-        Read OMNI High Resolution data for the given time range.
+        """Read high-resolution OMNI data for a time range.
 
         Parameters
         ----------
@@ -165,28 +234,42 @@ class OMNIHighRes(BaseIO):
             Cadence of the data in minutes, defaults to 1
         download : bool, optional
             Download data on the go, defaults to False.
+        variables : str or iterable of str or None, optional
+            Variables to return. ``None`` preserves the legacy nine-column
+            schema, ``"all"`` returns every variable supported by the selected
+            cadence, and a name or iterable selects a subset. Normalized aliases
+            such as ``"sym_h"`` are accepted.
 
         Returns
         -------
         :class:`pandas.DataFrame`
-            OMNI High Resolution data.
+            Selected OMNI variables plus ``file_name`` provenance. The index is
+            timezone-aware UTC.
 
         Raises
         ------
         AssertionError
             Raises `AssertionError` if the cadence is not 1 or 5 minutes.
+        ValueError
+            If the time range is invalid, a variable is unknown or unavailable
+            at the selected cadence, or an existing partial or unreadable cache
+            cannot satisfy the request.
         """
-        assert cadence_min == 1 or cadence_min == 5, (
-            "Only 1 or 5 minute cadence can be chosen for high resolution omni data."
+        self._validate_cadence(cadence_min)
+        variable_names = resolve_variable_names(
+            HIGH_RES_VARIABLES,
+            variables,
+            HIGH_RES_DEFAULT_VARIABLES,
+            cadence=cadence_min,
         )
-
-        if start_time > end_time:
-            msg = "start_time must be before end_time"
-            logger.error(msg)
-            raise ValueError(msg)
 
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
+
+        if start_time >= end_time:
+            msg = "start_time must be before end_time"
+            logger.error(msg)
+            raise ValueError(msg)
 
         if start_time < datetime(self.START_YEAR, 1, 1, tzinfo=timezone.utc):
             logger.warning(
@@ -195,16 +278,17 @@ class OMNIHighRes(BaseIO):
             )
             start_time = datetime(self.START_YEAR, 1, 1, tzinfo=timezone.utc)
 
-        assert start_time < end_time
+        if start_time >= end_time:
+            raise ValueError(f"Requested time range ends before OMNI data begin in {self.START_YEAR}.")
 
-        file_paths, _ = self._get_processed_file_list(start_time, end_time, cadence_min)
+        file_paths, time_intervals = self._get_processed_file_list(start_time, end_time, cadence_min)
 
         dfs = []
 
-        for file_path in file_paths:
+        for file_path, time_interval in zip(file_paths, time_intervals):
             if not file_path.exists():
                 if download:
-                    self.download_and_process(start_time, end_time, cadence_min=cadence_min)
+                    self._download_and_process_single_file(file_path, time_interval, cadence_min)
                 else:
                     logger.warning(f"File {file_path} not found")
                     continue
@@ -215,8 +299,40 @@ class OMNIHighRes(BaseIO):
                 logger.warning(f"File {file_path} not available after download attempt, skipping.")
                 continue
 
-            dfs.append(self._read_single_file(file_path))
+            try:
+                df = self._read_single_file(file_path)
+            except (OSError, UnicodeDecodeError, ValueError, KeyError, pd.errors.ParserError) as error:
+                if not download:
+                    raise ValueError(f"Cannot read processed OMNI file {file_path}: {error}") from error
+                logger.info(f"Replacing unreadable OMNI cache {file_path}")
+                self._download_and_process_single_file(file_path, time_interval, cadence_min)
+                try:
+                    df = self._read_single_file(file_path)
+                except (OSError, UnicodeDecodeError, ValueError, KeyError, pd.errors.ParserError) as retry_error:
+                    raise ValueError(
+                        f"Processed OMNI file {file_path} remains unreadable after attempted cache upgrade: "
+                        f"{retry_error}"
+                    ) from retry_error
+            missing = [name for name in variable_names if name not in df.columns]
+            if missing and download:
+                logger.info(f"Upgrading partial OMNI cache {file_path} for variables: {', '.join(missing)}")
+                self._download_and_process_single_file(file_path, time_interval, cadence_min)
+                df = self._read_single_file(file_path)
+                missing = [name for name in variable_names if name not in df.columns]
+            if missing:
+                raise ValueError(
+                    f"Processed OMNI file {file_path} does not contain: {', '.join(missing)}. "
+                    "Call read(..., download=True) or download_and_process(..., reprocess_files=True) "
+                    "to upgrade the cache."
+                )
 
+            selected = df.loc[:, variable_names].copy()
+            selected["file_name"] = file_path
+            selected.loc[selected[variable_names].isna().all(axis=1), "file_name"] = None
+            dfs.append(selected)
+
+        if not dfs:
+            raise ValueError("No OMNI High Resolution files are available for the requested time range.")
         data_out = pd.concat(dfs, ignore_index=False)
 
         if not data_out.empty:
@@ -305,7 +421,11 @@ class OMNIHighRes(BaseIO):
         return file_paths, time_intervals
 
     def _process_single_month(
-        self, data: list[str], original_end: Optional[datetime] = None, cadence_min: int = 1
+        self,
+        data: list[str],
+        original_end: Optional[datetime] = None,
+        cadence_min: int = 1,
+        variable_names: Iterable[str] | None = None,
     ) -> pd.DataFrame:
         """Process monthly OMNI High Resolution data to a DataFrame.
 
@@ -316,6 +436,10 @@ class OMNIHighRes(BaseIO):
         original_end : datetime, optional
             The original requested end time. Used to build a NaN-filled DataFrame
             when no data is available (e.g. the interval is beyond the OMNI data range).
+        cadence_min : int, optional
+            Cadence of the requested records.
+        variable_names : iterable of str, optional
+            Canonical variables in the same order as the OMNIWeb request.
 
         Returns
         -------
@@ -324,12 +448,18 @@ class OMNIHighRes(BaseIO):
             up to ``original_end`` if no data is available, or an empty DataFrame
             if ``original_end`` is not provided.
         """
-        columns = ["bavg", "bx_gsm", "by_gsm", "bz_gsm", "speed", "proton_density", "temperature", "pdyn", "sym-h"]
+        columns = resolve_variable_names(
+            HIGH_RES_VARIABLES,
+            list(variable_names) if variable_names is not None else None,
+            HIGH_RES_DEFAULT_VARIABLES,
+            cadence=cadence_min,
+        )
 
         # Empty data list signals that no data is available for this interval
         if not data:
             if original_end is None:
                 return pd.DataFrame(columns=columns)
+            original_end = enforce_utc_timezone(original_end)
             # Build a NaN-filled DataFrame with the correct timestamps up to original_end
             index = pd.date_range(
                 start=original_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0),
@@ -339,44 +469,50 @@ class OMNIHighRes(BaseIO):
             )
             return pd.DataFrame(pd.NA, index=index, columns=columns)
 
-        header_line = next(line for line in data if line.strip().startswith("YYYY"))
-        columns = header_line.split()
+        if not any(line.strip().startswith("YYYY") for line in data):
+            raise ValueError("OMNIWeb response does not contain the expected YYYY data header.")
 
-        data_lines = [line for line in data if line.strip().startswith(("19", "20"))]
+        # OMNIWeb wraps records in HTML and its parameter list contains lines
+        # such as ``19 Vx Velocity``. Require all four leading time fields so
+        # those labels (and year-prefixed footer text) cannot become data rows.
+        record_prefix = re.compile(r"^\s*\d{4}\s+\d{1,3}\s+\d{1,2}\s+\d{1,2}(?:\s|$)")
+        data_lines = [line for line in data if record_prefix.match(line)]
 
         if not data_lines:
             msg = "DataFrame is empty."
             logger.error(msg)
             raise ValueError(msg)
 
-        df = pd.DataFrame([line.split() for line in data_lines], columns=columns)
+        raw_columns = ["YYYY", "DOY", "HR", "MN", *columns]
+        rows = [line.split() for line in data_lines]
+        invalid_widths = sorted({len(row) for row in rows if len(row) != len(raw_columns)})
+        if invalid_widths:
+            raise ValueError(
+                f"OMNIWeb returned record widths {invalid_widths}; expected {len(raw_columns)} values "
+                f"for {len(columns)} selected variables."
+            )
+
+        df = pd.DataFrame(rows, columns=raw_columns)
         df = df.apply(pd.to_numeric)
 
-        df["timestamp"] = df["YYYY"].map(str).apply(lambda x: x + "-01-01 ") + df["HR"].map(str).apply(
-            lambda x: x.zfill(2)
-        )
-        df["timestamp"] += df["MN"].map(str).apply(lambda x: ":" + x.zfill(2) + ":00")
-        df["timestamp"] = pd.to_datetime(df["timestamp"])
-        df["timestamp"] = df["timestamp"] + df["DOY"].apply(lambda x: timedelta(days=int(x) - 1))
+        invalid_time = ~df["DOY"].between(1, 366) | ~df["HR"].between(0, 23) | ~df["MN"].between(0, 59)
+        if invalid_time.any():
+            raise ValueError("OMNIWeb returned an invalid day-of-year, hour, or minute field.")
+
+        year_and_day = df["YYYY"].astype(int).astype(str) + df["DOY"].astype(int).astype(str).str.zfill(3)
+        df["timestamp"] = pd.to_datetime(year_and_day, format="%Y%j", utc=True)
+        if not (df["timestamp"].dt.year == df["YYYY"]).all():
+            raise ValueError("OMNIWeb returned an invalid day-of-year for its record year.")
+        df["timestamp"] += pd.to_timedelta(df["HR"], unit="h") + pd.to_timedelta(df["MN"], unit="m")
 
         df.drop(columns=["YYYY", "HR", "MN", "DOY"], inplace=True)
         df.set_index("timestamp", inplace=True)
 
-        maxes = {
-            "bavg": 9999.9,
-            "bx_gsm": 9999.9,
-            "by_gsm": 9999.9,
-            "bz_gsm": 9999.9,
-            "speed": 99999.8,
-            "proton_density": 999.8,
-            "temperature": 9999998.0,
-            "pdyn": 99.0,
-            "sym-h": 99999.0,
-        }
-
-        df.columns = maxes.keys()
-        for col, max_val in maxes.items():
-            df[col] = df[col].where(df[col] < max_val, other=pd.NA)
+        metadata = {variable.name: variable for variable in HIGH_RES_VARIABLES}
+        for column in columns:
+            fill_value = metadata[column].fill_value
+            if fill_value is not None:
+                df[column] = df[column].where(df[column] < fill_value, other=pd.NA)
 
         if df.empty:
             msg = "DataFrame is empty after processing the month."
@@ -408,7 +544,13 @@ class OMNIHighRes(BaseIO):
 
         return df
 
-    def _get_data_from_omni(self, start: datetime, end: datetime, cadence: int = 1) -> list:
+    def _get_data_from_omni(
+        self,
+        start: datetime,
+        end: datetime,
+        cadence: int = 1,
+        variable_names: Iterable[str] | None = None,
+    ) -> list[str]:
         """
         Fetches data from NASA's OMNIWeb service.
 
@@ -418,56 +560,68 @@ class OMNIHighRes(BaseIO):
         that no data is available for the requested interval.
         """
 
-        payload = {
+        self._validate_cadence(cadence)
+        start = enforce_utc_timezone(start)
+        end = enforce_utc_timezone(end)
+        selected_names = resolve_variable_names(
+            HIGH_RES_VARIABLES,
+            list(variable_names) if variable_names is not None else None,
+            HIGH_RES_DEFAULT_VARIABLES,
+            cadence=cadence,
+        )
+        metadata = {variable.name: variable for variable in HIGH_RES_VARIABLES}
+        payload: dict[str, str | list[str]] = {
             "activity": "retrieve",
             "start_date": start.strftime("%Y%m%d"),
             "end_date": end.strftime("%Y%m%d"),
+            "vars": [str(metadata[name].nasa_id) for name in selected_names],
         }
-        common_vars = {"vars": ["13", "14", "17", "18", "21", "25", "26", "27", "41"]}
         if cadence == 1:
-            params = {"res": "min", "spacecraft": "omni_min"}
-            payload.update(params)
-            payload.update(common_vars)
-        elif cadence == 5:
-            params = {"res": "5min", "spacecraft": "omni_5min"}
-            payload.update(params)
-            payload.update(common_vars)
-
+            payload.update({"res": "min", "spacecraft": "omni_min"})
         else:
-            msg = f"Invalid cadence: {cadence}. Only 1 or 5 minutes are supported."
-            logger.error(msg)
-            raise ValueError(msg)
+            payload.update({"res": "5min", "spacecraft": "omni_5min"})
         logger.debug(f"Fetching data from {self.URL} with payload: {payload}")
-        response = requests.post(self.URL, data=payload)
+        response = requests.post(self.URL, data=payload, timeout=30)
         response.raise_for_status()
         data = response.text.splitlines()
 
-        if data and "Error" in data[0]:
+        correct_range_line = next((line for line in data if "correct range" in line.lower()), None)
+        has_error = any(re.search(r"\berror\b", line, flags=re.IGNORECASE) for line in data)
+        if correct_range_line is not None or has_error:
             logger.warning("Received an error response from the server.")
 
-            for line in data:
-                if "correct range" in line:
-                    # Use regex to find the valid date range (e.g., YYYYMMDD - YYYYMMDD)
-                    match = re.search(r"correct range: \d{8} - (\d{8})", line)
-                    if match:
-                        new_end_date_str = match.group(1)
-                        new_end_date = datetime.strptime(new_end_date_str, "%Y%m%d").replace(tzinfo=timezone.utc)
+            if correct_range_line is not None:
+                # Use regex to find the valid date range (e.g., YYYYMMDD - YYYYMMDD)
+                match = re.search(r"correct range:\s*\d{8}\s*-\s*(\d{8})", correct_range_line, re.IGNORECASE)
+                if match:
+                    new_end_date_str = match.group(1)
+                    new_end_date = datetime.strptime(new_end_date_str, "%Y%m%d").replace(tzinfo=timezone.utc)
 
+                    logger.warning(
+                        f"Invalid date range detected. Found suggested end date: {new_end_date.strftime('%Y-%m-%d')}"
+                    )
+
+                    # If the suggested end date is before the start date, no data is available
+                    # for this range — return an empty list to signal an empty DataFrame
+                    if new_end_date < start:
                         logger.warning(
-                            f"Invalid date range detected. Found suggested end date: {new_end_date.strftime('%Y-%m-%d')}"
+                            f"Suggested end date {new_end_date.strftime('%Y-%m-%d')} is before "
+                            f"start date {start.strftime('%Y-%m-%d')}. No data available for this range."
+                        )
+                        return []
+
+                    if new_end_date >= end:
+                        raise ValueError(
+                            "OMNIWeb returned an invalid corrected end date that would not shorten the request."
                         )
 
-                        # If the suggested end date is before the start date, no data is available
-                        # for this range — return an empty list to signal an empty DataFrame
-                        if new_end_date < start:
-                            logger.warning(
-                                f"Suggested end date {new_end_date.strftime('%Y-%m-%d')} is before "
-                                f"start date {start.strftime('%Y-%m-%d')}. No data available for this range."
-                            )
-                            return []
-
-                        # Recursively call the function with the original start date and the new end date
-                        return self._get_data_from_omni(start=start, end=new_end_date, cadence=cadence)
+                    # Recursively call the function with the original start date and the new end date
+                    return self._get_data_from_omni(
+                        start=start,
+                        end=new_end_date,
+                        cadence=cadence,
+                        variable_names=selected_names,
+                    )
             msg = f"An unspecified error occurred: {data}"
             logger.error(msg)
             raise ValueError(msg)

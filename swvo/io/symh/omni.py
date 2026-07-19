@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+# SPDX-FileContributor: Simon Mischel
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -8,17 +9,11 @@ Module for handling OMNI SYM-H data.
 
 from __future__ import annotations
 
-import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pandas as pd
 
 from swvo.io.omni import OMNIHighRes
-from swvo.io.utils import enforce_utc_timezone
-
-logger = logging.getLogger(__name__)
-
-logging.captureWarnings(True)
 
 
 class SymhOMNI(OMNIHighRes):
@@ -27,7 +22,7 @@ class SymhOMNI(OMNIHighRes):
     Inherits the `download_and_process`, other private methods and attributes from OMNIHighRes.
     """
 
-    def read(
+    def read(  # ty: ignore[invalid-method-override]
         self,
         start_time: datetime,
         end_time: datetime,
@@ -54,23 +49,17 @@ class SymhOMNI(OMNIHighRes):
             OMNI SYM-H data.
         """
 
-        if start_time > end_time:
-            msg = "start_time must be before end_time"
-            logger.error(msg)
-            raise ValueError(msg)
-
-        start_time = enforce_utc_timezone(start_time)
-        end_time = enforce_utc_timezone(end_time)
-        data_out = super().read(start_time, end_time, cadence_min=cadence_min, download=download)
+        data_out = super().read(
+            start_time,
+            end_time,
+            cadence_min=cadence_min,
+            download=download,
+            variables="sym-h",
+        )
 
         symh_df = pd.DataFrame(index=data_out.index)
 
         symh_df["sym-h"] = data_out["sym-h"]
         symh_df["file_name"] = data_out["file_name"]
-
-        symh_df = symh_df.truncate(
-            before=start_time - timedelta(minutes=cadence_min - 0.0000001),
-            after=end_time + timedelta(minutes=cadence_min + 0.0000001),
-        )
 
         return symh_df

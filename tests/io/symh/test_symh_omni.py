@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+# SPDX-FileContributor: Simon Mischel
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -10,6 +11,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from swvo.io.omni import OMNIHighRes
 from swvo.io.symh import SymhOMNI
 
 TEST_DIR = os.path.dirname(__file__)
@@ -50,12 +52,7 @@ class TestSymhOMNI:
             SymhOMNI()
 
     def test_download_and_process(self, symhomni):
-        start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
-        end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
-        # download this file without mocking
-        symhomni.download_and_process(start_time, end_time)
-        for file in (DATA_DIR / "OMNI" / "2020").glob("OMNI_HIGH_RES_1min_2020*.csv"):
-            assert file.exists()
+        assert symhomni.download_and_process.__func__ is OMNIHighRes.download_and_process
 
     def test_read_without_download(self, symhomni):
         start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)
@@ -65,11 +62,22 @@ class TestSymhOMNI:
         ):  # value error is raised when no files are found hence no concatenation is possible
             symhomni.read(start_time, end_time, download=False)
 
-    def test_read_with_download(self, symhomni):
-        start_time = datetime(2021, 12, 1, tzinfo=timezone.utc)
+    def test_read_with_download(self, symhomni, mocker):
+        start_time = datetime(2021, 12, 1)
         end_time = datetime(2022, 1, 31, tzinfo=timezone.utc)
+        index = pd.date_range(start="2021-12-01", end="2022-01-31", freq="min", tz="UTC")
+        parent_result = pd.DataFrame({"sym-h": -15.0, "file_name": "some_file"}, index=index)
+        parent_read = mocker.patch.object(OMNIHighRes, "read", return_value=parent_result)
+
         df = symhomni.read(start_time, end_time, download=True)
 
+        parent_read.assert_called_once_with(
+            start_time,
+            end_time,
+            cadence_min=1,
+            download=True,
+            variables="sym-h",
+        )
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0
         assert "sym-h" in df.columns
