@@ -62,9 +62,9 @@ class TestSymhOMNI:
             symhomni.read(start_time, end_time, download=False)
 
     def test_read_with_download(self, symhomni, mocker):
-        start_time = datetime(2021, 12, 1, tzinfo=timezone.utc)
+        start_time = datetime(2021, 12, 1)
         end_time = datetime(2022, 1, 31, tzinfo=timezone.utc)
-        index = pd.date_range(start=start_time, end=end_time, freq="min")
+        index = pd.date_range(start="2021-12-01", end="2022-01-31", freq="min", tz="UTC")
         parent_result = pd.DataFrame({"sym-h": -15.0, "file_name": "some_file"}, index=index)
         parent_read = mocker.patch.object(OMNIHighRes, "read", return_value=parent_result)
 

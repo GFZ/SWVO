@@ -8,19 +8,12 @@ Module for handling F10.7 data from OMNI low resolution files.
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
 
 from swvo.io.omni import OMNILowRes
-from swvo.io.utils import enforce_utc_timezone
-
-logger = logging.getLogger(__name__)
-
-
-logging.captureWarnings(True)
 
 
 class F107OMNI(OMNILowRes):
@@ -28,6 +21,8 @@ class F107OMNI(OMNILowRes):
     Class for reading F10.7 data from OMNI low resolution files.
     Inherits the :func:`download_and_process`, other private methods and attributes from :class:`OMNILowRes`.
     """
+
+    _READ_TIME_PADDING = timedelta(hours=23.9999)
 
     # data is downloaded along with OMNI data, check file name in parent class
     def read(  # ty: ignore[invalid-method-override]
@@ -51,14 +46,6 @@ class F107OMNI(OMNILowRes):
             F10.7 from OMNI Low Resolution data.
         """
 
-        start_time = enforce_utc_timezone(start_time)
-        end_time = enforce_utc_timezone(end_time)
-
-        if start_time >= end_time:
-            msg = "start_time must be before end_time"
-            logger.error(msg)
-            raise ValueError(msg)
-
         data_out = super().read(start_time, end_time, download=download, variables="f107")
 
         f107_df = pd.DataFrame(index=data_out.index)
@@ -70,9 +57,4 @@ class F107OMNI(OMNILowRes):
         f107_df = f107_df.drop(f107_df[data_out.index.hour % 24 != 0].index, axis=0)  # ty: ignore[unresolved-attribute]
         f107_df = f107_df.replace(999.9, np.nan)
         f107_df.loc[f107_df["f107"].isna(), "file_name"] = None
-        f107_df = f107_df.truncate(
-            before=start_time - timedelta(hours=23.9999),
-            after=end_time + timedelta(hours=23.9999),
-        )
-
         return f107_df  # noqa: RET504

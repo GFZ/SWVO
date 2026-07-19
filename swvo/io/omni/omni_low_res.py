@@ -49,6 +49,11 @@ class OMNILowRes(BaseIO):
     TIME_COLUMNS = ("year", "day", "hour")
     HEADER = [*TIME_COLUMNS, *(variable.name for variable in LOW_RES_VARIABLES)]
 
+    # Focused hourly readers expose values at their natural cadence and may
+    # include the nearest value around a requested boundary. Keeping that
+    # policy here lets this parent remain the single owner of normalized times.
+    _READ_TIME_PADDING: timedelta | None = None
+
     @classmethod
     def available_variables(cls) -> pd.DataFrame:
         """Return metadata for every hourly OMNI2 output variable."""
@@ -354,7 +359,14 @@ class OMNILowRes(BaseIO):
             selected.loc[selected[variable_names].isna().all(axis=1), "file_name"] = None
             data_out = selected.combine_first(data_out)
 
-        return data_out.loc[:, [*variable_names, "file_name"]]
+        data_out = data_out.loc[:, [*variable_names, "file_name"]]
+        if self._READ_TIME_PADDING is not None:
+            data_out = data_out.truncate(
+                before=start_time - self._READ_TIME_PADDING,
+                after=end_time + self._READ_TIME_PADDING,
+            )
+
+        return data_out
 
     def _read_single_file(self, file_path: Path) -> pd.DataFrame:
         """Read yearly OMNI Low Resolution file to a DataFrame.
