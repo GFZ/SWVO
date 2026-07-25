@@ -154,7 +154,7 @@ def _bin_in_time(
     )
 
     if isinstance(data_time[0], np.ndarray):
-        data_time = np.asarray([t[0] for t in data_time])
+        data_time = np.asarray([t[0] for t in data_time])  # ty:ignore[invalid-assignment]
 
     sim_timestamps = [t.timestamp() for t in sim_time]
     data_timestamps = [t.timestamp() for t in data_time]
