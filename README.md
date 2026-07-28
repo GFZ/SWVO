@@ -74,8 +74,8 @@ This package provides tools to read, process, and analyze several key solar and 
     - SWPC: `F107SWPC`
     - Combined: `read_f107_from_multiple_models`
 
-- **SME Index**:  
-  The SME (SuperMAG Electrojet) index measures auroral electrojet strength based on SuperMAG ground magnetometers. Requires a valid SuperMAG account.
+- **SuperMAG electrojet indices**:
+  SME, SML, and SMU describe the auroral electrojet using the SuperMAG ground-magnetometer network at one-minute cadence. Access requires a valid SuperMAG account.
   - **Sources & Classes:**
     - SuperMAG: `SMESuperMAG`
 
@@ -96,6 +96,24 @@ This package provides tools to read, process, and analyze several key solar and 
     - Density cube container: `PlasmasphereDensityCube`
 
 Each index can be accessed via these dedicated reader classes, which handle downloading and read methods. See the code in `swvo/io` or API documentation for details on each index's implementation.
+
+## SuperMAG SME, SML, and SMU
+
+`SMESuperMAG` retains its original SME-only default and can additionally return
+SML, SMU, or all three standard electrojet indices:
+
+```python
+reader.read(start, end)  # legacy output: sme, file_name
+reader.read(start, end, variables="all")  # sme, sml, smu, file_name
+reader.read(start, end, variables=["smu", "sml"])  # caller-defined order
+```
+
+New downloads store all three indices together. Existing SME-only cache files
+continue to work for default reads and can be upgraded on demand with
+`download=True`. See the
+[SuperMAG electrojet guide](https://swvo.readthedocs.io/en/latest/supermag_indices.html)
+for authentication, cache compatibility, error handling, data references, and
+acknowledgement guidance.
 
 ## Expanded OMNI data access
 

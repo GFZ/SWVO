@@ -29,5 +29,6 @@ User Guide
 
    Examples <examples/solar_wind_example>
    Complete OMNI variables <omni_variables>
+   SuperMAG electrojet indices <supermag_indices>
    Changelog <changelog>
    Contributing Guide <CONTRIBUTING>
