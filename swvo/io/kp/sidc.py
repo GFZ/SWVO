@@ -91,6 +91,7 @@ class KpSIDC(BaseIO):
 
         logger.debug(f"Downloading file {self.URL} ...")
 
+        self._resolved_urls = []
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
         for num, (file_path, time_interval) in enumerate(zip(file_paths, time_intervals)):
             if file_path.exists() and not reprocess_files:
@@ -126,10 +127,12 @@ class KpSIDC(BaseIO):
         rmtree(temporary_dir, ignore_errors=True)
 
     def _download(self, temporary_dir, start_time: datetime, end_time: datetime) -> None:
-        response = requests.get(
+        url = (
             self.URL
             + f"&dts_start={start_time.strftime('%Y-%m-%dT%H:%M:%SZ')}&dts_end={(end_time + timedelta(seconds=1)).strftime('%Y-%m-%dT%H:%M:%SZ')}"
         )
+        self._record_url(url)
+        response = requests.get(url)
         response.raise_for_status()
 
         with open(temporary_dir, "w") as f:

@@ -104,6 +104,7 @@ class DSCOVR(BaseIO):
         temporary_dir = Path("./temp_sw_dscovr_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
+        self._resolved_urls = []
         self._download(temporary_dir, start_time, end_time)
 
         logger.debug("Processing file ...")
@@ -168,6 +169,8 @@ class DSCOVR(BaseIO):
             "time_format": "iso",
         }
         logger.debug(f"Downloading DSCOVR data from {self.URL} for {start_time} - {end_time} ...")
+        request = requests.Request("GET", self.URL, params=params).prepare()
+        self._record_url(request.url)  # ty:ignore[invalid-argument-type]
         response = requests.get(self.URL, params=params, timeout=30)
         response.raise_for_status()
 

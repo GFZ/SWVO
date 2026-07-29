@@ -113,6 +113,7 @@ class OMNILowRes(BaseIO):
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
         complete_schema = [variable.name for variable in LOW_RES_VARIABLES]
 
+        self._resolved_urls = []
         with TemporaryDirectory(prefix="swvo-omni-low-res-") as temporary_dir_name:
             temporary_dir = Path(temporary_dir_name)
             for file_path, time_interval in zip(file_paths, time_intervals):
@@ -141,6 +142,7 @@ class OMNILowRes(BaseIO):
                     continue
 
     def _download(self, temporary_dir: Path, filename: str):
+        self._record_url(self.URL + filename)
         response = requests.get(self.URL + filename, timeout=10)
         response.raise_for_status()
 
