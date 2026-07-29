@@ -57,6 +57,10 @@ class SWACE(BaseIO):
 
     LABEL = "ace"
 
+    def _fallback_url(self) -> list[str]:
+        """Source URL templates, one per file (`{date}` is unresolved until a download has run)."""
+        return [self.URL + self.NAME_MAG, self.URL + self.NAME_SWEPAM]
+
     def download_and_process(self, start_time: datetime, end_time: datetime) -> None:
         """
         Download and process ACE data, splitting data across midnight into appropriate day files.
@@ -92,6 +96,7 @@ class SWACE(BaseIO):
         temporary_dir = Path("./temp_sw_ace_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
+        self._resolved_urls = []
         try:
             for date in pd.date_range(start=start_time.date(), end=end_time.date(), freq="D"):
                 request_date = date.to_pydatetime().replace(tzinfo=timezone.utc)
@@ -130,6 +135,7 @@ class SWACE(BaseIO):
             If the downloaded file is empty.
         """
         logger.debug(f"Downloading file {self.URL + file_name} ...")
+        self._record_url(self.URL + file_name)
         response = requests.get(self.URL + file_name, timeout=10)
         response.raise_for_status()
 

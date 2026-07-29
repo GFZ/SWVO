@@ -53,6 +53,9 @@ class KpNiemegk(BaseIO):
     DAYS_TO_SAVE_EACH_FILE = 3
     LABEL = "niemegk"
 
+    def _fallback_url(self) -> str:
+        return self.URL + self.NAME
+
     def download_and_process(self, start_time: datetime, end_time: datetime, reprocess_files: bool = False) -> None:
         """Download and process Niemegk Kp data file.
 

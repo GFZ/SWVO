@@ -37,6 +37,10 @@ class TestKpNiemegk:
         assert instance.data_dir == DATA_DIR
         assert instance.data_dir.exists()
 
+    def test_url(self):
+        instance = KpNiemegk(data_dir=DATA_DIR)
+        assert instance.url == "https://kp.gfz.de/fileadmin/files_for_gfz_cms/Kp_ap_nowcast.txt"
+
     def test_initialization_without_env_var(self):
         if KpNiemegk.ENV_VAR_NAME in os.environ:
             del os.environ[KpNiemegk.ENV_VAR_NAME]

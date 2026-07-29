@@ -143,6 +143,7 @@ class OMNIHighRes(BaseIO):
 
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time, cadence_min)
 
+        self._resolved_urls = []
         download_tasks = []
         for file_path, time_interval in zip(file_paths, time_intervals):
             if not reprocess_files and self._cache_contains(file_path, complete_schema):
@@ -581,6 +582,7 @@ class OMNIHighRes(BaseIO):
         else:
             payload.update({"res": "5min", "spacecraft": "omni_5min"})
         logger.debug(f"Fetching data from {self.URL} with payload: {payload}")
+        self._record_url(requests.Request("GET", self.URL, params=payload).prepare().url)  # ty:ignore[invalid-argument-type]
         response = requests.post(self.URL, data=payload, timeout=30)
         response.raise_for_status()
         data = response.text.splitlines()

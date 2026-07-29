@@ -53,6 +53,7 @@ class SMESuperMAG(BaseIO):
     """
 
     ENV_VAR_NAME = "SUPERMAG_STREAM_DIR"
+    URL = "https://supermag.jhuapl.edu/services/indices.php"
     LABEL = "supermag"
 
     def __init__(self, username: str, data_dir: Path | None = None, prefer_env_var: bool = False) -> None:
@@ -81,6 +82,7 @@ class SMESuperMAG(BaseIO):
         temporary_dir = Path("./temp_supermag")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
+        self._resolved_urls = []
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
 
         for file_path, time_interval in zip(file_paths, time_intervals):
@@ -92,20 +94,17 @@ class SMESuperMAG(BaseIO):
             try:
                 start_str = time_interval.strftime("%Y-%m-%dT%H:%M")
                 extent = int(timedelta(days=1).total_seconds())
-                url = (
-                    "https://supermag.jhuapl.edu/services/indices.php"
-                    f"?python&nohead&logon={self.username}"
-                    f"&start={start_str}"
-                    f"&extent={extent}"
-                    "&indices=sme"
-                )
+                url = f"{self.URL}?python&nohead&logon={self.username}&start={start_str}&extent={extent}&indices=sme"
 
                 logger.debug(f"Downloading data from {url} ...")
+                self._record_url(url)
 
                 response = requests.get(url, timeout=10)
                 response.raise_for_status()
 
                 data = response.text.splitlines()
+                if not data:
+                    raise ValueError("SuperMAG returned an empty response")
                 if data[0].startswith("ERROR"):
                     err = f"SuperMAG {data[0]}"
                     raise ValueError(err)

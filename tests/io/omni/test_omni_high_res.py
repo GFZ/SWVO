@@ -84,6 +84,26 @@ class TestOMNIHighRes:
         assert list(result.columns) == [*HIGH_RES_DEFAULT_VARIABLES, "file_name"]
         assert index[0] in result.index
 
+    def test_url_reflects_resolved_request_after_read_with_download(self, tmp_path, mocker):
+        omni_high_res = OMNIHighRes(data_dir=tmp_path)
+        assert omni_high_res.url == OMNIHighRes.URL
+
+        response = mocker.Mock()
+        response.text = "YYYY DOY HR MN\n"
+        response.raise_for_status = mocker.Mock()
+        mocker.patch("requests.post", return_value=response)
+
+        start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        end_time = datetime(2020, 1, 5, tzinfo=timezone.utc)
+        with pytest.raises(ValueError):
+            # no data available for the requested interval given the stubbed empty response
+            omni_high_res.read(start_time, end_time, download=True)
+
+        assert omni_high_res.url != OMNIHighRes.URL
+        assert omni_high_res.url.startswith(OMNIHighRes.URL + "?")
+        assert "start_date=20200101" in omni_high_res.url
+        assert "end_date=20200131" in omni_high_res.url
+
     def test_download_and_process_calls_get_data_per_month(self, omni_high_res, mocker):
         start_time = datetime(2023, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2023, 12, 31, tzinfo=timezone.utc)
@@ -329,6 +349,10 @@ class TestOMNIHighRes:
         assert payload["res"] == "5min"
         assert payload["spacecraft"] == "omni_5min"
         assert post.call_args.kwargs["timeout"] == 30
+
+        assert omni_high_res.url.startswith(OMNIHighRes.URL + "?")
+        assert "res=5min" in omni_high_res.url
+        assert "spacecraft=omni_5min" in omni_high_res.url
 
     @pytest.mark.parametrize("cadence", [1, 5])
     def test_fill_values_are_masked_for_every_cadence_field(self, omni_high_res, cadence):

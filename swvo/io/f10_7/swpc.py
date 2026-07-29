@@ -46,6 +46,9 @@ class F107SWPC(BaseIO):
 
     LABEL = "swpc"
 
+    def _fallback_url(self) -> str:
+        return self.URL + self.NAME_F107
+
     def _is_within_download_range(self, target_date: datetime) -> bool:
         """Check if a date is within the last 30 days.
 

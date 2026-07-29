@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 
 from swvo.io.kp import KpOMNI
+from swvo.io.omni import OMNILowRes
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
@@ -50,6 +51,8 @@ class TestKpOMNI:
             KpOMNI()
 
     def test_download_and_process(self, kp_omni, mocker):
+        assert kp_omni.url == OMNILowRes.URL
+
         mock_response = mocker.Mock()
         mock_response.content = b"test content"
         mock_response.raise_for_status = mocker.Mock()
@@ -66,6 +69,7 @@ class TestKpOMNI:
         kp_omni.download_and_process(start_time, end_time)
 
         assert (TEST_DIR / Path("data/omni2_2020.dat")).exists()
+        assert kp_omni.url == OMNILowRes.URL + "omni2_2020.dat"
 
     def test_read_without_download(self, kp_omni, mocker):
         start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)

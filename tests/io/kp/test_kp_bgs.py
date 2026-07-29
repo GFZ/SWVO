@@ -37,6 +37,7 @@ class TestKpBGS:
         instance = KpBGS(data_dir=DATA_DIR)
         assert instance.data_dir == DATA_DIR
         assert instance.data_dir.exists()
+        assert instance.url == "https://geomag.bgs.ac.uk/cgi-bin/solar"
 
     def test_initialization_without_env_var(self):
         if KpBGS.ENV_VAR_NAME in os.environ:

@@ -74,6 +74,7 @@ class DSTWDC(BaseIO):
         temporary_dir = Path("./temp_wdc")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
+        self._resolved_urls = []
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
 
         for file_path, time_interval in zip(file_paths, time_intervals):
@@ -93,6 +94,7 @@ class DSTWDC(BaseIO):
 
             try:
                 logger.debug(f"Downloading file {URL} ...")
+                self._record_url(URL)
                 response = requests.get(URL, timeout=10)
                 if response.status_code == 404:
                     logger.warning(f"WDC Dst data not found at {URL}")

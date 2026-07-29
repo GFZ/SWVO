@@ -37,6 +37,10 @@ class TestKpSWPC:
         assert instance.data_dir == DATA_DIR
         assert instance.data_dir.exists()
 
+    def test_url(self):
+        instance = KpSWPC(data_dir=DATA_DIR)
+        assert instance.url == "https://services.swpc.noaa.gov/text/3-day-forecast.txt"
+
     def test_initialization_without_env_var(self):
         if KpSWPC.ENV_VAR_NAME in os.environ:
             del os.environ[KpSWPC.ENV_VAR_NAME]

@@ -54,6 +54,23 @@ class TestSymhOMNI:
     def test_download_and_process(self, symhomni):
         assert symhomni.download_and_process.__func__ is OMNIHighRes.download_and_process
 
+    def test_url_reflects_resolved_request(self, symhomni, mocker):
+        assert symhomni.url == OMNIHighRes.URL
+
+        response = mocker.Mock()
+        response.text = "YYYY DOY HR MN\n"
+        response.raise_for_status = mocker.Mock()
+        mocker.patch("requests.post", return_value=response)
+
+        symhomni._get_data_from_omni(
+            datetime(2020, 1, 1, tzinfo=timezone.utc),
+            datetime(2020, 1, 2, tzinfo=timezone.utc),
+        )
+
+        assert symhomni.url != OMNIHighRes.URL
+        assert symhomni.url.startswith(OMNIHighRes.URL + "?")
+        assert "start_date=20200101" in symhomni.url
+
     def test_read_without_download(self, symhomni):
         start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2021, 2, 28, tzinfo=timezone.utc)

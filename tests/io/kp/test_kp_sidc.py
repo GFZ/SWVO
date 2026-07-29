@@ -7,6 +7,7 @@ import os
 import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pandas as pd
@@ -38,6 +39,22 @@ class TestKpSIDC:
         instance = KpSIDC(data_dir=DATA_DIR)
         assert instance.data_dir == DATA_DIR
         assert instance.data_dir.exists()
+        assert instance.url == KpSIDC.URL
+
+    def test_url_reflects_resolved_request_after_download(self, kp_sidc_instance):
+        mock_response = Mock()
+        mock_response.text = "[]"
+        mock_response.raise_for_status = Mock()
+
+        start_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        end_time = datetime(2024, 1, 2, tzinfo=timezone.utc)
+
+        with patch("requests.get", return_value=mock_response):
+            kp_sidc_instance.download_and_process(start_time, end_time, reprocess_files=True)
+
+        assert kp_sidc_instance.url != KpSIDC.URL
+        assert kp_sidc_instance.url.startswith(KpSIDC.URL)
+        assert "dts_start=2024-01-01T00:00:00Z" in kp_sidc_instance.url
 
     def test_initialization_without_env_var(self):
         if KpSIDC.ENV_VAR_NAME in os.environ:

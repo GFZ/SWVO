@@ -80,6 +80,22 @@ class TestSMESuperMAG:
         data = pd.read_csv(expected_files[0])
         assert "sme" in data.columns
 
+    def test_url_reflects_resolved_request_after_download(self, sme_instance, mocker, mock_sme_supermag_data):
+        assert sme_instance.url == SMESuperMAG.URL
+
+        mock_response = mocker.Mock()
+        mock_response.text = mock_sme_supermag_data
+        mock_response.raise_for_status = mocker.Mock()
+        mocker.patch("requests.get", return_value=mock_response)
+
+        sme_instance.download_and_process(datetime(2020, 1, 1), datetime(2020, 1, 2))
+
+        assert sme_instance.url != SMESuperMAG.URL
+        assert isinstance(sme_instance.url, list)
+        assert all(
+            url.startswith(SMESuperMAG.URL + f"?python&nohead&logon={TEST_USERNAME}") for url in sme_instance.url
+        )
+
     def test_process_single_file(self, sme_instance, mock_sme_supermag_data):
         test_file = MOCK_DATA_PATH / "test_sme.txt"
         test_file.parent.mkdir(exist_ok=True)

@@ -12,6 +12,7 @@ import pandas as pd
 import pytest
 
 from swvo.io.f10_7 import F107OMNI
+from swvo.io.omni import OMNILowRes
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = Path(os.path.join(TEST_DIR, "data/"))
@@ -51,6 +52,8 @@ class TestF107OMNI:
             F107OMNI()
 
     def test_download_and_process(self, f107omni, mocker):
+        assert f107omni.url == OMNILowRes.URL
+
         mock_response = mocker.Mock()
         mock_response.content = b"test content"
         mock_response.raise_for_status = mocker.Mock()
@@ -67,6 +70,7 @@ class TestF107OMNI:
         f107omni.download_and_process(start_time, end_time)
 
         assert (TEST_DIR / Path("data/omni2_2020.dat")).exists()
+        assert f107omni.url == OMNILowRes.URL + "omni2_2020.dat"
 
     def test_read_without_download(self, f107omni):
         start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)

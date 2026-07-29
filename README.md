@@ -27,12 +27,12 @@ This package provides a set of tools for managing solar data in Python. It inclu
 from datetime import datetime, timezone
 from swvo.io.solar_wind import SWACE
 
-ACE_DIR = "./ace_data/" #data directory for ACE data
+ACE_DIR = "./ace_data/"  # data directory for ACE data
 
 start = datetime(2024, 11, 20, 0, 0, tzinfo=timezone.utc)
 end = datetime(2024, 11, 20, 6, 0, tzinfo=timezone.utc)
 
-#Read ACE solar wind data with downloading
+# Read ACE solar wind data with downloading
 ace_df = swace.read(start, end, download=True)
 ```
 

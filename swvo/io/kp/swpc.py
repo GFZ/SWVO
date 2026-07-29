@@ -54,6 +54,9 @@ class KpSWPC(BaseIO):
 
     LABEL = "swpc"
 
+    def _fallback_url(self) -> str:
+        return self.URL + self.NAME
+
     def download_and_process(self, target_date: datetime, reprocess_files: bool = False) -> None:
         """
         Download and process SWPC Kp data file.

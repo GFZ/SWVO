@@ -230,3 +230,60 @@ class TestBaseIOEnvironmentVariablePrecedence:
         with patch.dict(os.environ, {"TEST_DATA_DIR": str(env_dir)}):
             io = TestBaseIO(data_dir=passed_dir, prefer_env_var=True)
             assert io.data_dir == env_dir
+
+
+class TestBaseIOUrl:
+    """Test the `url` property."""
+
+    def test_url_returns_single_url(self, tmp_path):
+        """Test that url property returns the subclass's URL string as-is."""
+
+        class SingleUrl(TestBaseIO):
+            URL = "https://example.com/data/file.txt"
+
+        io = SingleUrl(data_dir=tmp_path)
+        assert io.url == "https://example.com/data/file.txt"
+
+    def test_url_returns_list_of_urls(self, tmp_path):
+        """Test that url property returns a list as-is for multi-file sources."""
+
+        class MultiUrl(TestBaseIO):
+            URL = ["https://example.com/a.txt", "https://example.com/b.txt"]
+
+        io = MultiUrl(data_dir=tmp_path)
+        assert io.url == ["https://example.com/a.txt", "https://example.com/b.txt"]
+
+    def test_url_can_override_fallback(self, tmp_path):
+        """Test that subclasses can override _fallback_url when the base attribute isn't named URL."""
+
+        class ComputedUrl(TestBaseIO):
+            API_URL = "https://example.com/file.txt"
+
+            def _fallback_url(self):
+                return self.API_URL
+
+        io = ComputedUrl(data_dir=tmp_path)
+        assert io.url == "https://example.com/file.txt"
+
+    def test_url_reflects_last_resolved_request(self, tmp_path):
+        """Test that url returns the fully resolved URL after a request was recorded."""
+
+        class RecordingUrl(TestBaseIO):
+            URL = "https://example.com/data/"
+
+        io = RecordingUrl(data_dir=tmp_path)
+        assert io.url == "https://example.com/data/"
+
+        io._record_url("https://example.com/data/2026-07-29.txt")
+        assert io.url == "https://example.com/data/2026-07-29.txt"
+
+    def test_url_returns_list_when_multiple_requests_recorded(self, tmp_path):
+        """Test that url returns a list when more than one request was made."""
+
+        class MultiRequestUrl(TestBaseIO):
+            URL = "https://example.com/data/"
+
+        io = MultiRequestUrl(data_dir=tmp_path)
+        io._record_url("https://example.com/data/a.txt")
+        io._record_url("https://example.com/data/b.txt")
+        assert io.url == ["https://example.com/data/a.txt", "https://example.com/data/b.txt"]

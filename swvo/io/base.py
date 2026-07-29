@@ -42,6 +42,7 @@ class BaseIO(ABC):
 
     ENV_VAR_NAME: str = ""  # Must be set by subclasses
     LABEL: str = ""  # Must be set by subclasses
+    URL: str | list[str] = ""  # Should be set by subclasses; may be a single URL or a list of URLs
 
     def __init__(self, data_dir: Optional[Path] = None, prefer_env_var: bool = False) -> None:
         """Initialize the BaseIO class.
@@ -71,7 +72,49 @@ class BaseIO(ABC):
         self.data_dir: Path = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
+        self._resolved_urls: list[str] = []
+
         logger.info(f"{self.__class__.__name__} data directory: {self.data_dir}")
+
+    def _record_url(self, url: str) -> None:
+        """Record a fully resolved URL used for an actual request.
+
+        Subclasses call this right before each `requests.get`/`requests.post` with
+        the exact URL (including query params, dates, etc.) being fetched.
+        Subclasses should clear `self._resolved_urls` at the start of
+        `download_and_process` so URLs from a previous call don't linger.
+
+        Parameters
+        ----------
+        url : str
+            The fully resolved URL that was requested.
+        """
+        self._resolved_urls.append(url)
+
+    def _fallback_url(self) -> str | list[str]:
+        """URL(s) to report before any request has been resolved.
+
+        Defaults to the static `URL` template; subclasses whose base endpoint
+        attribute isn't named `URL` (e.g. `API_URL`) should override this.
+        """
+        return self.URL
+
+    @property
+    def url(self) -> str | list[str]:
+        """Source URL(s) the data is downloaded from.
+
+        If a download/read has already resolved concrete request URL(s) (e.g. with
+        dates or query parameters filled in), those are returned. Otherwise falls
+        back to `_fallback_url()`.
+
+        Returns
+        -------
+        str | list[str]
+            A single URL, or a list of URLs if more than one request was made.
+        """
+        if not self._resolved_urls:
+            return self._fallback_url()
+        return self._resolved_urls[0] if len(self._resolved_urls) == 1 else list(self._resolved_urls)
 
     @abstractmethod
     def read(self, *args, **kwargs) -> pd.DataFrame | list[pd.DataFrame]:

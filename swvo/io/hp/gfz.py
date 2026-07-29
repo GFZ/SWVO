@@ -51,6 +51,9 @@ class HpGFZ(BaseIO):
     API_URL = "https://kp.gfz.de/app/json/"
     LABEL = "gfz"
 
+    def _fallback_url(self) -> str:
+        return self.API_URL
+
     def __init__(self, index: str, data_dir: Optional[Path] = None, prefer_env_var: bool = False) -> None:
         """Initialize HpGFZ.
 
@@ -101,6 +104,7 @@ class HpGFZ(BaseIO):
         temporary_dir = Path("./temp_hp_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
+        self._resolved_urls = []
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
 
         for file_path, time_interval in zip(file_paths, time_intervals):
@@ -154,6 +158,7 @@ class HpGFZ(BaseIO):
 
         url = f"{self.API_URL}?start={start_str}&end={end_str}&index={index_param}&status=def"
 
+        self._record_url(url)
         logger.debug(f"Downloading data from {url} ...")
 
         try:

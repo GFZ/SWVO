@@ -86,6 +86,8 @@ class TestDSCOVR:
         assert all(isinstance(interval, tuple) for interval in time_intervals)
 
     def test_download_and_process(self, dscovr_instance, sample_portal_payload):
+        assert dscovr_instance.url == DSCOVR.URL
+
         start_time = datetime(2024, 3, 15, 1, 0, tzinfo=timezone.utc)
         end_time = datetime(2024, 3, 15, 1, 3, tzinfo=timezone.utc)
         mock_response = Mock()
@@ -111,6 +113,9 @@ class TestDSCOVR:
         assert kwargs["params"]["format"] == "json"
         assert kwargs["params"]["time_format"] == "iso"
         assert kwargs["timeout"] == 30
+
+        assert dscovr_instance.url.startswith(DSCOVR.URL + "?")
+        assert "start_time=2024-03-15T01%3A00%3A00" in dscovr_instance.url
 
     def test_portal_parameters(self, dscovr_instance):
         parameters = dscovr_instance._portal_parameters()

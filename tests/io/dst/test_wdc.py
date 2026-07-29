@@ -97,6 +97,7 @@ DAY
         assert "WDC Dst data not found" in caplog.text
         expected_file = MOCK_DATA_PATH / "2025" / "WDC_DST_202501.csv"
         assert not expected_file.exists()
+        assert dst_instance.url == "https://wdc.kugi.kyoto-u.ac.jp/dst_realtime/202501/"
 
     def test_process_single_file(self, dst_instance, sample_dst_data):
         test_file = MOCK_DATA_PATH / "test_dst.txt"

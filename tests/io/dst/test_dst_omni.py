@@ -52,6 +52,8 @@ class TestdstOMNI:
             DSTOMNI()
 
     def test_download_and_process(self, dstomni, mocker):
+        assert dstomni.url == OMNILowRes.URL
+
         mock_response = mocker.Mock()
         mock_response.content = b"test content"
         mock_response.raise_for_status = mocker.Mock()
@@ -67,6 +69,7 @@ class TestdstOMNI:
 
         dstomni.download_and_process(start_time, end_time)
         assert (TEST_DIR / Path("data/omni2_2020.dat")).exists()
+        assert dstomni.url == OMNILowRes.URL + "omni2_2020.dat"
 
     def test_read_without_download(self, dstomni):
         start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)

@@ -72,6 +72,9 @@ class TestF107SWPC:
             f107 = F107SWPC()
             assert f107.data_dir == MOCK_DATA_PATH
 
+    def test_url(self, f107_instance):
+        assert f107_instance.url == "https://services.swpc.noaa.gov/text/daily-solar-indices.txt"
+
     def test_initialization_without_env_var(self):
         if F107SWPC.ENV_VAR_NAME in os.environ:
             del os.environ[F107SWPC.ENV_VAR_NAME]

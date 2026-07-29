@@ -85,8 +85,8 @@ def _interp_flux_parallel(
                 flux_left,
                 flux_right,
                 target_al_single,
-                alpha_eq_model[it, al_left_idx],  # ty:ignore[invalid-argument-type]
-                alpha_eq_model[it, al_right_idx],
+                float(alpha_eq_model[it, al_left_idx]),
+                float(alpha_eq_model[it, al_right_idx]),
             )
         )
 

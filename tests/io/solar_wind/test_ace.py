@@ -115,6 +115,7 @@ class TestSWACE:
         assert data["pdyn"].iloc[0] == pytest.approx(2e-6 * 4.2 * 380.0**2)
         assert mock_requests_get.call_args_list[0].args[0] == SWACE.URL + mag_file_name
         assert mock_requests_get.call_args_list[1].args[0] == SWACE.URL + swepam_file_name
+        assert swace_instance.url == [SWACE.URL + mag_file_name, SWACE.URL + swepam_file_name]
 
     def test_download_and_process_multiple_days(self, swace_instance):
         start_time = datetime(2024, 3, 15, 23, 0, tzinfo=timezone.utc)
