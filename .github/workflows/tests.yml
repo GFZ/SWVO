@@ -35,7 +35,10 @@ jobs:
         run: uv python install
 
       - name: Install project and ty
-        run: uv venv && uv pip install . ty -U
+        run: |
+          uv venv
+          uv pip install . ty -U
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Run ty
         run: ty check
