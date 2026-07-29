@@ -15,6 +15,7 @@ import warnings
 from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from time import sleep
 
 import numpy as np
 import pandas as pd
@@ -26,6 +27,10 @@ from swvo.io.utils import enforce_utc_timezone
 logger = logging.getLogger(__name__)
 
 logging.captureWarnings(True)
+
+
+class _TransientSuperMAGResponseError(ValueError):
+    """Response error that can reasonably succeed when requested again."""
 
 
 class SMESuperMAG(BaseIO):
@@ -60,6 +65,8 @@ class SMESuperMAG(BaseIO):
     _DEFAULT_VARIABLES = ("sme",)
     _RESPONSE_COLUMNS = {"SME": "sme", "SML": "sml", "SMU": "smu"}
     _FILL_VALUE_THRESHOLD = 999998
+    _MAX_DOWNLOAD_ATTEMPTS = 4
+    _RETRY_BACKOFF_SECONDS = 1.0
 
     def __init__(self, username: str, data_dir: Path | None = None, prefer_env_var: bool = False) -> None:
         super().__init__(data_dir, prefer_env_var)
@@ -70,7 +77,9 @@ class SMESuperMAG(BaseIO):
 
         Existing complete files are retained unless ``reprocess_files`` is
         true. A legacy SME-only file is considered incomplete and is upgraded
-        to the complete schema.
+        to the complete schema. Transient failures are retried per day. If all
+        attempts for a day fail, batch processing warns, leaves that cache
+        untouched, and continues with subsequent days.
 
         Parameters
         ----------
@@ -84,9 +93,11 @@ class SMESuperMAG(BaseIO):
         Raises
         ------
         ValueError
-            If the time range is invalid or SuperMAG returns unusable data.
+            If the time range is invalid or SuperMAG returns a permanent error,
+            such as an invalid username.
         requests.RequestException
-            If a request fails. Existing cache files remain untouched.
+            If a non-retryable request fails. Existing cache files remain
+            untouched.
         """
         if start_time >= end_time:
             raise ValueError("start_time must be before end_time")
@@ -96,10 +107,32 @@ class SMESuperMAG(BaseIO):
         self._resolved_urls = []
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
 
+        failed_dates = []
         for file_path, time_interval in zip(file_paths, time_intervals, strict=True):
             if file_path.exists() and not reprocess_files and self._cache_contains(file_path, self._VARIABLES):
                 continue
-            self._download_and_process_single_file(file_path, time_interval)
+            try:
+                self._download_and_process_single_file(file_path, time_interval)
+            except Exception as error:
+                if not self._is_retryable_download_error(error):
+                    raise
+                failed_dates.append(time_interval.date())
+                logger.error(
+                    "SuperMAG download failed for %s after %d attempts (%s)",
+                    time_interval.date(),
+                    self._MAX_DOWNLOAD_ATTEMPTS,
+                    self._retry_reason(error),
+                )
+
+        if failed_dates:
+            dates = ", ".join(str(date) for date in failed_dates)
+            day_label = "day" if len(failed_dates) == 1 else "days"
+            warnings.warn(
+                f"SuperMAG download failed after {self._MAX_DOWNLOAD_ATTEMPTS} attempts "
+                f"for {len(failed_dates)} {day_label}: {dates}. Re-run the same range to retry failed days.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
     def _download_and_process_single_file(self, file_path: Path, time_interval: datetime) -> None:
         """Download one day and atomically replace its processed cache."""
@@ -114,20 +147,39 @@ class SMESuperMAG(BaseIO):
         }
 
         # Do not log the prepared request URL: it contains the SuperMAG username.
-        logger.debug("Downloading SuperMAG indices for %s", time_interval.date())
-        try:
-            resolved_url = requests.Request("GET", self.URL, params=params).prepare().url
-            if resolved_url is None:
-                raise ValueError("Could not resolve the SuperMAG request URL")
-            self._record_url(resolved_url)
-            response = requests.get(self.URL, params=params, timeout=10)
-            response.raise_for_status()
-            processed_df = self._process_response_text(response.text)
-            processed_df.to_csv(tmp_path, index=True, header=True)
-            tmp_path.replace(file_path)
-        except Exception:
-            tmp_path.unlink(missing_ok=True)
-            raise
+        for attempt in range(1, self._MAX_DOWNLOAD_ATTEMPTS + 1):
+            logger.debug(
+                "Downloading SuperMAG indices for %s (attempt %d/%d)",
+                time_interval.date(),
+                attempt,
+                self._MAX_DOWNLOAD_ATTEMPTS,
+            )
+            try:
+                resolved_url = requests.Request("GET", self.URL, params=params).prepare().url
+                if resolved_url is None:
+                    raise ValueError("Could not resolve the SuperMAG request URL")
+                self._record_url(resolved_url)
+                response = requests.get(self.URL, params=params, timeout=10)
+                response.raise_for_status()
+                processed_df = self._process_response_text(response.text)
+                processed_df.to_csv(tmp_path, index=True, header=True)
+                tmp_path.replace(file_path)
+                return
+            except Exception as error:
+                tmp_path.unlink(missing_ok=True)
+                if not self._is_retryable_download_error(error) or attempt == self._MAX_DOWNLOAD_ATTEMPTS:
+                    raise
+
+                backoff = self._RETRY_BACKOFF_SECONDS * 2 ** (attempt - 1)
+                logger.warning(
+                    "Transient SuperMAG failure for %s (%s); retrying in %.1f seconds (attempt %d/%d)",
+                    time_interval.date(),
+                    self._retry_reason(error),
+                    backoff,
+                    attempt + 1,
+                    self._MAX_DOWNLOAD_ATTEMPTS,
+                )
+                sleep(backoff)
 
     def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> tuple[list[Path], list[datetime]]:
         """Return daily cache paths and matching midnight request times."""
@@ -152,7 +204,7 @@ class SMESuperMAG(BaseIO):
         """Parse a SuperMAG indices response into the complete cache schema."""
         response_text = text.strip()
         if not response_text:
-            raise ValueError("SuperMAG returned an empty response")
+            raise _TransientSuperMAGResponseError("SuperMAG returned an empty response")
         if response_text.startswith("ERROR"):
             first_line = response_text.splitlines()[0]
             raise ValueError(f"SuperMAG {first_line}")
@@ -171,7 +223,9 @@ class SMESuperMAG(BaseIO):
 
         if isinstance(data, dict):
             data = [data]
-        if not isinstance(data, list) or not data:
+        if isinstance(data, list) and not data:
+            raise _TransientSuperMAGResponseError("SuperMAG returned no records")
+        if not isinstance(data, list):
             raise ValueError("SuperMAG response must contain at least one record")
 
         df = pd.DataFrame(data)
@@ -192,6 +246,29 @@ class SMESuperMAG(BaseIO):
         processed = df.loc[:, self._VARIABLES].copy()
         processed.index = pd.DatetimeIndex(timestamps, name="timestamp")
         return processed
+
+    @staticmethod
+    def _is_retryable_download_error(error: Exception) -> bool:
+        """Return whether ``error`` represents a transient download failure."""
+        if isinstance(error, (_TransientSuperMAGResponseError, requests.Timeout, requests.ConnectionError)):
+            return True
+        if isinstance(error, requests.HTTPError) and error.response is not None:
+            status_code = error.response.status_code
+            return status_code == 429 or status_code >= 500
+        return False
+
+    @staticmethod
+    def _retry_reason(error: Exception) -> str:
+        """Return a log-safe failure description without a prepared URL."""
+        if isinstance(error, _TransientSuperMAGResponseError):
+            return str(error)
+        if isinstance(error, requests.Timeout):
+            return "request timed out"
+        if isinstance(error, requests.ConnectionError):
+            return "connection failed"
+        if isinstance(error, requests.HTTPError) and error.response is not None:
+            return f"HTTP {error.response.status_code}"
+        return type(error).__name__
 
     def read(
         self,

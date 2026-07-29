@@ -124,10 +124,39 @@ inclusive one-minute interval behavior. Exact historical availability and
 station participation are controlled by SuperMAG and can vary over time.
 Source fill values are returned as ``NaN``.
 
-HTTP errors, timeouts, explicit SuperMAG ``ERROR`` responses, empty or malformed
-JSON, missing response fields, and invalid timestamps are reported to the
-caller. Missing local files still produce the established warning when
-``download=False``.
+Permanent HTTP and SuperMAG ``ERROR`` responses, malformed JSON, missing
+response fields, and invalid timestamps are reported to the caller. The
+transient conditions described below are retried first. Missing local files
+still produce the established warning when ``download=False``.
+
+Transient download failures
+---------------------------
+
+SuperMAG can occasionally return an empty HTTP response for a valid historical
+day and then succeed when the same request is repeated. To make long downloads
+resilient, SWVO treats the following conditions as transient:
+
+* an empty response body or an empty JSON record array;
+* a request timeout or connection failure;
+* HTTP status ``429`` or a ``5xx`` server response.
+
+Each affected day is attempted at most four times, with bounded exponential
+backoff of one, two, and four seconds between attempts. Permanent failures,
+including an explicit SuperMAG ``ERROR`` response such as an invalid username
+and other HTTP ``4xx`` responses, are not retried.
+
+The failure policy depends on how the download is invoked:
+
+* :meth:`~swvo.io.sme.SMESuperMAG.download_and_process` continues with later
+  days after all attempts for a transiently failing day are exhausted. At the
+  end it emits a warning listing every failed date and recommends re-running
+  the same range.
+* :meth:`~swvo.io.sme.SMESuperMAG.read` with ``download=True`` remains strict.
+  If the day needed for that read still fails after all attempts, the final
+  exception is raised to the caller.
+
+No failed attempt replaces an existing cache. Temporary files are removed
+before retrying, and a later successful attempt is installed atomically.
 
 Sources and acknowledgement
 ---------------------------

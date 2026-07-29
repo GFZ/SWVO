@@ -110,7 +110,8 @@ reader.read(start, end, variables=["smu", "sml"])  # caller-defined order
 
 New downloads store all three indices together. Existing SME-only cache files
 continue to work for default reads and can be upgraded on demand with
-`download=True`. See the
+`download=True`. Historical batch downloads retry transient SuperMAG failures
+per day and continue past an unavailable day with a dated warning. See the
 [SuperMAG electrojet guide](https://swvo.readthedocs.io/en/latest/supermag_indices.html)
 for authentication, cache compatibility, error handling, data references, and
 acknowledgement guidance.

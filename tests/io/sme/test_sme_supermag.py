@@ -12,7 +12,7 @@ import os
 import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 import numpy as np
 import pandas as pd
@@ -40,6 +40,16 @@ def _response(text: str | None = None) -> Mock:
     response = Mock()
     response.text = text if text is not None else json.dumps(_records())
     response.raise_for_status.return_value = None
+    return response
+
+
+def _http_error_response(status_code: int) -> Mock:
+    response = _response()
+    response.status_code = status_code
+    response.raise_for_status.side_effect = requests.HTTPError(
+        f"HTTP {status_code}",
+        response=response,
+    )
     return response
 
 
@@ -174,7 +184,7 @@ class TestResponseProcessing:
             ("ERROR Invalid user", "SuperMAG ERROR Invalid user"),
             ("not json", "No JSON object or array"),
             ("prefix [{broken}] suffix", "Malformed JSON"),
-            ("[]", "at least one record"),
+            ("[]", "no records"),
             ('"unexpected"', "at least one record"),
         ],
     )
@@ -250,9 +260,132 @@ class TestDownloadAndAtomicCache:
         get.assert_called_once()
         assert list(pd.read_csv(cache_path).columns) == ["timestamp", "sme", "sml", "smu"]
 
+    def test_empty_response_is_retried_until_success(self, reader: SMESuperMAG, tmp_path: Path):
+        with (
+            patch(
+                "swvo.io.sme.supermag.requests.get",
+                side_effect=[_response(""), _response("  \n"), _response()],
+            ) as get,
+            patch("swvo.io.sme.supermag.sleep") as retry_sleep,
+        ):
+            reader.download_and_process(datetime(2020, 1, 1), datetime(2020, 1, 1, 0, 2))
+
+        assert get.call_count == 3
+        assert retry_sleep.call_args_list == [call(1.0), call(2.0)]
+        assert (tmp_path / "SuperMAG_SME_20200101.csv").exists()
+
+    def test_empty_record_array_is_retried(self, reader: SMESuperMAG, tmp_path: Path):
+        with (
+            patch(
+                "swvo.io.sme.supermag.requests.get",
+                side_effect=[_response("[]"), _response()],
+            ) as get,
+            patch("swvo.io.sme.supermag.sleep") as retry_sleep,
+        ):
+            reader.download_and_process(datetime(2020, 1, 1), datetime(2020, 1, 1, 0, 2))
+
+        assert get.call_count == 2
+        retry_sleep.assert_called_once_with(1.0)
+        assert (tmp_path / "SuperMAG_SME_20200101.csv").exists()
+
+    def test_timeout_and_connection_failures_are_retried(self, reader: SMESuperMAG, tmp_path: Path):
+        for error in (requests.Timeout("timeout"), requests.ConnectionError("connection")):
+            cache_path = tmp_path / "SuperMAG_SME_20200101.csv"
+            cache_path.unlink(missing_ok=True)
+            with (
+                patch(
+                    "swvo.io.sme.supermag.requests.get",
+                    side_effect=[error, _response()],
+                ) as get,
+                patch("swvo.io.sme.supermag.sleep") as retry_sleep,
+            ):
+                reader.download_and_process(datetime(2020, 1, 1), datetime(2020, 1, 1, 0, 2))
+
+            assert get.call_count == 2
+            retry_sleep.assert_called_once_with(1.0)
+            assert cache_path.exists()
+
+    @pytest.mark.parametrize("status_code", [429, 500, 503])
+    def test_retryable_http_status_then_success(self, reader: SMESuperMAG, tmp_path: Path, status_code: int):
+        with (
+            patch(
+                "swvo.io.sme.supermag.requests.get",
+                side_effect=[_http_error_response(status_code), _response()],
+            ) as get,
+            patch("swvo.io.sme.supermag.sleep") as retry_sleep,
+        ):
+            reader.download_and_process(datetime(2020, 1, 1), datetime(2020, 1, 1, 0, 2))
+
+        assert get.call_count == 2
+        retry_sleep.assert_called_once_with(1.0)
+        assert (tmp_path / "SuperMAG_SME_20200101.csv").exists()
+
+    def test_exhausted_transient_day_warns_and_batch_continues(self, reader: SMESuperMAG, tmp_path: Path):
+        responses = [_response("") for _ in range(reader._MAX_DOWNLOAD_ATTEMPTS)]
+        responses.append(_response())
+        with (
+            patch("swvo.io.sme.supermag.requests.get", side_effect=responses) as get,
+            patch("swvo.io.sme.supermag.sleep") as retry_sleep,
+            pytest.warns(
+                RuntimeWarning,
+                match=r"failed after 4 attempts for 1 day.*2020-01-01.*Re-run",
+            ),
+        ):
+            reader.download_and_process(datetime(2020, 1, 1), datetime(2020, 1, 2))
+
+        assert get.call_count == reader._MAX_DOWNLOAD_ATTEMPTS + 1
+        assert retry_sleep.call_args_list == [call(1.0), call(2.0), call(4.0)]
+        assert not (tmp_path / "SuperMAG_SME_20200101.csv").exists()
+        assert (tmp_path / "SuperMAG_SME_20200102.csv").exists()
+
+    def test_exhausted_empty_response_remains_strict_for_on_demand_read(self, reader: SMESuperMAG):
+        with (
+            patch("swvo.io.sme.supermag.requests.get", return_value=_response("")) as get,
+            patch("swvo.io.sme.supermag.sleep") as retry_sleep,
+            pytest.raises(ValueError, match="empty response"),
+        ):
+            reader.read(
+                datetime(2020, 1, 1),
+                datetime(2020, 1, 1, 0, 2),
+                download=True,
+                variables="all",
+            )
+
+        assert get.call_count == reader._MAX_DOWNLOAD_ATTEMPTS
+        assert retry_sleep.call_args_list == [call(1.0), call(2.0), call(4.0)]
+
+    def test_invalid_username_is_not_retried(self, reader: SMESuperMAG):
+        with (
+            patch(
+                "swvo.io.sme.supermag.requests.get",
+                return_value=_response("ERROR: Invalid username"),
+            ) as get,
+            patch("swvo.io.sme.supermag.sleep") as retry_sleep,
+            pytest.raises(ValueError, match="Invalid username"),
+        ):
+            reader.download_and_process(datetime(2020, 1, 1), datetime(2020, 1, 1, 0, 2))
+
+        get.assert_called_once()
+        retry_sleep.assert_not_called()
+
+    def test_retry_logging_does_not_expose_username(self, reader: SMESuperMAG, caplog: pytest.LogCaptureFixture):
+        caplog.set_level(logging.DEBUG)
+        error = requests.ConnectionError(f"prepared URL included {TEST_USERNAME}")
+        with (
+            patch(
+                "swvo.io.sme.supermag.requests.get",
+                side_effect=[error, _response()],
+            ),
+            patch("swvo.io.sme.supermag.sleep"),
+        ):
+            reader.download_and_process(datetime(2020, 1, 1), datetime(2020, 1, 1, 0, 2))
+
+        assert "connection failed" in caplog.text
+        assert TEST_USERNAME not in caplog.text
+
     @pytest.mark.parametrize(
         "side_effect",
-        [requests.Timeout("timed out"), requests.HTTPError("server failed")],
+        [requests.Timeout("timed out"), requests.ConnectionError("connection failed")],
     )
     def test_request_failure_preserves_existing_cache_and_cleans_temporary_file(
         self, reader: SMESuperMAG, tmp_path: Path, side_effect: requests.RequestException
@@ -262,22 +395,27 @@ class TestDownloadAndAtomicCache:
         cache_path.write_text(original)
         with (
             patch("swvo.io.sme.supermag.requests.get", side_effect=side_effect),
+            patch("swvo.io.sme.supermag.sleep"),
             pytest.raises(type(side_effect), match=str(side_effect)),
         ):
-            reader.download_and_process(datetime(2020, 1, 1), datetime(2020, 1, 1, 0, 2), reprocess_files=True)
+            reader._download_and_process_single_file(cache_path, datetime(2020, 1, 1))
         assert cache_path.read_text() == original
         assert not cache_path.with_suffix(".csv.tmp").exists()
 
-    def test_http_status_failure_preserves_existing_cache(self, reader: SMESuperMAG, tmp_path: Path):
+    def test_non_retryable_http_status_preserves_existing_cache(self, reader: SMESuperMAG, tmp_path: Path):
         cache_path = tmp_path / "SuperMAG_SME_20200101.csv"
         cache_path.write_text("timestamp,sme\n2020-01-01T00:00:00+00:00,7\n")
-        response = _response()
-        response.raise_for_status.side_effect = requests.HTTPError("503")
         with (
-            patch("swvo.io.sme.supermag.requests.get", return_value=response),
-            pytest.raises(requests.HTTPError, match="503"),
+            patch(
+                "swvo.io.sme.supermag.requests.get",
+                return_value=_http_error_response(404),
+            ) as get,
+            patch("swvo.io.sme.supermag.sleep") as retry_sleep,
+            pytest.raises(requests.HTTPError, match="404"),
         ):
             reader.download_and_process(datetime(2020, 1, 1), datetime(2020, 1, 1, 0, 2), reprocess_files=True)
+        get.assert_called_once()
+        retry_sleep.assert_not_called()
         assert "7" in cache_path.read_text()
         assert not cache_path.with_suffix(".csv.tmp").exists()
 
