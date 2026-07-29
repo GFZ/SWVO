@@ -103,6 +103,8 @@ class SMESuperMAG(BaseIO):
                 response.raise_for_status()
 
                 data = response.text.splitlines()
+                if not data:
+                    raise ValueError("SuperMAG returned an empty response")
                 if data[0].startswith("ERROR"):
                     err = f"SuperMAG {data[0]}"
                     raise ValueError(err)
