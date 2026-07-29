@@ -55,6 +55,7 @@ class TestOMNILowRes:
         omni_low_res.download_and_process(start_time, end_time)
 
         assert (TEST_DIR / Path("data/omni2_2020.dat")).exists()
+        assert omni_low_res.url == OMNILowRes.URL + "omni2_2020.dat"
 
     def test_read_without_download(self, omni_low_res, mocker):
         start_time = datetime(2021, 1, 1, tzinfo=timezone.utc)

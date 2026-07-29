@@ -46,6 +46,7 @@ class TestHpGFZ:
         assert hp30gfz.index == "hp30"
         assert hp30gfz.index_number == 30
         assert isinstance(hp30gfz.data_dir, Path)
+        assert hp30gfz.url == "https://kp.gfz.de/app/json/"
 
     def test_hp60gfz_initialization(self, hp60gfz):
         assert hp60gfz.index == "hp60"
@@ -163,6 +164,7 @@ class TestHpGFZ:
             "https://kp.gfz.de/app/json/?start=2020-01-01T00:00:00Z&end=2020-12-31T00:00:00Z&index=Hp30&status=def"
         )
         mock_get.assert_called_once_with(expected_url, timeout=10)
+        assert hp30gfz.url == expected_url
 
     @pytest.fixture
     def sample_csv_data(self):
