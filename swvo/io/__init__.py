@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
+# SPDX-FileContributor: Simon Mischel
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -12,5 +13,6 @@ from swvo.io import (
     RBMDataSet as RBMDataSet,
     solar_wind as solar_wind,
     sme as sme,
+    substorms as substorms,
 )
 from swvo.io.base import BaseIO as BaseIO
