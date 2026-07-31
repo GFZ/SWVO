@@ -233,6 +233,52 @@ class TestReadSolarWindFromMultipleModels:
         assert (data["file_name"] == "ace_file").all()
         assert data.loc[start_time, "speed"] == 400.0
 
+    def test_omni_empty_dataframe_falls_back_to_ace(self, monkeypatch):
+        """Regression test: SWOMNI returning a genuinely empty (0-row) DataFrame
+        for the requested range — e.g. no cached/downloadable data available —
+        must not be mistaken for "no gaps remain". The reader must still fall
+        through to the next model in model_order (SWACE)."""
+        start_time = datetime(2026, 7, 24, 10, tzinfo=timezone.utc)
+        end_time = datetime(2026, 7, 24, 10, 5, tzinfo=timezone.utc)
+        index = pd.date_range(start_time, end_time, freq="1min", tz="UTC")
+        ace_data = pd.DataFrame(
+            {
+                "speed": [400.0] * len(index),
+                "proton_density": [5.0] * len(index),
+                "bavg": [7.0] * len(index),
+                "temperature": [100000.0] * len(index),
+                "bx_gsm": [1.0] * len(index),
+                "by_gsm": [2.0] * len(index),
+                "bz_gsm": [-1.0] * len(index),
+                "file_name": ["ace_file"] * len(index),
+            },
+            index=index,
+        )
+
+        def read_empty_omni(self, read_start, read_end, *, download=False):
+            return pd.DataFrame(
+                columns=["bavg", "bx_gsm", "by_gsm", "bz_gsm", "speed", "proton_density", "temperature", "file_name"]
+            )
+
+        def read_ace(self, read_start, read_end, *, download=False, propagation=False):
+            return ace_data
+
+        monkeypatch.setattr(SWOMNI, "read", read_empty_omni)
+        monkeypatch.setattr(SWACE, "read", read_ace)
+
+        data = read_solar_wind_from_multiple_models(
+            start_time=start_time,
+            end_time=end_time,
+            model_order=[SWOMNI(), SWACE()],
+            historical_data_cutoff_time=end_time,
+            download=True,
+        )
+
+        assert isinstance(data, pd.DataFrame)
+        assert not data.empty
+        assert (data["model"] == "ace").all()
+        assert data.loc[start_time, "speed"] == 400.0
+
     def test_model_check_with_wrong_class(self, sample_times):
         class FakeModel:
             pass

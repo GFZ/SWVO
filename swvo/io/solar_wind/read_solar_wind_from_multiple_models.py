@@ -307,34 +307,34 @@ def _read_historical_model(
     # Create continuous index from start to end time
     continuous_index = pd.date_range(start=start_time, end=end_time, freq="1min", tz="UTC")
 
-    if not data_one_model.empty:
-        continuous_df = pd.DataFrame(index=continuous_index)
-        continuous_df.index.name = data_one_model.index.name
+    # Always build the continuous, NaN-filled frame, even when the model returned zero rows
+    continuous_df = pd.DataFrame(index=continuous_index)
+    continuous_df.index.name = data_one_model.index.name
+    for col in data_one_model.columns:
+        if data_one_model[col].dtype in ["object", "str"]:
+            continuous_df[col] = None
+        else:
+            continuous_df[col] = np.nan
+
+    common_index = data_one_model.index.intersection(continuous_index)
+    if len(common_index) > 0:
         for col in data_one_model.columns:
-            if data_one_model[col].dtype in ["object", "str"]:
-                continuous_df[col] = None
-            else:
-                continuous_df[col] = np.nan
+            continuous_df.loc[common_index, col] = data_one_model.loc[common_index, col]
 
-        common_index = data_one_model.index.intersection(continuous_index)
-        if len(common_index) > 0:
-            for col in data_one_model.columns:
-                continuous_df.loc[common_index, col] = data_one_model.loc[common_index, col]
+    data_one_model = continuous_df
 
-        data_one_model = continuous_df
+    historical_data = data_one_model.loc[:historical_data_cutoff_time]
+    if not historical_data.empty:
+        if do_interpolation:
+            interpolated_historical = _interpolate_short_gaps(historical_data, max_gap_minutes=180)
+            data_one_model.loc[:historical_data_cutoff_time] = interpolated_historical
+            logger.info(
+                f"Applied spline interpolation to short gaps (<= 3 hours) in {model.LABEL} historical data",
+            )
 
-        historical_data = data_one_model.loc[:historical_data_cutoff_time]
-        if not historical_data.empty:
-            if do_interpolation:
-                interpolated_historical = _interpolate_short_gaps(historical_data, max_gap_minutes=180)
-                data_one_model.loc[:historical_data_cutoff_time] = interpolated_historical
-                logger.info(
-                    f"Applied spline interpolation to short gaps (<= 3 hours) in {model.LABEL} historical data",
-                )
-
-        if historical_data_cutoff_time < end_time:
-            data_one_model.loc[historical_data_cutoff_time + timedelta(minutes=1) : end_time] = np.nan
-            logger.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
+    if historical_data_cutoff_time < end_time:
+        data_one_model.loc[historical_data_cutoff_time + timedelta(minutes=1) : end_time] = np.nan
+        logger.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
 
     return data_one_model
 
