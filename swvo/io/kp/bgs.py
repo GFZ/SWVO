@@ -73,6 +73,8 @@ class KpBGS(BaseIO):
 
         request_time = enforce_utc_timezone(request_time)
 
+        self._resolved_urls = []
+
         temporary_dir = Path("./temp_kp_bgs_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
@@ -128,6 +130,7 @@ class KpBGS(BaseIO):
             "year": str(request_time.year),
         }
 
+        self._record_url(requests.Request("GET", self.URL, params=payload).prepare().url)  # ty:ignore[invalid-argument-type]
         response = requests.post(self.URL, data=payload)
         response.raise_for_status()
 

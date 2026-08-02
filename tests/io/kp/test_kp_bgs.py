@@ -17,6 +17,11 @@ from swvo.io.kp import KpBGS
 TEST_DIR = Path("test_data")
 DATA_DIR = TEST_DIR / "mock_kp_bgs"
 
+# The BGS endpoint currently has no published Kp data for July/August, so any
+# test that downloads for "now" or a recent past month can land on a month
+# with an empty response table depending on when the suite runs.
+_BGS_MISSING_MONTHS = (7, 8)
+
 
 class TestKpBGS:
     @pytest.fixture(scope="session", autouse=True)
@@ -69,6 +74,11 @@ class TestKpBGS:
         assert time_intervals[0][0] == datetime(2024, 1, 1, tzinfo=timezone.utc)
         assert time_intervals[0][1] == datetime(2024, 1, 31, 23, 59, 59, tzinfo=timezone.utc)
 
+    @pytest.mark.xfail(
+        datetime.now(timezone.utc).month in _BGS_MISSING_MONTHS,
+        reason="BGS endpoint currently has no published Kp data for July/August",
+        strict=False,
+    )
     def test_download_and_process_current_month(self, kp_bgs_instance):
         current_time = datetime.now(timezone.utc)
         end_time = current_time + timedelta(days=2)
@@ -78,16 +88,36 @@ class TestKpBGS:
         file_paths, _ = kp_bgs_instance._get_processed_file_list(current_time, end_time)
 
         for file_path in file_paths:
-            if file_path.exists():
-                df = pd.read_csv(file_path, names=["t", "kp"])
-                assert len(df) > 0
-                assert "t" in df.columns
-                assert "kp" in df.columns
+            df = pd.read_csv(file_path, names=["t", "kp"])
+            assert len(df) > 0
+            assert "t" in df.columns
+            assert "kp" in df.columns
 
-                valid_kps = df["kp"].dropna()
-                assert valid_kps.min() >= 0
-                assert valid_kps.max() <= 9
+            valid_kps = df["kp"].dropna()
+            assert valid_kps.min() >= 0
+            assert valid_kps.max() <= 9
 
+    def test_url_reflects_resolved_request_after_download_and_process(self, kp_bgs_instance, mocker):
+        assert kp_bgs_instance.url == KpBGS.URL
+
+        response = mocker.Mock()
+        response.text = "<html></html>"
+        response.raise_for_status = mocker.Mock()
+        mocker.patch("requests.post", return_value=response)
+
+        request_time = datetime(2024, 3, 1, tzinfo=timezone.utc)
+        kp_bgs_instance.download_and_process(request_time, reprocess_files=True)
+
+        assert kp_bgs_instance.url != KpBGS.URL
+        assert kp_bgs_instance.url.startswith(KpBGS.URL + "?")
+        assert "month=3" in kp_bgs_instance.url
+        assert "year=2024" in kp_bgs_instance.url
+
+    @pytest.mark.xfail(
+        (datetime.now(timezone.utc) - timedelta(days=32)).month in _BGS_MISSING_MONTHS,
+        reason="BGS endpoint currently has no published Kp data for July/August",
+        strict=False,
+    )
     def test_download_past_month(self, kp_bgs_instance):
         past_time = datetime.now(timezone.utc) - timedelta(days=32)
         end_time = past_time + timedelta(days=2)
