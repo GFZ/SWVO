@@ -163,25 +163,30 @@ class TestCatalogSelectionAndFileNames:
             ("liou", "liou"),
         ],
     )
-    def test_catalog_names_and_aliases(self, requested: str, canonical: str):
-        assert SubstormsSuperMAG._resolve_catalog(requested).name == canonical
+    def test_catalog_names_and_aliases(
+        self,
+        reader: SubstormsSuperMAG,
+        requested: str,
+        canonical: str,
+    ):
+        assert reader._resolve_catalog(requested).name == canonical
 
     @pytest.mark.parametrize("catalog", [None, 1, ["newell"]])
-    def test_catalog_must_be_a_string(self, catalog):
+    def test_catalog_must_be_a_string(self, reader: SubstormsSuperMAG, catalog):
         with pytest.raises(TypeError, match="catalog must be a string"):
-            SubstormsSuperMAG._resolve_catalog(catalog)
+            reader._resolve_catalog(catalog)
 
     @pytest.mark.parametrize("catalog", ["", " ", "\n"])
-    def test_catalog_must_not_be_empty(self, catalog: str):
+    def test_catalog_must_not_be_empty(self, reader: SubstormsSuperMAG, catalog: str):
         with pytest.raises(ValueError, match="must not be empty"):
-            SubstormsSuperMAG._resolve_catalog(catalog)
+            reader._resolve_catalog(catalog)
 
-    def test_unknown_catalog_lists_canonical_choices(self):
+    def test_unknown_catalog_lists_canonical_choices(self, reader: SubstormsSuperMAG):
         with pytest.raises(
             ValueError,
             match=r"Unknown.*'other'.*newell, forsyth, ohtani, frey, liou",
         ):
-            SubstormsSuperMAG._resolve_catalog("other")
+            reader._resolve_catalog("other")
 
     def test_annual_cache_paths_are_catalog_specific(self, reader: SubstormsSuperMAG):
         paths, years = reader._get_cache_file_list(

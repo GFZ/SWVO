@@ -421,15 +421,13 @@ class SubstormsSuperMAG(BaseIO):
         frame.index = pd.DatetimeIndex(timestamps, name="onset")
         return frame.loc[:, ["mlt", "mlat", "glon", "glat"]]
 
-    @staticmethod
-    def _validate_cache_year(frame: pd.DataFrame, year: int) -> None:
+    def _validate_cache_year(self, frame: pd.DataFrame, year: int) -> None:
         """Ensure an annual response contains no records from another year."""
 
         if any(pd.Timestamp(value).year != year for value in frame.index):
             raise ValueError(f"SuperMAG event response for {year} contains an onset outside that year")
 
-    @classmethod
-    def _resolve_catalog(cls, catalog: str) -> SuperMAGSubstormCatalog:
+    def _resolve_catalog(self, catalog: str) -> SuperMAGSubstormCatalog:
         """Validate a catalogue name and normalize documented aliases."""
 
         if not isinstance(catalog, str):
@@ -446,24 +444,21 @@ class SubstormsSuperMAG(BaseIO):
         available = ", ".join(candidate.name for candidate in SUPERMAG_SUBSTORM_CATALOGS)
         raise ValueError(f"Unknown SuperMAG substorm catalog: {catalog!r}. Available catalogs: {available}")
 
-    @staticmethod
-    def _empty_measurements() -> pd.DataFrame:
+    def _empty_measurements(self) -> pd.DataFrame:
         """Return an empty parsed-event table with a UTC onset index."""
 
         index = pd.DatetimeIndex([], tz=timezone.utc, name="onset")
         return pd.DataFrame(index=index, columns=["mlt", "mlat", "glon", "glat"], dtype=float)
 
-    @classmethod
-    def _empty_events(cls) -> pd.DataFrame:
+    def _empty_events(self) -> pd.DataFrame:
         """Return an empty public event table with stable column types."""
 
-        frame = cls._empty_measurements()
+        frame = self._empty_measurements()
         frame["catalog"] = pd.Series(index=frame.index, dtype="object")
         frame["file_name"] = pd.Series(index=frame.index, dtype="object")
         return frame
 
-    @staticmethod
-    def _is_retryable_download_error(error: Exception) -> bool:
+    def _is_retryable_download_error(self, error: Exception) -> bool:
         """Return whether ``error`` represents a transient download failure."""
 
         if isinstance(
@@ -480,8 +475,7 @@ class SubstormsSuperMAG(BaseIO):
             return status_code == 429 or status_code >= 500
         return False
 
-    @staticmethod
-    def _retry_reason(error: Exception) -> str:
+    def _retry_reason(self, error: Exception) -> str:
         """Return a log-safe failure description without a prepared URL."""
 
         if isinstance(error, _TransientSuperMAGEventResponseError):
