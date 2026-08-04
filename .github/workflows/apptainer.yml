@@ -1,0 +1,48 @@
+name: Build and Push Apptainer Image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "*.def"
+      - "swvo/**"
+      - "pyproject.toml"
+      - "requirements.txt"
+      - "download_daily_files.py"
+  workflow_dispatch:
+
+env:
+  APPTAINER_VERSION: "1.5.3"
+  IMAGE_NAME: swvo
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Get SWVO package version
+        id: swvo_version
+        run: |
+          VERSION=$(grep -oP '(?<=^current_version = ")[^"]+' pyproject.toml)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Install Apptainer
+        run: |
+          wget https://github.com/apptainer/apptainer/releases/download/v${{ env.APPTAINER_VERSION }}/apptainer_${{ env.APPTAINER_VERSION }}_amd64.deb
+          sudo apt-get update
+          sudo apt-get install -y ./apptainer_${{ env.APPTAINER_VERSION }}_amd64.deb
+
+      - name: Build image
+        run: sudo apptainer build ${{ env.IMAGE_NAME }}.sif swvo.def
+
+      - name: Log in to GHCR
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | apptainer remote login -u ${{ github.actor }} --password-stdin oras://ghcr.io
+
+      - name: Push image
+        run: |
+          apptainer push ${{ env.IMAGE_NAME }}.sif oras://ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
+          apptainer push ${{ env.IMAGE_NAME }}.sif oras://ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          apptainer push ${{ env.IMAGE_NAME }}.sif oras://ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ steps.swvo_version.outputs.version }}
