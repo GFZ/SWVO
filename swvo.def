@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: 2026 GFZ Helmholtz Centre for Geosciences
+# SPDX-FileContributor: Sahil Jhawar
+#
+# SPDX-License-Identifier: Apache-2.0
+
+Bootstrap: docker
+From: astral/uv:python3.12-bookworm-slim
+
+%labels
+    Author Sahil Jhawar
+    Description SWVO
+    Version 1.2.5
+
+%files
+    swvo /opt/swvo/
+    pyproject.toml /opt/swvo/
+    requirements.txt /opt/swvo/
+    download_daily_files.py /opt/swvo/
+
+%environment
+    export UV_PROJECT_ENVIRONMENT=/opt/swvo/.venv
+    export PATH="/opt/swvo:/opt/swvo/.venv/bin:/root/.local/bin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+%post
+    apt-get update
+    apt-get install -y --no-install-recommends curl ca-certificates build-essential
+    rm -rf /var/lib/apt/lists/*
+
+    export PATH="/root/.local/bin:$PATH"
+    export UV_PROJECT_ENVIRONMENT=/opt/swvo/.venv
+
+    cd /opt/swvo/
+    uv sync
+
+%runscript
+    exec "$@"
