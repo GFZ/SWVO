@@ -13,6 +13,7 @@ on:
       - "pyproject.toml"
       - "requirements.txt"
       - "download_daily_files.py"
+      - ".github/workflows/apptainer.yml"
   workflow_dispatch:
 
 env:
@@ -45,8 +46,14 @@ jobs:
         run: |
           echo ${{ secrets.GITHUB_TOKEN }} | apptainer remote login -u ${{ github.actor }} --password-stdin oras://ghcr.io
 
+      - name: Set lowercase repository owner
+        id: repo_owner
+        run: echo "owner=${OWNER,,}" >> "$GITHUB_OUTPUT" #{,,} works in bash to make it lowecase
+        env:
+          OWNER: ${{ github.repository_owner }}
+
       - name: Push image
         run: |
-          apptainer push ${{ env.IMAGE_NAME }}.sif oras://ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
-          apptainer push ${{ env.IMAGE_NAME }}.sif oras://ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          apptainer push ${{ env.IMAGE_NAME }}.sif oras://ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ steps.swvo_version.outputs.version }}
+          apptainer push ${{ env.IMAGE_NAME }}.sif oras://ghcr.io/${{ steps.repo_owner.outputs.owner }}/${{ env.IMAGE_NAME }}:latest
+          apptainer push ${{ env.IMAGE_NAME }}.sif oras://ghcr.io/${{ steps.repo_owner.outputs.owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          apptainer push ${{ env.IMAGE_NAME }}.sif oras://ghcr.io/${{ steps.repo_owner.outputs.owner }}/${{ env.IMAGE_NAME }}:${{ steps.swvo_version.outputs.version }}
