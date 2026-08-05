@@ -73,7 +73,9 @@ DAY
         assert len(time_intervals) == 36
 
     def test_download_and_process(self, dst_instance):
-        dst_instance.download_and_process(datetime(2026, 5, 1), datetime(2026, 9, 1))
+        current_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        past_month = current_month.replace(month=current_month.month - 2)
+        dst_instance.download_and_process(past_month, current_month)
 
         expected_files = list(MOCK_DATA_PATH.glob("**/WDC_DST_*.csv"))
 
