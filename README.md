@@ -79,6 +79,11 @@ This package provides tools to read, process, and analyze several key solar and 
   - **Sources & Classes:**
     - SuperMAG: `SMESuperMAG`
 
+- **Substorm-onset events**:
+  Sparse onset catalogues identified from SuperMAG SML or auroral images. The available techniques are Newell, Forsyth/SOPHIE, Ohtani, Frey, and Liou.
+  - **Sources & Classes:**
+    - SuperMAG: `SubstormsSuperMAG`
+
 - **Solar Wind Parameters**:  
   Access to solar wind data (speed, density, magnetic field components) from various spacecraft. Essential for solar-terrestrial interaction studies.
   - **Sources & Classes:**
@@ -115,6 +120,27 @@ per day and continue past an unavailable day with a dated warning. See the
 [SuperMAG electrojet guide](https://swvo.readthedocs.io/en/latest/supermag_indices.html)
 for authentication, cache compatibility, error handling, data references, and
 acknowledgement guidance.
+
+## SuperMAG substorm-onset catalogues
+
+`SubstormsSuperMAG` retrieves one of the five scientifically distinct onset
+catalogues distributed by SuperMAG. Newell is the default, and `sophie` is
+accepted as an alias for the official `forsyth` identifier:
+
+```python
+from swvo.io.substorms import SubstormsSuperMAG
+
+reader = SubstormsSuperMAG(username, data_dir=cache_directory)
+newell = reader.read(start, end, download=True)
+sophie = reader.read(start, end, download=True, catalog="sophie")
+```
+
+Results contain onset location, canonical catalogue name, UTC indexing, and
+local-file provenance. Annual self-documented caches retain SuperMAG revision
+and acknowledgement information. See the
+[SuperMAG substorm catalogue guide](https://swvo.readthedocs.io/en/latest/supermag_substorms.html)
+for catalogue differences, coverage, location interpretation, caching,
+revisions, reliability, and publication requirements.
 
 ## Expanded OMNI data access
 
