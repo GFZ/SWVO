@@ -14,7 +14,7 @@ repos:
       # Run the formatter.
       - id: ruff-format
   - repo: https://github.com/astral-sh/ty-pre-commit
-    rev: v0.0.64
+    rev: v0.0.66
     hooks:
       - id: ty
         files: ^swvo/
