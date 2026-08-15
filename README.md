@@ -42,7 +42,7 @@ See here for a detailed example <a href="docs/examples/solar_wind_example.ipynb"
 
 This package provides tools to read, process, and analyze several key solar and geomagnetic indices. For each index, the available data sources and the corresponding reader classes are listed below:
 
-- **Kp Index**:  
+- **Kp Index**:
   A global geomagnetic activity index with a 3-hour cadence, ranging from 0 (quiet) to 9 (extremely disturbed). Used to assess geomagnetic storm conditions.
   - **Sources & Classes:**
     - OMNI: `KpOMNI`
@@ -53,21 +53,21 @@ This package provides tools to read, process, and analyze several key solar and 
     - SIDC: `KpSIDC`
     - Combined: `read_kp_from_multiple_models`
 
-- **Dst Index**:  
+- **Dst Index**:
   The Disturbance Storm Time (Dst) index measures the intensity of the Earth's ring current, related to geomagnetic storms. Provided hourly and is negative during storm conditions.
   - **Sources & Classes:**
     - OMNI: `DSTOMNI`
     - WDC: `DSTWDC`
     - Combined: `read_dst_from_multiple_models`
 
-- **Hp Index**:  
+- **Hp Index**:
   The Hp30 and Hp60 indices are high-cadence (30-minute and 60-minute) geomagnetic indices provided by GFZ, used for detailed geomagnetic activity studies.
   - **Sources & Classes:**
     - GFZ: `HpGFZ`
     - Ensemble: `HpEnsemble`
     - Combined: `read_hp_from_multiple_models`
 
-- **F10.7 Index**:  
+- **F10.7 Index**:
   The F10.7 solar radio flux index is a daily measure of solar activity (flux density at 10.7 cm), a standard proxy for solar EUV emissions.
   - **Sources & Classes:**
     - OMNI: `F107OMNI`
@@ -84,7 +84,7 @@ This package provides tools to read, process, and analyze several key solar and 
   - **Sources & Classes:**
     - SuperMAG: `SubstormsSuperMAG`
 
-- **Solar Wind Parameters**:  
+- **Solar Wind Parameters**:
   Access to solar wind data (speed, density, magnetic field components) from various spacecraft. Essential for solar-terrestrial interaction studies.
   - **Sources & Classes:**
     - ACE: `SWACE`
@@ -93,7 +93,7 @@ This package provides tools to read, process, and analyze several key solar and 
     - SWIFT: `SWSWIFTEnsemble`
     - Combined: `read_solar_wind_from_multiple_models`
 
-- **Plasmasphere Density Predictions**:  
+- **Plasmasphere Density Predictions**:
   Reader utilities for PAGER plasmasphere density grids and model combined inputs.
   - **Sources & Classes:**
     - Density predictions: `PlasmaspherePredictionReader`
@@ -101,25 +101,6 @@ This package provides tools to read, process, and analyze several key solar and 
     - Density cube container: `PlasmasphereDensityCube`
 
 Each index can be accessed via these dedicated reader classes, which handle downloading and read methods. See the code in `swvo/io` or API documentation for details on each index's implementation.
-
-## SuperMAG SME, SML, and SMU
-
-`SMESuperMAG` retains its original SME-only default and can additionally return
-SML, SMU, or all three standard electrojet indices:
-
-```python
-reader.read(start, end)  # legacy output: sme, file_name
-reader.read(start, end, variables="all")  # sme, sml, smu, file_name
-reader.read(start, end, variables=["smu", "sml"])  # caller-defined order
-```
-
-New downloads store all three indices together. Existing SME-only cache files
-continue to work for default reads and can be upgraded on demand with
-`download=True`. Historical batch downloads retry transient SuperMAG failures
-per day and continue past an unavailable day with a dated warning. See the
-[SuperMAG electrojet guide](https://swvo.readthedocs.io/en/latest/supermag_indices.html)
-for authentication, cache compatibility, error handling, data references, and
-acknowledgement guidance.
 
 ## SuperMAG substorm-onset catalogues
 
@@ -141,21 +122,6 @@ and acknowledgement information. See the
 [SuperMAG substorm catalogue guide](https://swvo.readthedocs.io/en/latest/supermag_substorms.html)
 for catalogue differences, coverage, location interpretation, caching,
 revisions, reliability, and publication requirements.
-
-## Expanded OMNI data access
-
-`OMNIHighRes` and `OMNILowRes` preserve their established default columns and
-also support `variables="all"` or an explicit variable-name selection. The
-high-resolution reader exposes all 42 one-minute and 45 five-minute OMNIWeb
-fields; the hourly reader exposes all 54 non-time OMNI2 fields and accepts both
-historic 55-word and current 57-word source records.
-
-Variable metadata can be inspected without making a network request through a
-reader instance's `available_variables()` method or the shared cadence-aware
-`swvo.io.omni.variables.available_variables()` utility. See the
-[complete OMNI variable guide](https://swvo.readthedocs.io/en/latest/omni_variables.html)
-for examples, variable tables, cadence restrictions, cache-upgrade behavior,
-compatibility guarantees, and NASA source acknowledgements.
 
 ## Installation
 
