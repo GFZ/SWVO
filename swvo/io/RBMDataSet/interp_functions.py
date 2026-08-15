@@ -52,7 +52,7 @@ def _interp_flux_parallel(
         # first find the two al levels, where en points must exist
 
         al_right_idx = np.searchsorted(alpha_eq_model[it, :], target_al_single, side="right")
-        al_left_idx = al_right_idx - 1
+        al_left_idx = int(al_right_idx - 1)
 
         if al_right_idx == 0 or al_right_idx >= len(alpha_eq_model[it, :]):
             result.append(np.nan)
@@ -208,7 +208,7 @@ def _interp_psd_parallel(
     for _, (mu_t, K_t) in enumerate(targets):
         # 3a) Bracket in K
         k_right = np.searchsorted(K_use, K_t, side="right")
-        k_left = k_right - 1
+        k_left = int(k_right - 1)
         if k_right == 0 or k_right >= K_use.size:
             out.append(np.nan)
             continue
