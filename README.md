@@ -102,27 +102,6 @@ This package provides tools to read, process, and analyze several key solar and 
 
 Each index can be accessed via these dedicated reader classes, which handle downloading and read methods. See the code in `swvo/io` or API documentation for details on each index's implementation.
 
-## SuperMAG substorm-onset catalogues
-
-`SubstormsSuperMAG` retrieves one of the five scientifically distinct onset
-catalogues distributed by SuperMAG. Newell is the default, and `sophie` is
-accepted as an alias for the official `forsyth` identifier:
-
-```python
-from swvo.io.substorms import SubstormsSuperMAG
-
-reader = SubstormsSuperMAG(username, data_dir=cache_directory)
-newell = reader.read(start, end, download=True)
-sophie = reader.read(start, end, download=True, catalog="sophie")
-```
-
-Results contain onset location, canonical catalogue name, UTC indexing, and
-local-file provenance. Annual self-documented caches retain SuperMAG revision
-and acknowledgement information. See the
-[SuperMAG substorm catalogue guide](https://swvo.readthedocs.io/en/latest/supermag_substorms.html)
-for catalogue differences, coverage, location interpretation, caching,
-revisions, reliability, and publication requirements.
-
 ## Installation
 
 To install the package, run the following command:
