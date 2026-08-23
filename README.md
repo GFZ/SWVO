@@ -33,6 +33,7 @@ start = datetime(2024, 11, 20, 0, 0, tzinfo=timezone.utc)
 end = datetime(2024, 11, 20, 6, 0, tzinfo=timezone.utc)
 
 # Read ACE solar wind data with downloading
+swace = SWACE(ACE_DIR)
 ace_df = swace.read(start, end, download=True)
 ```
 
