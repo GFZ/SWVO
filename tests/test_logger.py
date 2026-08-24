@@ -23,19 +23,21 @@ def test_logger_has_null_handler():
     assert any(isinstance(h, logging.NullHandler) for h in logger.handlers)
 
 
-def test_setup_logging_adds_stream_handler():
+def test_setup_logging_adds_console_handler():
+    from rich.logging import RichHandler
+
     from swvo.logger import setup_logging
 
     # Get the root logger since that's what setup_logging configures
     root_logger = logging.getLogger()
 
-    # Remove existing StreamHandler to ensure clean test
-    root_logger.handlers = [h for h in root_logger.handlers if not isinstance(h, logging.StreamHandler)]
+    # Remove existing console handlers to ensure clean test
+    root_logger.handlers = [h for h in root_logger.handlers if not isinstance(h, (logging.StreamHandler, RichHandler))]
 
     setup_logging()
 
-    # Check that StreamHandler was added to root logger
-    assert any(isinstance(h, logging.StreamHandler) for h in root_logger.handlers)
+    # Check that a RichHandler was added to root logger for console output
+    assert any(isinstance(h, RichHandler) for h in root_logger.handlers)
 
 
 def test_child_logger_emits_after_setup(caplog):

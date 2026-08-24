@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: Apache-2.0
 import os
 import shutil
-from concurrent.futures import Future
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -136,11 +135,11 @@ class TestOMNIHighRes:
         omni_high_res = OMNIHighRes(data_dir=tmp_path)
         start_time = datetime(2023, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2023, 12, 31, tzinfo=timezone.utc)
-        executor_max_workers = []
+        pool_processes = []
 
-        class RecordingExecutor:
-            def __init__(self, max_workers=None):
-                executor_max_workers.append(max_workers)
+        class RecordingPool:
+            def __init__(self, processes=None, **kwargs):
+                pool_processes.append(processes)
 
             def __enter__(self):
                 return self
@@ -148,20 +147,15 @@ class TestOMNIHighRes:
             def __exit__(self, exc_type, exc_value, traceback):
                 return False
 
-            def submit(self, fn, *args, **kwargs):
-                future = Future()
-                try:
-                    future.set_result(fn(*args, **kwargs))
-                except Exception as exc:
-                    future.set_exception(exc)
-                return future
+            def map(self, func, iterable, **kwargs):
+                return [func(item) for item in iterable]
 
-        mocker.patch("swvo.io.omni.omni_high_res.ThreadPoolExecutor", RecordingExecutor)
+        mocker.patch("swvo.io.omni.omni_high_res.JoblibPool", RecordingPool)
         process_single_file = mocker.patch.object(omni_high_res, "_download_and_process_single_file")
 
         omni_high_res.download_and_process(start_time, end_time)
 
-        assert executor_max_workers == [10]
+        assert pool_processes == [10]
         assert process_single_file.call_count == 12
 
     def test_download_and_process_stays_sequential_for_10_files(self, tmp_path, mocker):
@@ -169,12 +163,12 @@ class TestOMNIHighRes:
         start_time = datetime(2023, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2023, 10, 31, tzinfo=timezone.utc)
 
-        executor = mocker.patch("swvo.io.omni.omni_high_res.ThreadPoolExecutor")
+        pool = mocker.patch("swvo.io.omni.omni_high_res.JoblibPool")
         process_single_file = mocker.patch.object(omni_high_res, "_download_and_process_single_file")
 
         omni_high_res.download_and_process(start_time, end_time)
 
-        executor.assert_not_called()
+        pool.assert_not_called()
         assert process_single_file.call_count == 10
 
     def test_invalid_cadence(self, omni_high_res):

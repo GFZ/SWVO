@@ -4,45 +4,49 @@
 
 
 import logging
-import sys
 from pathlib import Path
-from typing import Optional
+from typing import ClassVar, Optional
+
+from rich.logging import RichHandler
 
 # Get the package logger
-logger = logging.getLogger("swvo")
+logger = logging.getLogger(__package__)
 logger.addHandler(logging.NullHandler())
 
 
-class _ColorFormatter(logging.Formatter):
-    COLORS = {
-        logging.DEBUG: "\033[36m",  # cyan
-        logging.INFO: "\033[32m",  # green
-        logging.WARNING: "\033[33m",  # yellow
-        logging.ERROR: "\033[31m",  # red
-        logging.CRITICAL: "\033[1;31m",  # bold red
+class _RichMarkupFormatter(logging.Formatter):
+    COLORS: ClassVar = {
+        logging.DEBUG: "cyan",
+        logging.INFO: "green",
+        logging.WARNING: "yellow",
+        logging.ERROR: "red",
+        logging.CRITICAL: "bold red",
     }
-    RESET = "\033[0m"
 
-    def format(self, record):
+    def format(self, record) -> str:  # noqa: ANN001
         msg = super().format(record)
-        color = self.COLORS.get(record.levelno, "")
-        return f"{color}{msg}{self.RESET}"
+        style = self.COLORS.get(record.levelno, "")
+        return f"[{style}]{msg}[/{style}]" if style else msg
 
 
-def setup_logging(level: str = "INFO", log_file: Optional[Path] = None, file_mode: str = "w"):
+def setup_logging(level: str | int = "INFO", log_file: Optional[Path] = None, file_mode: str = "w") -> None:
     """Setup logging for the swvo package and root logger.
 
     Parameters
     ----------
-    level : str, optional
+    level : str | int, optional
         Logging level, by default is INFO
     log_file : Path, optional
         Path to log file. If None, only console logging is enabled.If provided, logs will be written to both console and file., by default None
     """
     try:
-        level = getattr(logging, level.upper())
+        if isinstance(level, str):
+            level = getattr(logging, level.upper())
+        elif not isinstance(level, int):
+            raise ValueError(f"Invalid logging level: {level}. Expected a string or integer logging level.")
     except AttributeError:
-        raise ValueError(f"Invalid logging level: {level}. Use one of DEBUG, INFO, WARNING, ERROR, CRITICAL.")
+        msg = f"Invalid logging level: {level}. Use one of CRITICAL, FATAL, ERROR, WARNING, WARN, INFO, DEBUG, NOTSET, or their corresponding integer values."
+        raise ValueError(msg)  # noqa: B904
 
     # Configure root logger so all loggers inherit the formatting
     root_logger = logging.getLogger()
@@ -52,12 +56,13 @@ def setup_logging(level: str = "INFO", log_file: Optional[Path] = None, file_mod
     datefmt = "%Y-%m-%d %H:%M:%S"
 
     if any(
-        isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler) for h in root_logger.handlers
+        isinstance(h, RichHandler) or (isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler))
+        for h in root_logger.handlers
     ):
         pass
     else:
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setFormatter(_ColorFormatter(log_format, datefmt=datefmt))
+        console_handler = RichHandler(show_time=False, show_level=False, show_path=False, markup=True)
+        console_handler.setFormatter(_RichMarkupFormatter(log_format, datefmt=datefmt))
         root_logger.addHandler(console_handler)
 
     if log_file:

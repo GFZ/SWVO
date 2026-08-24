@@ -11,12 +11,13 @@ import calendar
 import logging
 import re
 from collections.abc import Iterable
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
+from functools import partial
 from typing import List, Optional, Tuple
 
 import pandas as pd
 import requests
+from richpool import JoblibPool
 
 from swvo.io.base import BaseIO
 from swvo.io.omni.variables import (
@@ -154,17 +155,25 @@ class OMNIHighRes(BaseIO):
         if len(download_tasks) > self.PARALLEL_DOWNLOAD_THRESHOLD:
             max_workers = min(self.MAX_PARALLEL_DOWNLOADS, len(download_tasks))
             logger.info(f"Downloading {len(download_tasks)} OMNI high resolution files with {max_workers} workers.")
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = [
-                    executor.submit(self._download_and_process_single_file, file_path, time_interval, cadence_min)
-                    for file_path, time_interval in download_tasks
-                ]
-                for future in as_completed(futures):
-                    future.result()
+            with JoblibPool(processes=max_workers, backend="threading") as pool:
+                pool.map(
+                    partial(self._download_and_process_task, cadence_min=cadence_min),
+                    download_tasks,
+                    desc="Downloading",
+                )
             return
 
         for file_path, time_interval in download_tasks:
             self._download_and_process_single_file(file_path, time_interval, cadence_min)
+
+    def _download_and_process_task(
+        self,
+        task: Tuple[object, Tuple[datetime, datetime]],
+        cadence_min: int,
+    ) -> None:
+        """Unpack a ``(file_path, time_interval)`` task for `JoblibPool.map`."""
+        file_path, time_interval = task
+        self._download_and_process_single_file(file_path, time_interval, cadence_min)
 
     def _download_and_process_single_file(
         self,
