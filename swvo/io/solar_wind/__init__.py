@@ -22,4 +22,5 @@ AVERAGE_VALUES_TO_FILL: dict[str, float] = {
 # This has to be imported after the models and constants to avoid a circular import
 from swvo.io.solar_wind.read_solar_wind_from_multiple_models import (  # noqa: E402
     read_solar_wind_from_multiple_models as read_solar_wind_from_multiple_models,
+    SWModel as SWModel,
 )
