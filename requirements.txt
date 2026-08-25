@@ -21,3 +21,4 @@ ruff
 beautifulsoup4
 rich
 richpool
+ipython
