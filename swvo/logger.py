@@ -4,9 +4,11 @@
 
 
 import logging
+import sys
 from pathlib import Path
 from typing import ClassVar, Optional
 
+from rich.highlighter import NullHighlighter
 from rich.logging import RichHandler
 
 # Get the package logger
@@ -27,6 +29,32 @@ class _RichMarkupFormatter(logging.Formatter):
         msg = super().format(record)
         style = self.COLORS.get(record.levelno, "")
         return f"[{style}]{msg}[/{style}]" if style else msg
+
+
+class _ColorFormatter(logging.Formatter):
+    COLORS = {
+        logging.DEBUG: "\033[36m",  # cyan
+        logging.INFO: "\033[32m",  # green
+        logging.WARNING: "\033[33m",  # yellow
+        logging.ERROR: "\033[31m",  # red
+        logging.CRITICAL: "\033[1;31m",  # bold red
+    }
+    RESET = "\033[0m"
+
+    def format(self, record):
+        msg = super().format(record)
+        color = self.COLORS.get(record.levelno, "")
+        return f"{color}{msg}{self.RESET}"
+
+
+def _running_in_ipython() -> bool:
+    try:
+        from IPython import get_ipython
+
+        shell = get_ipython()
+        return shell is not None and shell.__class__.__name__ == "ZMQInteractiveShell"
+    except ImportError:
+        return False
 
 
 def setup_logging(level: str | int = "INFO", log_file: Optional[Path] = None, file_mode: str = "w") -> None:
@@ -55,17 +83,44 @@ def setup_logging(level: str | int = "INFO", log_file: Optional[Path] = None, fi
     log_format = "[%(levelname)-8s] %(asctime)s - %(name)s:%(lineno)d - %(message)s"
     datefmt = "%Y-%m-%d %H:%M:%S"
 
-    if any(
-        isinstance(h, RichHandler) or (isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler))
-        for h in root_logger.handlers
-    ):
-        pass
-    else:
-        console_handler = RichHandler(show_time=False, show_level=False, show_path=False, markup=True)
-        console_handler.setFormatter(_RichMarkupFormatter(log_format, datefmt=datefmt))
+    has_console_handler = any(
+        isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler) for h in root_logger.handlers
+    )
+
+    if not has_console_handler:
+        formatter = _RichMarkupFormatter(
+            log_format,
+            datefmt=datefmt,
+        )
+
+        if _running_in_ipython():
+            formatter = _ColorFormatter(
+                log_format,
+                datefmt=datefmt,
+            )
+            console_handler = logging.StreamHandler(sys.stdout)
+        else:
+            console_handler = RichHandler(
+                show_time=False,
+                show_level=False,
+                show_path=False,
+                markup=True,
+                rich_tracebacks=False,
+                highlighter=NullHighlighter(),
+            )
+
+        console_handler.setFormatter(formatter)
         root_logger.addHandler(console_handler)
 
     if log_file:
-        file_handler = logging.FileHandler(log_file, mode=file_mode)
-        file_handler.setFormatter(logging.Formatter(log_format, datefmt=datefmt))
+        file_handler = logging.FileHandler(
+            log_file,
+            mode=file_mode,
+        )
+        file_handler.setFormatter(
+            logging.Formatter(
+                log_format,
+                datefmt=datefmt,
+            )
+        )
         root_logger.addHandler(file_handler)
