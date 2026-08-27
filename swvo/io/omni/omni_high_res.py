@@ -350,7 +350,7 @@ class OMNIHighRes(BaseIO):
 
         data_out = data_out.truncate(
             before=start_time - timedelta(minutes=cadence_min - 0.0000001),
-            after=end_time + timedelta(minutes=cadence_min + 0.0000001),
+            after=end_time + timedelta(minutes=cadence_min - 0.0000001),
         )
 
         return data_out

@@ -142,7 +142,7 @@ class HpEnsemble:
 
             hp_df = hp_df.truncate(
                 before=start_time - timedelta(minutes=int(self.index_number) - 0.01),
-                after=end_time + timedelta(minutes=int(self.index_number) + 0.01),
+                after=end_time + timedelta(minutes=int(self.index_number) - 0.01),
             )
 
             data.append(hp_df)

@@ -248,7 +248,7 @@ class HpGFZ(BaseIO):
 
         data_out = data_out.truncate(
             before=start_time - timedelta(minutes=int(self.index_number) - 0.01),
-            after=end_time + timedelta(minutes=int(self.index_number) + 0.01),
+            after=end_time + timedelta(minutes=int(self.index_number) - 0.01),
         )
 
         return data_out  # noqa: RET504
