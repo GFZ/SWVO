@@ -581,8 +581,6 @@ def test_eq_file_loading_mode_different_satellite(mock_module_string):
                     verbose=False,
                 )
 
-                print("sahil")
-
                 assert dataset1 != dataset2
 
 

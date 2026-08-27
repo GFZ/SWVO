@@ -92,6 +92,7 @@ This package provides tools to read, process, and analyze several key solar and 
     - DSCOVR: `DSCOVR`
     - OMNI: `SWOMNI`
     - SWIFT: `SWSWIFTEnsemble`
+    - ENLIL: `SWENLIL_BKG` (ambient background runs), `SWENLIL_CME` (CME simulation runs)
     - Combined: `read_solar_wind_from_multiple_models`
 
 - **Plasmasphere Density Predictions**:

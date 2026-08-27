@@ -29,7 +29,7 @@ HpModel = Hp30Ensemble | Hp30GFZ | Hp60Ensemble | Hp60GFZ
 logging.captureWarnings(True)
 
 
-def read_hp_from_multiple_models(  # noqa: PLR0913
+def read_hp_from_multiple_models(
     start_time: datetime,
     end_time: datetime,
     model_order: Sequence[HpModel] | None = None,
@@ -148,7 +148,7 @@ def _fill_average(df: pd.DataFrame, hp_index: str) -> pd.DataFrame:
     return df
 
 
-def _read_from_model(  # noqa: PLR0913
+def _read_from_model(
     model: HpModel,
     start_time: datetime,
     end_time: datetime,

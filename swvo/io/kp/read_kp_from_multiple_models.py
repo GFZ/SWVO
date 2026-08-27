@@ -29,7 +29,7 @@ KpModel = KpEnsemble | KpNiemegk | KpOMNI | KpSWPC | KpBGS | KpSIDC
 logging.captureWarnings(True)
 
 
-def read_kp_from_multiple_models(  # noqa: PLR0913
+def read_kp_from_multiple_models(
     start_time: datetime,
     end_time: datetime,
     model_order: Sequence[KpModel] | None = None,
@@ -154,7 +154,7 @@ def read_kp_from_multiple_models(  # noqa: PLR0913
     return data_out
 
 
-def _read_from_model(  # noqa: PLR0913
+def _read_from_model(
     model: KpModel,
     start_time: datetime,
     end_time: datetime,
