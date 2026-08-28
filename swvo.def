@@ -9,7 +9,7 @@ From: astral/uv:python3.12-bookworm-slim
 %labels
     Author Sahil Jhawar
     Description SWVO
-    Version 1.2.7rc0
+    Version 1.2.7rc1
 
 %files
     swvo /opt/swvo/
