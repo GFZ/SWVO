@@ -20,6 +20,11 @@ From: astral/uv:python3.12-bookworm-slim
 %environment
     export UV_PROJECT_ENVIRONMENT=/opt/swvo/.venv
     export PATH="/opt/swvo:/opt/swvo/.venv/bin:/root/.local/bin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    if [ -d "${HOME}" ] && [ -w "${HOME}" ]; then
+        export XDG_CONFIG_HOME="${HOME}/.config"
+    else
+        export XDG_CONFIG_HOME="/tmp/.config"
+    fi
 
 %post
     apt-get update
@@ -28,6 +33,7 @@ From: astral/uv:python3.12-bookworm-slim
 
     export PATH="/root/.local/bin:$PATH"
     export UV_PROJECT_ENVIRONMENT=/opt/swvo/.venv
+    export XDG_CONFIG_HOME
 
     cd /opt/swvo/
     uv sync

@@ -14,6 +14,15 @@ on:
       - "requirements.txt"
       - "download_daily_files.py"
       - ".github/workflows/apptainer.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "*.def"
+      - "swvo/**"
+      - "pyproject.toml"
+      - "requirements.txt"
+      - "download_daily_files.py"
+      - ".github/workflows/apptainer.yml"
   workflow_dispatch:
 
 env:
@@ -42,17 +51,24 @@ jobs:
       - name: Build image
         run: sudo apptainer build ${{ env.IMAGE_NAME }}.sif swvo.def
 
+      - name: Pytest in image
+        run: |
+          sudo apptainer exec ${{ env.IMAGE_NAME }}.sif pytest -rf tests
+
       - name: Log in to GHCR
+        if: github.event_name == 'push' && github.repository_owner == 'GFZ'
         run: |
           echo ${{ secrets.GITHUB_TOKEN }} | apptainer remote login -u ${{ github.actor }} --password-stdin oras://ghcr.io
 
       - name: Set lowercase repository owner
+        if: github.event_name == 'push' && github.repository_owner == 'GFZ'
         id: repo_owner
         run: echo "owner=${OWNER,,}" >> "$GITHUB_OUTPUT" #{,,} works in bash to make it lowecase
         env:
           OWNER: ${{ github.repository_owner }}
 
       - name: Push image
+        if: github.event_name == 'push' && github.repository_owner == 'GFZ'
         run: |
           apptainer push ${{ env.IMAGE_NAME }}.sif oras://ghcr.io/${{ steps.repo_owner.outputs.owner }}/${{ env.IMAGE_NAME }}:latest
           apptainer push ${{ env.IMAGE_NAME }}.sif oras://ghcr.io/${{ steps.repo_owner.outputs.owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
