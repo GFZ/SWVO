@@ -84,7 +84,8 @@ def setup_logging(level: str | int = "INFO", log_file: Optional[Path] = None, fi
     datefmt = "%Y-%m-%d %H:%M:%S"
 
     has_console_handler = any(
-        isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler) for h in root_logger.handlers
+        isinstance(h, RichHandler) or (isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler))
+        for h in root_logger.handlers
     )
 
     if not has_console_handler:

@@ -40,6 +40,25 @@ def test_setup_logging_adds_console_handler():
     assert any(isinstance(h, RichHandler) for h in root_logger.handlers)
 
 
+def test_setup_logging_does_not_duplicate_console_handler():
+    from rich.logging import RichHandler
+
+    from swvo.logger import setup_logging
+
+    root_logger = logging.getLogger()
+
+    # Remove existing console handlers to ensure a clean test
+    root_logger.handlers = [h for h in root_logger.handlers if not isinstance(h, (logging.StreamHandler, RichHandler))]
+
+    # RichHandler is not a logging.StreamHandler subclass, so calling setup_logging
+    # again must not add a second one just because the isinstance check misses it
+    setup_logging()
+    setup_logging()
+    setup_logging()
+
+    assert sum(isinstance(h, RichHandler) for h in root_logger.handlers) == 1
+
+
 def test_child_logger_emits_after_setup(caplog):
     from swvo.logger import setup_logging
 
