@@ -20,6 +20,7 @@ from swvo.io.solar_wind import (
     SWENLIL,
     SWENLIL_BKG,
     SWENLIL_CME,
+    SWIMAP,
     SWMIDL,
     SWOMNI,
     SWSWIFTEnsemble,
@@ -412,6 +413,49 @@ class TestReadSolarWindFromMultipleModels:
         assert isinstance(data, pd.DataFrame)
         assert all(col in data.columns for col in expected_columns)
         assert (data["model"].dropna() == "midl").all()
+        assert data["speed"].notna().mean() > 0.99
+        assert data["bavg"].dropna().eq(13.0).all()
+        assert data["speed"].dropna().between(400.0, 401.0).all()
+
+    def test_imap_is_read_as_a_historical_model(self, tmp_path, expected_columns):
+        """SWIMAP passed in the model order is accepted and read like the other historical
+        models: propagated from L1 and labelled `imap` in the `model` column."""
+        start_time = datetime(2024, 11, 22, tzinfo=timezone.utc)
+        end_time = datetime(2024, 11, 23, tzinfo=timezone.utc)
+
+        imap_model = SWIMAP(tmp_path / "imap")
+
+        for day in pd.date_range(start_time - timedelta(days=1), end_time, freq="D"):
+            index = pd.date_range(day, day + timedelta(hours=24) - timedelta(minutes=1), freq="1min", tz="UTC")
+            index.name = "t"
+            speed = np.linspace(400.0, 401.0, len(index))
+            df = pd.DataFrame(
+                {
+                    "bx_gsm": 3.0,
+                    "by_gsm": -4.0,
+                    "bz_gsm": 12.0,
+                    "bavg": 13.0,
+                    "speed": speed,
+                    "proton_density": 5.0,
+                    "temperature": 120000.0,
+                    "pdyn": 2e-6 * 5.0 * speed**2,
+                },
+                index=index,
+            )
+            path = imap_model.data_dir / day.strftime("%Y/%m") / f"IMAP_SW_NOWCAST_{day.strftime('%Y%m%d')}.csv"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            df.to_csv(path)
+
+        data = read_solar_wind_from_multiple_models(
+            start_time=start_time,
+            end_time=end_time,
+            model_order=[imap_model],
+            historical_data_cutoff_time=end_time,
+        )
+
+        assert isinstance(data, pd.DataFrame)
+        assert all(col in data.columns for col in expected_columns)
+        assert (data["model"].dropna() == "imap").all()
         assert data["speed"].notna().mean() > 0.99
         assert data["bavg"].dropna().eq(13.0).all()
         assert data["speed"].dropna().between(400.0, 401.0).all()

@@ -6,6 +6,7 @@ from swvo.io.solar_wind.ace import SWACE as SWACE
 from swvo.io.solar_wind.omni import SWOMNI as SWOMNI
 from swvo.io.solar_wind.swift import SWSWIFTEnsemble as SWSWIFTEnsemble
 from swvo.io.solar_wind.dscovr import DSCOVR as DSCOVR
+from swvo.io.solar_wind.imap import SWIMAP as SWIMAP
 from swvo.io.solar_wind.midl import SWMIDL as SWMIDL
 from swvo.io.solar_wind.enlil import (
     SWENLIL as SWENLIL,

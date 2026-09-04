@@ -26,6 +26,7 @@ from swvo.io.solar_wind import (
     SWENLIL,
     SWENLIL_BKG,
     SWENLIL_CME,
+    SWIMAP,
     SWMIDL,
     SWOMNI,
     SWSWIFTEnsemble,
@@ -38,7 +39,7 @@ from swvo.io.utils import (
 
 logger = logging.getLogger(__name__)
 
-SWModel = DSCOVR | SWACE | SWOMNI | SWMIDL | SWSWIFTEnsemble | SWENLIL_BKG | SWENLIL_CME
+SWModel = DSCOVR | SWACE | SWOMNI | SWMIDL | SWIMAP | SWSWIFTEnsemble | SWENLIL_BKG | SWENLIL_CME
 
 ENLIL_MAX_LOOKBACK_DAYS = 5
 
@@ -72,7 +73,7 @@ def read_solar_wind_from_multiple_models(
         End time of the data request.
     model_order : list, optional
         Order in which data will be read from the models.
-        Defaults to [OMNI, DSCOVR, ACE, SWIFT, ENLIL CME, ENLIL BKG].
+        Defaults to [OMNI, IMAP, ACE, SWIFT, ENLIL CME, ENLIL BKG].
     reduce_ensemble : Literal["mean", "median"], optional
         The method to reduce ensembles to a single time series. Defaults to None.
     historical_data_cutoff_time : datetime, optional
@@ -123,9 +124,9 @@ def read_solar_wind_from_multiple_models(
         historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
 
     if model_order is None:
-        model_order = [SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble(), SWENLIL_CME(), SWENLIL_BKG()]
+        model_order = [SWOMNI(), SWIMAP(), SWACE(), SWSWIFTEnsemble(), SWENLIL_CME(), SWENLIL_BKG()]
         logger.warning(
-            "No model order specified, using default order: SWOMNI, DSCOVR, SWACE, SWSWIFTEnsemble, "
+            "No model order specified, using default order: SWOMNI, SWIMAP, SWACE, SWSWIFTEnsemble, "
             "SWENLIL_CME, SWENLIL_BKG"
         )
 
@@ -301,7 +302,7 @@ def _read_from_model(
 
     """
     # Read from historical models
-    if isinstance(model, (DSCOVR, SWACE, SWOMNI, SWMIDL)):
+    if isinstance(model, (DSCOVR, SWACE, SWOMNI, SWMIDL, SWIMAP)):
         data_one_model = _read_historical_model(
             model,
             start_time,
@@ -344,7 +345,7 @@ def _read_from_model(
 
 
 def _read_historical_model(
-    model: DSCOVR | SWACE | SWOMNI | SWMIDL,
+    model: DSCOVR | SWACE | SWOMNI | SWMIDL | SWIMAP,
     start_time: datetime,
     end_time: datetime,
     historical_data_cutoff_time: datetime,
@@ -352,11 +353,11 @@ def _read_historical_model(
     download: bool,
     do_interpolation: bool,
 ) -> pd.DataFrame:
-    """Reads SW data from historical models (DSCOVR, SWACE, SWOMNI or SWMIDL) within the specified time range.
+    """Reads SW data from historical models (DSCOVR, SWACE, SWOMNI, SWMIDL or SWIMAP) within the specified time range.
 
     Parameters
     ----------
-    model : DSCOVR | SWACE | SWOMNI | SWMIDL
+    model : DSCOVR | SWACE | SWOMNI | SWMIDL | SWIMAP
         The historical model from which to read the data.
     start_time : datetime
         The start time of the data range.

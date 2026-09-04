@@ -90,6 +90,7 @@ This package provides tools to read, process, and analyze several key solar and 
   - **Sources & Classes:**
     - ACE: `SWACE`
     - DSCOVR: `DSCOVR`
+    - IMAP: `SWIMAP`
     - OMNI: `SWOMNI`
     - SWIFT: `SWSWIFTEnsemble`
     - ENLIL: `SWENLIL_BKG` (ambient background runs), `SWENLIL_CME` (CME simulation runs)
