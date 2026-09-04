@@ -26,6 +26,7 @@ from swvo.io.solar_wind import (
     SWENLIL,
     SWENLIL_BKG,
     SWENLIL_CME,
+    SWIMAP,
     SWMIDL,
     SWOMNI,
     SWSWIFTEnsemble,
@@ -38,7 +39,7 @@ from swvo.io.utils import (
 
 logger = logging.getLogger(__name__)
 
-SWModel = DSCOVR | SWACE | SWOMNI | SWMIDL | SWSWIFTEnsemble | SWENLIL_BKG | SWENLIL_CME
+SWModel = DSCOVR | SWACE | SWOMNI | SWMIDL | SWIMAP | SWSWIFTEnsemble | SWENLIL_BKG | SWENLIL_CME
 
 ENLIL_MAX_LOOKBACK_DAYS = 5
 
@@ -301,7 +302,7 @@ def _read_from_model(
 
     """
     # Read from historical models
-    if isinstance(model, (DSCOVR, SWACE, SWOMNI, SWMIDL)):
+    if isinstance(model, (DSCOVR, SWACE, SWOMNI, SWMIDL, SWIMAP)):
         data_one_model = _read_historical_model(
             model,
             start_time,
@@ -344,7 +345,7 @@ def _read_from_model(
 
 
 def _read_historical_model(
-    model: DSCOVR | SWACE | SWOMNI | SWMIDL,
+    model: DSCOVR | SWACE | SWOMNI | SWMIDL | SWIMAP,
     start_time: datetime,
     end_time: datetime,
     historical_data_cutoff_time: datetime,
@@ -352,11 +353,11 @@ def _read_historical_model(
     download: bool,
     do_interpolation: bool,
 ) -> pd.DataFrame:
-    """Reads SW data from historical models (DSCOVR, SWACE, SWOMNI or SWMIDL) within the specified time range.
+    """Reads SW data from historical models (DSCOVR, SWACE, SWOMNI, SWMIDL or SWIMAP) within the specified time range.
 
     Parameters
     ----------
-    model : DSCOVR | SWACE | SWOMNI | SWMIDL
+    model : DSCOVR | SWACE | SWOMNI | SWMIDL | SWIMAP
         The historical model from which to read the data.
     start_time : datetime
         The start time of the data range.
