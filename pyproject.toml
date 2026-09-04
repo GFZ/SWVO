@@ -93,6 +93,7 @@ push = true
 "pyproject.toml" = ['current_version = "{version}"']
 "swvo/__init__.py" = ['__version__ = "{version}"']
 "swvo.def" = ['    Version {version}']
+"CITATION.cff" = ['^version: {version}']
 
 [tool.ty.src]
 include = ["swvo"]
