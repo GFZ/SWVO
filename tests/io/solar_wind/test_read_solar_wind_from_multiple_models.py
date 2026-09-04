@@ -20,6 +20,7 @@ from swvo.io.solar_wind import (
     SWENLIL,
     SWENLIL_BKG,
     SWENLIL_CME,
+    SWMIDL,
     SWOMNI,
     SWSWIFTEnsemble,
     read_solar_wind_from_multiple_models,
@@ -367,6 +368,53 @@ class TestReadSolarWindFromMultipleModels:
         assert not data.empty
         assert (data["model"] == "ace").all()
         assert data.loc[start_time, "speed"] == 400.0
+
+    def test_midl_is_read_as_a_historical_model(self, tmp_path, expected_columns):
+        """SWMIDL passed in the model order is accepted and read like the other historical
+        models: propagated from L1 and labelled `midl` in the `model` column."""
+        start_time = datetime(2024, 11, 22, tzinfo=timezone.utc)
+        end_time = datetime(2024, 11, 23, tzinfo=timezone.utc)
+
+        midl_model = SWMIDL(tmp_path / "midl")
+
+        # One MIDL day file per day, plus the preceding day the propagation shift reaches back to.
+        # The speed ramps slightly across the window: a strictly constant speed would shift every
+        # sample by the same amount and `sw_mag_propagation` would round half the minutes onto
+        # each other, leaving an alternating grid that says nothing about the model wiring.
+        for day in pd.date_range(start_time - timedelta(days=1), end_time, freq="D"):
+            index = pd.date_range(day, day + timedelta(hours=24) - timedelta(minutes=1), freq="1min", tz="UTC")
+            index.name = "t"
+            speed = np.linspace(400.0, 401.0, len(index))
+            df = pd.DataFrame(
+                {
+                    "bavg": 13.0,
+                    "bx_gsm": 3.0,
+                    "by_gsm": -4.0,
+                    "bz_gsm": 12.0,
+                    "proton_density": 5.0,
+                    "speed": speed,
+                    "temperature": 120000.0,
+                    "pdyn": 2e-6 * 5.0 * speed**2,
+                },
+                index=index,
+            )
+            path = midl_model.data_dir / day.strftime("%Y/%m") / midl_model._file_name(day)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            df.to_csv(path)
+
+        data = read_solar_wind_from_multiple_models(
+            start_time=start_time,
+            end_time=end_time,
+            model_order=[midl_model],
+            historical_data_cutoff_time=end_time,
+        )
+
+        assert isinstance(data, pd.DataFrame)
+        assert all(col in data.columns for col in expected_columns)
+        assert (data["model"].dropna() == "midl").all()
+        assert data["speed"].notna().mean() > 0.99
+        assert data["bavg"].dropna().eq(13.0).all()
+        assert data["speed"].dropna().between(400.0, 401.0).all()
 
     def test_model_check_with_wrong_class(self, sample_times):
         class FakeModel:
