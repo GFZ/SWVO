@@ -22,7 +22,7 @@ repos:
       # Run the formatter.
       - id: ruff-format
   - repo: https://github.com/astral-sh/ty-pre-commit
-    rev: v0.0.77
+    rev: v0.0.78
     hooks:
       - id: ty
         files: ^swvo/
