@@ -11,7 +11,7 @@ import logging
 import warnings
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Literal, Tuple, cast
 
 import midl as midl_client
 import numpy as np
@@ -43,13 +43,6 @@ class SWMIDL(BaseIO):
         Data directory for the MIDL Solar Wind data. If not provided, it will be read from the environment variable
     prefer_env_var : bool, optional
         If True, the environment variable takes precedence over the passed `data_dir` argument.
-    target : float | int | str, optional
-        Location at which MIDL returns the solar wind: ``"L1"`` (default) for unpropagated L1
-        observations, or a distance in Earth radii along the Sun-Earth line for data MIDL has
-        already propagated.
-    method : str, optional
-        MIDL propagation method, either ``"ballistic"`` (default) or ``"mhd"``. Only relevant if
-        `target` is not ``"L1"``. MHD targets must be integer Earth radii in ``[-70, 70]``.
 
     Methods
     -------
@@ -59,8 +52,7 @@ class SWMIDL(BaseIO):
     Raises
     ------
     ValueError
-        Returns `ValueError` if necessary environment variable is not set, or if `target` or
-        `method` are invalid.
+        Returns `ValueError` if necessary environment variable is not set.
     """
 
     ENV_VAR_NAME = "SW_MIDL_STREAM_DIR"
@@ -87,59 +79,84 @@ class SWMIDL(BaseIO):
 
     METHODS = ("ballistic", "mhd")
 
-    def __init__(
+    def _normalize_target_method(
         self,
-        data_dir: Path | None = None,
-        prefer_env_var: bool = False,
-        target: float | int | str = "L1",
-        method: str = "ballistic",
-    ) -> None:
-        super().__init__(data_dir, prefer_env_var)
+        target: float | int | str,
+        method: str,
+    ) -> Tuple[float | str, Literal["ballistic", "mhd"]]:
+        """Validate and normalize a `target`/`method` pair.
 
+        Parameters
+        ----------
+        target : float | int | str
+            Location at which MIDL returns the solar wind: ``"L1"`` for unpropagated L1
+            observations, or a distance in Earth radii along the Sun-Earth line for data MIDL has
+            already propagated.
+        method : str
+            MIDL propagation method, either ``"ballistic"`` or ``"mhd"``. Only relevant if
+            `target` is not ``"L1"``. MHD targets must be integer Earth radii in ``[-70, 70]``.
+
+        Returns
+        -------
+        Tuple[float | str, Literal["ballistic", "mhd"]]
+            Normalized `(target, method)` pair.
+
+        Raises
+        ------
+        ValueError
+            If `target` or `method` are invalid.
+        """
         if not isinstance(method, str) or method.lower() not in self.METHODS:
             msg = f"method must be one of {self.METHODS}, got {method!r}"
             logger.error(msg)
             raise ValueError(msg)
-        self.method = method.lower()
+        normalized_method = cast(Literal["ballistic", "mhd"], method.lower())
 
         if isinstance(target, str):
             if target.lower() != "l1":
                 msg = f"target must be a number or 'L1', got {target!r}"
                 logger.error(msg)
                 raise ValueError(msg)
-            self.target: float | str = "L1"
+            target = "L1"
         elif isinstance(target, (int, float)) and not isinstance(target, bool):
-            self.target = float(target)
+            target = float(target)
         else:
             msg = f"target must be a number or 'L1', got {type(target).__name__}"
             logger.error(msg)
             raise ValueError(msg)
 
-        if self.target == "L1" and self.method != "ballistic":
+        if target == "L1" and normalized_method != "ballistic":
             msg = "target='L1' is only valid with method='ballistic'"
             logger.error(msg)
             raise ValueError(msg)
 
-        self._target_token = self._make_target_token()
+        return target, normalized_method
 
-    def _make_target_token(self) -> str:
+    def _make_target_token(self, target: float | str, method: str) -> str:
         """Build the canonical target token used in cached file names.
 
         Mirrors MIDL's own naming (``L1``, ``32Re``, ``mhd_030Re``) so that data for different
         targets can live side by side in one data directory.
+
+        Parameters
+        ----------
+        target : float | str
+            Normalized target, as returned by :meth:`_normalize_target_method`.
+        method : str
+            Normalized method, as returned by :meth:`_normalize_target_method`.
 
         Returns
         -------
         str
             Canonical, file name safe target token.
         """
-        if self.target == "L1":
+        if target == "L1":
             return "L1"
 
-        target_re = float(self.target)
-        if self.method == "mhd":
+        target_re = float(target)
+        if method == "mhd":
             if not target_re.is_integer() or not (-70 <= target_re <= 70):
-                msg = f"MHD target must be an integer number of Earth radii in [-70, 70], got {self.target!r}"
+                msg = f"MHD target must be an integer number of Earth radii in [-70, 70], got {target!r}"
                 logger.error(msg)
                 raise ValueError(msg)
             return f"mhd_{int(target_re):03d}Re"
@@ -151,7 +168,14 @@ class SWMIDL(BaseIO):
     def _fallback_url(self) -> str:
         return self.URL
 
-    def download_and_process(self, start_time: datetime, end_time: datetime) -> None:
+    def download_and_process(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+        *,
+        target: float | int | str = "L1",
+        method: Literal["ballistic", "mhd"] = "ballistic",
+    ) -> None:
         """
         Download and process MIDL data, splitting data across midnight into appropriate day files.
 
@@ -165,13 +189,21 @@ class SWMIDL(BaseIO):
             Start time of the data to download. Must be timezone-aware.
         end_time : datetime
             End time of the data to download. Must be timezone-aware.
+        target : float | int | str, optional
+            Location at which MIDL returns the solar wind: ``"L1"`` (default) for unpropagated L1
+            observations, or a distance in Earth radii along the Sun-Earth line for data MIDL has
+            already propagated.
+        method : Literal["ballistic", "mhd"], optional
+            MIDL propagation method, either ``"ballistic"`` (default) or ``"mhd"``. Only relevant
+            if `target` is not ``"L1"``. MHD targets must be integer Earth radii in ``[-70, 70]``.
 
         Raises
         ------
         AssertionError
             If `start_time` is after `end_time`.
         ValueError
-            If `start_time` is before the first year of MIDL data.
+            If `start_time` is before the first year of MIDL data, or if `target` or `method` are
+            invalid.
 
         Returns
         -------
@@ -187,8 +219,11 @@ class SWMIDL(BaseIO):
             logger.error(msg)
             raise ValueError(msg)
 
+        target, method = self._normalize_target_method(target, method)
+        target_token = self._make_target_token(target, method)
+
         self._resolved_urls = []
-        for url in self._source_urls(start_time, end_time):
+        for url in self._source_urls(start_time, end_time, target_token):
             self._record_url(url)
 
         logger.debug(f"Downloading MIDL data for {start_time} - {end_time} ...")
@@ -198,8 +233,8 @@ class SWMIDL(BaseIO):
         dataset = midl_client.load(
             start_time.replace(tzinfo=None),
             end_time.replace(tzinfo=None),
-            self.target,
-            method=self.method,
+            target,
+            method=method,
             coords="GSM",
             orbital_motion=False,
         )
@@ -214,7 +249,7 @@ class SWMIDL(BaseIO):
         unique_dates = np.unique(processed_df.index.date)  # ty: ignore[unresolved-attribute]
 
         for date in unique_dates:
-            file_path = self.data_dir / date.strftime("%Y/%m") / self._file_name(date)
+            file_path = self.data_dir / date.strftime("%Y/%m") / self._file_name(date, target_token)
             tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
 
             try:
@@ -241,7 +276,7 @@ class SWMIDL(BaseIO):
                     tmp_path.unlink()
                 continue
 
-    def _source_urls(self, start_time: datetime, end_time: datetime) -> list[str]:
+    def _source_urls(self, start_time: datetime, end_time: datetime, target_token: str) -> list[str]:
         """Build the list of monthly source file URLs spanned by a time range.
 
         These are the files the MIDL client fetches under the hood; they are recorded so that
@@ -253,6 +288,8 @@ class SWMIDL(BaseIO):
             Start time of the data.
         end_time : datetime
             End time of the data.
+        target_token : str
+            Canonical target token, as returned by :meth:`_make_target_token`.
 
         Returns
         -------
@@ -267,27 +304,29 @@ class SWMIDL(BaseIO):
 
         urls = []
         for month in months:
-            sub_dir = "mhd/" if self._target_token.startswith("mhd_") else ""
+            sub_dir = "mhd/" if target_token.startswith("mhd_") else ""
             urls.append(
-                f"{self.URL}/{month:%Y}/{month:%m}/{sub_dir}{month:%Y%m}_{self._target_token}.csv",
+                f"{self.URL}/{month:%Y}/{month:%m}/{sub_dir}{month:%Y%m}_{target_token}.csv",
             )
 
         return urls
 
-    def _file_name(self, date) -> str:
+    def _file_name(self, date, target_token: str) -> str:
         """Build the cached file name for a single day.
 
         Parameters
         ----------
         date : datetime.date
             Date of the file.
+        target_token : str
+            Canonical target token, as returned by :meth:`_make_target_token`.
 
         Returns
         -------
         str
             File name of the processed daily file.
         """
-        return f"MIDL_SW_{self._target_token}_{date.strftime('%Y%m%d')}.csv"
+        return f"MIDL_SW_{target_token}_{date.strftime('%Y%m%d')}.csv"
 
     def _process_dataset(self, dataset: xr.Dataset) -> pd.DataFrame:
         """Convert a MIDL dataset to the SWVO Solar Wind schema.
@@ -341,6 +380,9 @@ class SWMIDL(BaseIO):
         end_time: datetime,
         download: bool = False,
         propagation: bool = False,
+        *,
+        target: float | int | str = "L1",
+        method: Literal["ballistic", "mhd"] = "ballistic",
     ) -> pd.DataFrame:
         """
         Read MIDL data for the specified time range.
@@ -354,9 +396,15 @@ class SWMIDL(BaseIO):
         download : bool, optional
             Download data on the go, defaults to False.
         propagation : bool, optional
-            Propagate the data from L1 to near-Earth, defaults to False. Ignored if the instance
-            was constructed with a `target` other than ``"L1"``, since MIDL has then already
-            propagated the data.
+            Propagate the data from L1 to near-Earth, defaults to False. Ignored if `target` is
+            not ``"L1"``, since MIDL has then already propagated the data.
+        target : float | int | str, optional
+            Location at which MIDL returns the solar wind: ``"L1"`` (default) for unpropagated L1
+            observations, or a distance in Earth radii along the Sun-Earth line for data MIDL has
+            already propagated.
+        method : Literal["ballistic", "mhd"], optional
+            MIDL propagation method, either ``"ballistic"`` (default) or ``"mhd"``. Only relevant
+            if `target` is not ``"L1"``. MHD targets must be integer Earth radii in ``[-70, 70]``.
 
         Returns
         -------
@@ -367,13 +415,18 @@ class SWMIDL(BaseIO):
         ------
         AssertionError
             Raises `AssertionError` if the end time is before the start time.
+        ValueError
+            Raises `ValueError` if `target` or `method` are invalid.
         """
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
 
-        if propagation and self.target != "L1":
+        target, method = self._normalize_target_method(target, method)
+        target_token = self._make_target_token(target, method)
+
+        if propagation and target != "L1":
             logger.warning(
-                f"Ignoring `propagation` because MIDL data is already propagated to {self._target_token}",
+                f"Ignoring `propagation` because MIDL data is already propagated to {target_token}",
             )
             propagation = False
 
@@ -382,7 +435,7 @@ class SWMIDL(BaseIO):
             start_time = start_time - timedelta(days=1)
         assert start_time < end_time, "Start time must be before end time!"
 
-        file_paths, _ = self._get_processed_file_list(start_time, end_time)
+        file_paths, _ = self._get_processed_file_list(start_time, end_time, target_token)
 
         t = pd.date_range(
             datetime(start_time.year, start_time.month, start_time.day),
@@ -395,8 +448,8 @@ class SWMIDL(BaseIO):
 
         if download and any(not file_path.exists() for file_path in file_paths):
             try:
-                self.download_and_process(start_time, end_time)
-                file_paths, _ = self._get_processed_file_list(start_time, end_time)
+                self.download_and_process(start_time, end_time, target=target, method=method)
+                file_paths, _ = self._get_processed_file_list(start_time, end_time, target_token)
             except AssertionError as e:
                 logger.error(f"`download_and_process` failed because: {e}")
 
@@ -419,7 +472,12 @@ class SWMIDL(BaseIO):
 
         return data_out
 
-    def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
+    def _get_processed_file_list(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+        target_token: str,
+    ) -> Tuple[List, List]:
         """Get list of file paths and their corresponding time intervals.
 
         Parameters
@@ -428,6 +486,8 @@ class SWMIDL(BaseIO):
             Start time of the data.
         end_time : datetime
             End time of the data.
+        target_token : str
+            Canonical target token, as returned by :meth:`_make_target_token`.
 
         Returns
         -------
@@ -441,7 +501,7 @@ class SWMIDL(BaseIO):
         end_time = datetime(end_time.year, end_time.month, end_time.day, 0, 0, 0)
 
         while current_time <= end_time:
-            file_path = self.data_dir / current_time.strftime("%Y/%m") / self._file_name(current_time)
+            file_path = self.data_dir / current_time.strftime("%Y/%m") / self._file_name(current_time, target_token)
             file_paths.append(file_path)
 
             interval_start = current_time

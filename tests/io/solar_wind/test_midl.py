@@ -75,8 +75,6 @@ class TestSWMIDL:
         with patch.dict("os.environ", {SWMIDL.ENV_VAR_NAME: str(DATA_DIR)}):
             midl = SWMIDL()
             assert midl.data_dir == DATA_DIR
-            assert midl.target == "L1"
-            assert midl.method == "ballistic"
 
     def test_initialization_with_explicit_path(self):
         explicit_path = DATA_DIR / "explicit"
@@ -100,9 +98,9 @@ class TestSWMIDL:
             (-5, "mhd", "mhd_-05Re"),
         ],
     )
-    def test_target_token(self, target, method, token):
-        midl = SWMIDL(data_dir=DATA_DIR, target=target, method=method)
-        assert midl._target_token == token
+    def test_target_token(self, midl_instance, target, method, token):
+        normalized_target, normalized_method = midl_instance._normalize_target_method(target, method)
+        assert midl_instance._make_target_token(normalized_target, normalized_method) == token
 
     @pytest.mark.parametrize(
         "kwargs",
@@ -115,15 +113,38 @@ class TestSWMIDL:
             {"target": 200, "method": "mhd"},
         ],
     )
-    def test_initialization_with_invalid_arguments(self, kwargs):
+    def test_read_with_invalid_target_method(self, midl_instance, kwargs):
         with pytest.raises(ValueError):
-            SWMIDL(data_dir=DATA_DIR, **kwargs)
+            midl_instance.read(
+                datetime(2020, 1, 1, tzinfo=timezone.utc),
+                datetime(2020, 1, 2, tzinfo=timezone.utc),
+                **kwargs,
+            )
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"target": "bow_shock"},
+            {"target": None},
+            {"method": "kriging"},
+            {"target": "L1", "method": "mhd"},
+            {"target": 20.25, "method": "mhd"},
+            {"target": 200, "method": "mhd"},
+        ],
+    )
+    def test_download_and_process_with_invalid_target_method(self, midl_instance, kwargs):
+        with pytest.raises(ValueError):
+            midl_instance.download_and_process(
+                datetime(2020, 1, 1, tzinfo=timezone.utc),
+                datetime(2020, 1, 2, tzinfo=timezone.utc),
+                **kwargs,
+            )
 
     def test_get_processed_file_list(self, midl_instance):
         start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
 
-        file_paths, time_intervals = midl_instance._get_processed_file_list(start_time, end_time)
+        file_paths, time_intervals = midl_instance._get_processed_file_list(start_time, end_time, "L1")
 
         assert len(file_paths) == 366
         assert all(str(path).startswith(str(DATA_DIR)) for path in file_paths)
@@ -136,6 +157,7 @@ class TestSWMIDL:
         urls = midl_instance._source_urls(
             datetime(2023, 12, 20, tzinfo=timezone.utc),
             datetime(2024, 2, 3, tzinfo=timezone.utc),
+            "L1",
         )
 
         assert urls == [
@@ -144,10 +166,10 @@ class TestSWMIDL:
             f"{SWMIDL.URL}/2024/02/202402_L1.csv",
         ]
 
-        mhd_instance = SWMIDL(data_dir=DATA_DIR, target=30, method="mhd")
-        mhd_urls = mhd_instance._source_urls(
+        mhd_urls = midl_instance._source_urls(
             datetime(2024, 1, 5, tzinfo=timezone.utc),
             datetime(2024, 1, 6, tzinfo=timezone.utc),
+            "mhd_030Re",
         )
         assert mhd_urls == [f"{SWMIDL.URL}/2024/01/mhd/202401_mhd_030Re.csv"]
 
@@ -306,15 +328,14 @@ class TestSWMIDL:
         assert data.index.is_monotonic_increasing
         assert any(data["file_name"] == "propagated from previous MIDL file")
 
-    def test_propagation_skipped_for_propagated_target(self, caplog):
-        instance = SWMIDL(data_dir=DATA_DIR, target=32)
+    def test_propagation_skipped_for_propagated_target(self, midl_instance, caplog):
         start_time = datetime(2024, 3, 15, tzinfo=timezone.utc)
         end_time = datetime(2024, 3, 16, tzinfo=timezone.utc)
 
-        with patch("swvo.io.solar_wind.midl.sw_mag_propagation") as mock_propagation:
-            data = instance.read(start_time, end_time, propagation=True)
+        data = midl_instance.read(start_time, end_time, target=32, propagation=True)
 
-        assert not mock_propagation.called
         assert "already propagated" in caplog.text
-        # No -1 day shift was applied either.
+        # No -1 day shift was applied either, so the output starts exactly at start_time
+        # instead of the day before, and carries no propagation provenance.
         assert data.index[0] == start_time
+        assert "file_name" not in data.columns

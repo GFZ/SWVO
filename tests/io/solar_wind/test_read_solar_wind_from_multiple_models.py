@@ -398,7 +398,7 @@ class TestReadSolarWindFromMultipleModels:
                 },
                 index=index,
             )
-            path = midl_model.data_dir / day.strftime("%Y/%m") / midl_model._file_name(day)
+            path = midl_model.data_dir / day.strftime("%Y/%m") / midl_model._file_name(day, "L1")
             path.parent.mkdir(parents=True, exist_ok=True)
             df.to_csv(path)
 
