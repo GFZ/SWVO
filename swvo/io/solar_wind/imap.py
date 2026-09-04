@@ -8,14 +8,16 @@ Module for handling IMAP (Interstellar Mapping and Acceleration Probe) Solar Win
 
 import logging
 import warnings
-from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from time import sleep
-from typing import List, Tuple
+from typing import List, Literal, Tuple
 
 import numpy as np
 import pandas as pd
 import requests
+from richpool import p_map
 
 from swvo.io.base import BaseIO
 from swvo.io.utils import enforce_utc_timezone, sw_mag_propagation
@@ -23,6 +25,18 @@ from swvo.io.utils import enforce_utc_timezone, sw_mag_propagation
 logger = logging.getLogger(__name__)
 
 logging.captureWarnings(True)
+
+# The only two I-ALiRT `space-weather` instruments this reader ever queries.
+Instrument = Literal["mag", "swapi"]
+
+
+@dataclass
+class _DayChunks:
+    """Accumulates one UTC day's fetched chunks, grouped by instrument."""
+
+    mag: list = field(default_factory=list)
+    swapi: list = field(default_factory=list)
+    failed: bool = False
 
 
 class SWIMAP(BaseIO):
@@ -74,15 +88,23 @@ class SWIMAP(BaseIO):
     _MAX_DOWNLOAD_ATTEMPTS = 4
     _RETRY_BACKOFF_SECONDS = 1.0
 
+    _CHUNK_SIZE = timedelta(hours=1)
+    _CHUNK_WORKERS = 8
+
+    # Data older than this requires an API key this reader does not have/use (observed as an
+    # HTTP 400 with an "API key required" message).
+    _PUBLIC_DATA_START = datetime(2026, 2, 1, tzinfo=timezone.utc)
+
     def download_and_process(self, start_time: datetime, end_time: datetime) -> None:
         """
         Download and process IMAP data, splitting data across midnight into appropriate day files.
 
-        Requests are chunked one UTC day at a time: the I-ALiRT API rejects requests spanning more
-        than a few days (observed as an HTTP 400 on a ~3 day span), and day-chunking keeps every
-        request comfortably under that limit. A day where the `mag` or `swapi` API call
-        permanently fails (after retries) is skipped with a warning rather than aborting the whole
-        range; re-running the same range later retries only the missing days.
+        The whole requested period (rounded out to full UTC days, since output is cached per day)
+        is pre-split into fixed 1-hour windows for both `mag` and `swapi`, and every window/
+        instrument request is fetched concurrently under a single progress bar (see
+        `_fetch_chunks`) rather than looping day by day. A day where any of its chunks
+        permanently fails (after retries) is skipped entirely, with a warning, rather than
+        aborting the whole range; re-running the same range later retries only the missing days.
 
         Parameters
         ----------
@@ -95,6 +117,8 @@ class SWIMAP(BaseIO):
         ------
         AssertionError
             If `start_time` is after `end_time`.
+        ValueError
+            If `start_time` is before `_PUBLIC_DATA_START`, since that data requires an API key.
 
         Returns
         -------
@@ -103,23 +127,34 @@ class SWIMAP(BaseIO):
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
 
+        if start_time < self._PUBLIC_DATA_START:
+            raise ValueError(
+                f"IMAP data before {self._PUBLIC_DATA_START:%Y-%m-%dT%H:%M:%S} requires an API key, "
+                "which this reader does not use. Please choose a later start_time."
+            )
+
         assert start_time < end_time, "Start time must be before end time!"
 
         self._resolved_urls = []
+
+        day_starts = [
+            date.to_pydatetime().replace(tzinfo=timezone.utc)
+            for date in pd.date_range(start=start_time.date(), end=end_time.date(), freq="D")
+        ]
+        range_start = day_starts[0]
+        range_end = day_starts[-1] + timedelta(days=1)
+
+        chunks_by_day = self._fetch_chunks(range_start, range_end)
+
         failed_dates = []
-
-        for date in pd.date_range(start=start_time.date(), end=end_time.date(), freq="D"):
-            day_start = date.to_pydatetime().replace(tzinfo=timezone.utc)
-            day_end = day_start + timedelta(days=1)
-
-            try:
-                mag_df = self._fetch_instrument("mag", day_start, day_end)
-                swapi_df = self._fetch_instrument("swapi", day_start, day_end)
-            except Exception as error:
+        for day_start in day_starts:
+            day = chunks_by_day[day_start.date()]
+            if day.failed:
                 failed_dates.append(day_start.date())
-                logger.error(f"Failed to download IMAP data for {day_start.date()}: {error}")
                 continue
 
+            mag_df = pd.concat(day.mag) if day.mag else self._empty_instrument_frame("mag")
+            swapi_df = pd.concat(day.swapi) if day.swapi else self._empty_instrument_frame("swapi")
             processed_df = self._merge_instrument_data(mag_df, swapi_df, day_start)
             self._save_processed_data(processed_df, day_start.date())
 
@@ -133,41 +168,124 @@ class SWIMAP(BaseIO):
                 stacklevel=2,
             )
 
-    def _fetch_instrument(self, instrument: str, day_start: datetime, day_end: datetime) -> pd.DataFrame:
-        """Query the I-ALiRT `space-weather` endpoint for one instrument and one UTC day.
+    def _fetch_chunks(self, range_start: datetime, range_end: datetime) -> dict[date, _DayChunks]:
+        """Fetch `mag` and `swapi` for `[range_start, range_end)` as concurrent fixed 1-hour
+        requests.
 
-        Transient failures (timeouts, connection errors, HTTP 429/5xx) are retried with backoff;
-        anything else (including HTTP 400, which signals a malformed/too-large request rather than
-        a temporary server issue) is raised immediately.
+        A chunk that permanently fails (after `_request_instrument`'s own retries) is reported as
+        `None` rather than raised, so one bad chunk doesn't abort the whole batch.
 
         Parameters
         ----------
-        instrument : str
+        range_start : datetime
+            Start of the UTC range to fetch (inclusive). Must fall on a day boundary.
+        range_end : datetime
+            End of the UTC range to fetch (exclusive). Must fall on a day boundary.
+
+        Returns
+        -------
+        dict[date, _DayChunks]
+            One entry per UTC date in the range, holding that day's successfully parsed per-chunk
+            DataFrames (grouped by instrument) and whether any chunk for that day failed.
+        """
+        chunk_count = int((range_end - range_start) / self._CHUNK_SIZE)
+        window_starts = [range_start + i * self._CHUNK_SIZE for i in range(chunk_count)]
+        tasks = [(instrument, window_start) for window_start in window_starts for instrument in ("mag", "swapi")]
+
+        results = p_map(
+            lambda task: self._fetch_chunk(task[0], task[1], task[1] + self._CHUNK_SIZE),
+            tasks,
+            kind="thread",
+            num_cpus=self._CHUNK_WORKERS,
+            desc="Fetching IMAP data",
+        )
+
+        chunks_by_day = {
+            (range_start + i * timedelta(days=1)).date(): _DayChunks() for i in range((range_end - range_start).days)
+        }
+        for instrument, window_start, chunk_df in results:
+            day = chunks_by_day[window_start.date()]
+            if chunk_df is None:
+                day.failed = True
+                continue
+            getattr(day, instrument).append(chunk_df)
+
+        return chunks_by_day
+
+    def _fetch_chunk(
+        self,
+        instrument: Instrument,
+        window_start: datetime,
+        window_end: datetime,
+    ) -> tuple[Instrument, datetime, pd.DataFrame | None]:
+        """Fetch one instrument's data for one window, reporting failure instead of raising.
+
+        Parameters
+        ----------
+        instrument : Instrument
             Either ``"mag"`` or ``"swapi"``.
-        day_start : datetime
-            Start of the UTC day to request (inclusive).
-        day_end : datetime
-            End of the UTC day to request (exclusive).
+        window_start : datetime
+            Start of the UTC window to request (inclusive).
+        window_end : datetime
+            End of the UTC window to request (exclusive).
+
+        Returns
+        -------
+        tuple[Instrument, datetime, pd.DataFrame | None]
+            `(instrument, window_start, data)`; `data` is `None` if the request permanently failed.
+        """
+        try:
+            return instrument, window_start, self._request_instrument(instrument, window_start, window_end)
+        except Exception as error:
+            logger.error(f"Failed to download IMAP {instrument} data for {window_start} - {window_end}: {error}")
+            return instrument, window_start, None
+
+    def _empty_instrument_frame(self, instrument: Instrument) -> pd.DataFrame:
+        """An empty, correctly indexed and columned frame for `instrument`, for a day with no chunks."""
+        fields = self.MAG_FIELDS if instrument == "mag" else self.SWAPI_FIELDS
+        return pd.DataFrame(columns=fields, index=pd.DatetimeIndex([], tz="UTC"))
+
+    def _request_instrument(self, instrument: Instrument, window_start: datetime, window_end: datetime) -> pd.DataFrame:
+        """Make one (retried) HTTP GET for a single time window.
+
+        Transient failures (timeouts, connection errors, HTTP 429/5xx) are retried with backoff;
+        any other error (e.g. a malformed request, or a window still too wide for the API) is
+        raised immediately.
+
+        Parameters
+        ----------
+        instrument : Instrument
+            Either ``"mag"`` or ``"swapi"``.
+        window_start : datetime
+            Start of the UTC window to request (inclusive).
+        window_end : datetime
+            End of the UTC window to request (exclusive).
 
         Returns
         -------
         pd.DataFrame
-            Parsed instrument data for the day, indexed by UTC timestamp.
+            Parsed instrument data for the window, indexed by UTC timestamp.
         """
         params = {
             "instrument": instrument,
-            "time_utc_start": day_start.strftime("%Y-%m-%dT%H:%M:%S"),
-            "time_utc_end": day_end.strftime("%Y-%m-%dT%H:%M:%S"),
+            "time_utc_start": window_start.strftime("%Y-%m-%dT%H:%M:%S"),
+            "time_utc_end": window_end.strftime("%Y-%m-%dT%H:%M:%S"),
         }
 
         for attempt in range(1, self._MAX_DOWNLOAD_ATTEMPTS + 1):
             logger.debug(
-                f"Downloading IMAP {instrument} data for {day_start.date()} (attempt {attempt}/{self._MAX_DOWNLOAD_ATTEMPTS}) ..."
+                f"Downloading IMAP {instrument} data for {window_start} - {window_end} "
+                f"(attempt {attempt}/{self._MAX_DOWNLOAD_ATTEMPTS}) ..."
             )
             try:
                 resolved_url = requests.Request("GET", self.URL, params=params).prepare().url
                 self._record_url(resolved_url)  # ty:ignore[invalid-argument-type]
                 response = requests.get(self.URL, params=params, timeout=30)
+                if self._is_api_key_required_response(response):
+                    raise ValueError(
+                        f"IMAP {instrument} query for {window_start} - {window_end} requires an "
+                        "API key, which this reader does not use."
+                    )
                 response.raise_for_status()
                 payload = response.json()
                 return self._parse_instrument_payload(instrument, payload)
@@ -177,18 +295,18 @@ class SWIMAP(BaseIO):
 
                 backoff = self._RETRY_BACKOFF_SECONDS * 2 ** (attempt - 1)
                 logger.warning(
-                    f"Transient IMAP {instrument} failure for {day_start.date()} "
+                    f"Transient IMAP {instrument} failure for {window_start} - {window_end} "
                     f"({self._retry_reason(error)}); retrying in {backoff:.1f}s "
                     f"(attempt {attempt + 1}/{self._MAX_DOWNLOAD_ATTEMPTS})"
                 )
                 sleep(backoff)
 
-    def _parse_instrument_payload(self, instrument: str, payload: dict) -> pd.DataFrame:
+    def _parse_instrument_payload(self, instrument: Instrument, payload: dict) -> pd.DataFrame:
         """Convert one instrument's `space-weather` JSON payload to a DataFrame.
 
         Parameters
         ----------
-        instrument : str
+        instrument : Instrument
             Either ``"mag"`` or ``"swapi"``.
         payload : dict
             Decoded JSON payload, shaped ``{"meta": {...}, "data": [...]}``.
@@ -311,8 +429,22 @@ class SWIMAP(BaseIO):
             if tmp_path.exists():
                 tmp_path.unlink()
 
-    @staticmethod
-    def _is_retryable_download_error(error: Exception) -> bool:
+    def _is_api_key_required_response(self, response: requests.Response) -> bool:
+        """Return whether `response` is the API's "API key required" error for old data.
+
+        Recognized as an HTTP 400 whose JSON body carries an "API key required" message -
+        distinguished from other 400s since retrying, chunking, or waiting would not fix it.
+        """
+        if response.status_code != 400:
+            return False
+        try:
+            payload = response.json()
+        except ValueError:
+            return False
+        message = payload.get("message", "") if isinstance(payload, dict) else ""
+        return "api key required" in message.lower()
+
+    def _is_retryable_download_error(self, error: Exception) -> bool:
         """Return whether `error` represents a transient download failure worth retrying."""
         if isinstance(error, (requests.Timeout, requests.ConnectionError)):
             return True
@@ -321,8 +453,7 @@ class SWIMAP(BaseIO):
             return status_code == 429 or status_code >= 500
         return False
 
-    @staticmethod
-    def _retry_reason(error: Exception) -> str:
+    def _retry_reason(self, error: Exception) -> str:
         """Return a short, log-safe description of a transient failure."""
         if isinstance(error, requests.Timeout):
             return "request timed out"
