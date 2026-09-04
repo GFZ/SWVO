@@ -73,7 +73,7 @@ def read_solar_wind_from_multiple_models(
         End time of the data request.
     model_order : list, optional
         Order in which data will be read from the models.
-        Defaults to [OMNI, DSCOVR, ACE, SWIFT, ENLIL CME, ENLIL BKG].
+        Defaults to [OMNI, IMAP, ACE, SWIFT, ENLIL CME, ENLIL BKG].
     reduce_ensemble : Literal["mean", "median"], optional
         The method to reduce ensembles to a single time series. Defaults to None.
     historical_data_cutoff_time : datetime, optional
@@ -124,9 +124,9 @@ def read_solar_wind_from_multiple_models(
         historical_data_cutoff_time = min(datetime.now(timezone.utc), end_time)
 
     if model_order is None:
-        model_order = [SWOMNI(), DSCOVR(), SWACE(), SWSWIFTEnsemble(), SWENLIL_CME(), SWENLIL_BKG()]
+        model_order = [SWOMNI(), SWIMAP(), SWACE(), SWSWIFTEnsemble(), SWENLIL_CME(), SWENLIL_BKG()]
         logger.warning(
-            "No model order specified, using default order: SWOMNI, DSCOVR, SWACE, SWSWIFTEnsemble, "
+            "No model order specified, using default order: SWOMNI, SWIMAP, SWACE, SWSWIFTEnsemble, "
             "SWENLIL_CME, SWENLIL_BKG"
         )
 
