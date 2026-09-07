@@ -27,6 +27,6 @@ repos:
       - id: ty
         files: ^swvo/
   - repo: https://github.com/sahiljhawar/reuseify
-    rev: 1.0.1
+    rev: 1.0.2
     hooks:
       - id: reuseify-lint
