@@ -226,7 +226,7 @@ class SWMIDL(BaseIO):
         for url in self._source_urls(start_time, end_time, target_token):
             self._record_url(url)
 
-        logger.debug(f"Downloading MIDL data for {start_time} - {end_time} ...")
+        logger.info(f"Downloading MIDL data for {start_time} - {end_time} ...")
         # MIDL indexes its files with naive timestamps and slices them with whatever it is
         # handed, so a timezone-aware bound raises a comparison error. SWVO is UTC throughout,
         # so the bounds are simply stripped of their (already UTC) timezone here.
@@ -239,25 +239,22 @@ class SWMIDL(BaseIO):
             orbital_motion=False,
         )
 
-        logger.debug("Processing data ...")
+        logger.info("Processing data ...")
         processed_df = self._process_dataset(dataset)
 
         if processed_df.empty:
             logger.warning(f"No MIDL data returned for {start_time} - {end_time}")
             return
 
-        unique_dates = np.unique(processed_df.index.date)  # ty: ignore[unresolved-attribute]
+        # groupby avoids re-scanning the whole frame per day
+        day_groups = processed_df.groupby(processed_df.index.date)  # ty: ignore[unresolved-attribute]
+        logger.info(f"Saving {len(day_groups)} daily MIDL file(s) to {self.data_dir} ...")
 
-        for date in unique_dates:
-            file_path = self.data_dir / date.strftime("%Y/%m") / self._file_name(date, target_token)
+        for date, day_data in day_groups:
+            file_path = self.data_dir / date.strftime("%Y/%m") / self._file_name(date, target_token)  # ty: ignore[unresolved-attribute]
             tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
 
             try:
-                day_start = enforce_utc_timezone(datetime.combine(date, datetime.min.time()))
-                day_end = enforce_utc_timezone(datetime.combine(date, datetime.max.time()))
-
-                day_data = processed_df[(processed_df.index >= day_start) & (processed_df.index <= day_end)]
-
                 if file_path.exists():
                     logger.debug(f"Found previous file for {date}. Loading and combining ...")
                     previous_df = self._read_single_file(file_path)
