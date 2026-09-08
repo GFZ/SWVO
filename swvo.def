@@ -15,6 +15,7 @@ From: astral/uv:python3.12-bookworm-slim
     swvo /opt/swvo/
     pyproject.toml /opt/swvo/
     uv.lock /opt/swvo/
+    docs/requirements.txt /opt/swvo/docs/requirements.txt
     download_daily_files.py /opt/swvo/
 
 %environment
