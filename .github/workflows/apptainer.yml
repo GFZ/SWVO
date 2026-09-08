@@ -42,9 +42,19 @@ jobs:
           VERSION=$(grep -oP '(?<=^current_version = ")[^"]+' pyproject.toml)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+      - name: Cache Apptainer .deb
+        id: cache-apptainer-deb
+        uses: actions/cache@v6
+        with:
+          path: apptainer_${{ env.APPTAINER_VERSION }}_amd64.deb
+          key: apptainer-deb-${{ env.APPTAINER_VERSION }}
+
+      - name: Download Apptainer
+        if: steps.cache-apptainer-deb.outputs.cache-hit != 'true'
+        run: wget https://github.com/apptainer/apptainer/releases/download/v${{ env.APPTAINER_VERSION }}/apptainer_${{ env.APPTAINER_VERSION }}_amd64.deb
+
       - name: Install Apptainer
         run: |
-          wget https://github.com/apptainer/apptainer/releases/download/v${{ env.APPTAINER_VERSION }}/apptainer_${{ env.APPTAINER_VERSION }}_amd64.deb
           sudo apt-get update
           sudo apt-get install -y ./apptainer_${{ env.APPTAINER_VERSION }}_amd64.deb
 
