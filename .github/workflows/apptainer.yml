@@ -11,7 +11,7 @@ on:
       - "*.def"
       - "swvo/**"
       - "pyproject.toml"
-      - "requirements.txt"
+      - "uv.lock"
       - "download_daily_files.py"
       - ".github/workflows/apptainer.yml"
   pull_request:
@@ -20,7 +20,7 @@ on:
       - "*.def"
       - "swvo/**"
       - "pyproject.toml"
-      - "requirements.txt"
+      - "uv.lock"
       - "download_daily_files.py"
       - ".github/workflows/apptainer.yml"
   workflow_dispatch:

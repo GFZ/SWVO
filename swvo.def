@@ -14,7 +14,7 @@ From: astral/uv:python3.12-bookworm-slim
 %files
     swvo /opt/swvo/
     pyproject.toml /opt/swvo/
-    requirements.txt /opt/swvo/
+    uv.lock /opt/swvo/
     download_daily_files.py /opt/swvo/
 
 %environment
@@ -36,7 +36,7 @@ From: astral/uv:python3.12-bookworm-slim
     export XDG_CONFIG_HOME
 
     cd /opt/swvo/
-    uv sync
+    uv sync --locked
 
 %runscript
     exec "$@"
