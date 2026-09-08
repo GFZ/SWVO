@@ -30,14 +30,15 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@main
+        with:
+          enable-cache: true
 
       - name: Set up Python
         run: uv python install
 
       - name: Install project and ty
         run: |
-          uv venv
-          uv pip install . ty -U
+          uv sync --locked
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Run ty
@@ -58,11 +59,11 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
+          enable-cache: true
 
       - name: Install dependencies
         run: |
-          uv venv
-          uv pip install .
+          uv sync --locked
           uv pip install coveralls coverage pytest-cov
 
       - name: Run tests

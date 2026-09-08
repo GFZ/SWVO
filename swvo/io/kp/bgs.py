@@ -75,15 +75,15 @@ class KpBGS(BaseIO):
 
         self._resolved_urls = []
 
-        temporary_dir = Path("./temp_kp_bgs_wget")
-        temporary_dir.mkdir(exist_ok=True, parents=True)
-
-        logger.debug(f"Downloading file {self.URL} ...")
-
         file_path = self.data_dir / request_time.strftime("%Y") / f"BGS_KP_FORECAST_{request_time.strftime('%Y%m')}.csv"
 
         if file_path.exists() and not reprocess_files:
             return
+
+        logger.debug(f"Downloading file {self.URL} ...")
+
+        temporary_dir = Path("./temp_kp_bgs_wget")
+        temporary_dir.mkdir(exist_ok=True, parents=True)
 
         tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
         try:
@@ -109,8 +109,8 @@ class KpBGS(BaseIO):
             if tmp_path.exists():
                 tmp_path.unlink()
             return
-
-        rmtree(temporary_dir, ignore_errors=True)
+        finally:
+            rmtree(temporary_dir, ignore_errors=True)
 
     def _download(self, temporary_dir: Path, request_time: datetime) -> None:
         """Download BGS Kp data for a specific month.

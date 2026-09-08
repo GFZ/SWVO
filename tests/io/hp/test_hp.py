@@ -141,7 +141,6 @@ class TestHpGFZ:
         mock_response.raise_for_status = Mock()
         mock_get = mocker.patch("swvo.io.hp.gfz.requests.get", return_value=mock_response)
 
-        mocker.patch("swvo.io.hp.gfz.rmtree")
         mocker.patch.object(hp30gfz, "_process_single_file", return_value=pd.DataFrame())
 
         hp30gfz.download_and_process(start_time, end_time)
