@@ -3522,11 +3522,11 @@ requires-dist = [
     { name = "ipython" },
     { name = "linkify-it-py", marker = "extra == 'docs'" },
     { name = "mat73", specifier = ">=0.65" },
-    { name = "matplotlib", specifier = ">=3.10.8" },
+    { name = "matplotlib", specifier = ">=3.10" },
     { name = "myst-parser", marker = "extra == 'docs'" },
     { name = "nbsphinx", marker = "extra == 'docs'" },
     { name = "netcdf4", specifier = ">=1.7.2" },
-    { name = "numpy", specifier = ">=2.4.2" },
+    { name = "numpy", specifier = ">=2.2" },
     { name = "numpydoc", marker = "extra == 'docs'" },
     { name = "pandas", specifier = ">=2.3" },
     { name = "pre-commit" },
@@ -3539,7 +3539,7 @@ requires-dist = [
     { name = "rich" },
     { name = "richpool" },
     { name = "ruff" },
-    { name = "scipy", specifier = ">=1.17.0" },
+    { name = "scipy", specifier = ">=1.15" },
     { name = "sphinx", marker = "extra == 'docs'" },
     { name = "sphinx-copybutton", marker = "extra == 'docs'" },
     { name = "sphinx-github-changelog", marker = "extra == 'docs'" },
@@ -3547,7 +3547,7 @@ requires-dist = [
     { name = "tqdm", specifier = ">=4.67.3" },
     { name = "ty" },
     { name = "wget", specifier = ">=3.2" },
-    { name = "xarray", specifier = ">=2025.1.0" },
+    { name = "xarray", specifier = ">=2024.10" },
 ]
 provides-extras = ["docs"]
 
