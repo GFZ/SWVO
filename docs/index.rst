@@ -28,8 +28,9 @@ User Guide
    :maxdepth: 1
 
    Examples <examples/solar_wind_example>
+   Changelog <changelog>
+   Contributing Guide <CONTRIBUTING>
+
    Complete OMNI variables <omni_variables>
    SuperMAG electrojet indices <supermag_indices>
    SuperMAG substorm-onset catalogues <supermag_substorms>
-   Changelog <changelog>
-   Contributing Guide <CONTRIBUTING>
