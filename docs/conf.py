@@ -96,6 +96,9 @@ intersphinx_mapping = {
 }
 
 html_theme = "pydata_sphinx_theme"
+html_theme_options = {
+    "header_links_before_dropdown": 4,
+}
 
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
