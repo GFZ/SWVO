@@ -68,10 +68,19 @@ class KpNiemegk(BaseIO):
         reprocess_files : bool, optional
             Downloads and processes the files again, defaults to False, by default False
 
+        Returns
+        -------
+        None
+
         Raises
         ------
         FileNotFoundError
             Raise `FileNotFoundError` if the file is not downloaded successfully.
+
+        Examples
+        --------
+        >>> reader = KpNiemegk(data_dir="/path/to/kp_niemegk")
+        >>> reader.download_and_process(start_time, end_time)
         """
         if start_time < datetime.now(timezone.utc) - timedelta(days=30):
             logger.info("We can only download and process a Kp Niemegk file from the last 30 days!")
@@ -140,6 +149,11 @@ class KpNiemegk(BaseIO):
         -------
         :class:`pandas.DataFrame`
             Niemegk Kp dataframe.
+
+        Examples
+        --------
+        >>> reader = KpNiemegk(data_dir="/path/to/kp_niemegk")
+        >>> reader.read(start_time, end_time, download=True)
         """
 
         if start_time > end_time:

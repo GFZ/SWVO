@@ -2,10 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""Shared exception types raised by swvo.io readers."""
+
 
 class ModelError(Exception):
-    pass
+    """Raised when a model passed to a multi-model reader is unknown or incompatible."""
 
 
 class VariableNotFoundError(Exception):
-    pass
+    """Raised when a requested variable is not available from a reader."""

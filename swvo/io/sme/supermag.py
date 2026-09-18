@@ -90,6 +90,10 @@ class SMESuperMAG(BaseIO):
         reprocess_files : bool, optional
             Replace complete cached files as well. Defaults to ``False``.
 
+        Returns
+        -------
+        None
+
         Raises
         ------
         ValueError
@@ -98,6 +102,11 @@ class SMESuperMAG(BaseIO):
         requests.RequestException
             If a non-retryable request fails. Existing cache files remain
             untouched.
+
+        Examples
+        --------
+        >>> reader = SMESuperMAG(username="my_supermag_user", data_dir="/path/to/supermag")
+        >>> reader.download_and_process(start_time, end_time)
         """
         if start_time >= end_time:
             raise ValueError("start_time must be before end_time")
@@ -312,10 +321,10 @@ class SMESuperMAG(BaseIO):
 
         Examples
         --------
-        ``reader.read(start, end)`` returns the legacy SME schema.
-        ``reader.read(start, end, variables="all")`` returns all three indices.
-        ``reader.read(start, end, variables=["smu", "sml"])`` preserves that
-        requested column order.
+        >>> reader = SMESuperMAG(username="my_supermag_user", data_dir="/path/to/supermag")
+        >>> reader.read(start_time, end_time)  # legacy SME schema
+        >>> reader.read(start_time, end_time, variables="all")  # all three indices
+        >>> reader.read(start_time, end_time, variables=["smu", "sml"])  # requested column order
         """
         selected_variables = self._resolve_variables(variables)
         if start_time > end_time:

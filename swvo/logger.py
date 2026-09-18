@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""Logging setup for the swvo package, including rich/color console formatting."""
 
 import logging
 import sys
@@ -26,6 +27,7 @@ class _RichMarkupFormatter(logging.Formatter):
     }
 
     def format(self, record) -> str:  # noqa: ANN001
+        """Format a log record, wrapping it in rich markup for its level's color."""
         msg = super().format(record)
         style = self.COLORS.get(record.levelno, "")
         return f"[{style}]{msg}[/{style}]" if style else msg
@@ -42,6 +44,7 @@ class _ColorFormatter(logging.Formatter):
     RESET = "\033[0m"
 
     def format(self, record):
+        """Format a log record, wrapping it in ANSI color codes for its level."""
         msg = super().format(record)
         color = self.COLORS.get(record.levelno, "")
         return f"{color}{msg}{self.RESET}"

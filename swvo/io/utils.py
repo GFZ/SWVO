@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""Shared helper functions used across swvo.io readers."""
+
 import logging
 from datetime import datetime, timezone
 from typing import Optional, overload

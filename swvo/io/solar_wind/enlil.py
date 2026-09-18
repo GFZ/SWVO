@@ -257,12 +257,21 @@ class SWENLIL(BaseIO):
         reprocess_files : bool, optional
             Downloads and processes the files again, defaults to False.
 
+        Returns
+        -------
+        None
+
         Raises
         ------
         FileNotFoundError
             If `_missing_run_error` reports an error for every requested date.
         requests.RequestException
             If the archive lookup fails for every requested date.
+
+        Examples
+        --------
+        >>> reader = SWENLIL_BKG(data_dir="/path/to/enlil")
+        >>> reader.download_and_process(start_time, end_time)
         """
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time) if end_time is not None else start_time
@@ -322,6 +331,7 @@ class SWENLIL(BaseIO):
             return
 
         def process_job(job: tuple[dict, datetime]) -> None:
+            """Download and process the single run described by `job`."""
             entry, target_date = job
             self._download_and_process_single_run(entry, target_date, reprocess_files)
 
@@ -725,6 +735,11 @@ class SWENLIL_BKG(SWENLIL):
             A data frame with columns `bx_gsm`, `by_gsm`, `bz_gsm`, `bavg`, `speed`,
             `proton_density`, `temperature`, `pdyn`, `file_name`, indexed by time (UTC).
             Empty if no background run exists for that date.
+
+        Examples
+        --------
+        >>> reader = SWENLIL_BKG(data_dir="/path/to/enlil")
+        >>> reader.read(start_time, download=True)
         """
         start_time = enforce_utc_timezone(start_time)
         runs = self._read_runs(start_time, end_time, download)
@@ -791,5 +806,10 @@ class SWENLIL_CME(SWENLIL):
             One data frame per CME run, sorted by run time, each with columns `bx_gsm`,
             `by_gsm`, `bz_gsm`, `bavg`, `speed`, `proton_density`, `temperature`, `pdyn`,
             `file_name`, indexed by time (UTC). Empty if that date has no CME run.
+
+        Examples
+        --------
+        >>> reader = SWENLIL_CME(data_dir="/path/to/enlil")
+        >>> reader.read(start_time, download=True)
         """
         return self._read_runs(start_time, end_time, download)

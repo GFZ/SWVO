@@ -103,6 +103,11 @@ class OMNILowRes(BaseIO):
         ------
         ValueError
             If ``start_time`` is not before ``end_time``.
+
+        Examples
+        --------
+        >>> reader = OMNILowRes(data_dir="/path/to/omni_low_res")
+        >>> reader.download_and_process(start_time, end_time)
         """
 
         start_time = enforce_utc_timezone(start_time)
@@ -279,6 +284,11 @@ class OMNILowRes(BaseIO):
         ValueError
             If the time range is invalid, a variable is unknown, or an existing
             partial or unreadable cache cannot satisfy the request.
+
+        Examples
+        --------
+        >>> reader = OMNILowRes(data_dir="/path/to/omni_low_res")
+        >>> reader.read(start_time, end_time, download=True)
         """
         START_YEAR = 1963
         variable_names = resolve_variable_names(

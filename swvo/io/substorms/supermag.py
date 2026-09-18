@@ -109,6 +109,10 @@ class SubstormsSuperMAG(BaseIO):
             Canonical catalogue name or documented alias. Defaults to
             ``"newell"``.
 
+        Returns
+        -------
+        None
+
         Raises
         ------
         TypeError
@@ -118,6 +122,11 @@ class SubstormsSuperMAG(BaseIO):
             permanent error.
         requests.RequestException
             If a non-retryable request fails.
+
+        Examples
+        --------
+        >>> reader = SubstormsSuperMAG(username="my_supermag_user", data_dir="/path/to/substorms")
+        >>> reader.download_and_process(start_time, end_time)
         """
 
         if start_time >= end_time:
@@ -211,6 +220,11 @@ class SubstormsSuperMAG(BaseIO):
         The location in index-derived catalogues is the location of the
         station contributing to SML at onset, not necessarily the physical
         auroral breakup location.
+
+        Examples
+        --------
+        >>> reader = SubstormsSuperMAG(username="my_supermag_user", data_dir="/path/to/substorms")
+        >>> reader.read(start_time, end_time, download=True)
         """
 
         if start_time > end_time:

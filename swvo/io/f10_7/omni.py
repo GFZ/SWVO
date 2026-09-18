@@ -45,6 +45,11 @@ class F107OMNI(OMNILowRes):
         -------
         :class:`pandas.DataFrame`
             F10.7 from OMNI Low Resolution data.
+
+        Examples
+        --------
+        >>> reader = F107OMNI(data_dir="/path/to/omni_low_res")
+        >>> reader.read(start_time, end_time, download=True)
         """
 
         data_out = super().read(start_time, end_time, download=download, variables="f107")
