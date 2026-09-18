@@ -13,3 +13,7 @@ updates:
       timezone: "Europe/Berlin"
     cooldown:
       default-days: 0
+    groups:
+      pre-commit-dependencies:
+        patterns:
+          - "*"
