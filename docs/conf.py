@@ -5,6 +5,11 @@
 import os
 import sys
 
+from docutils import nodes
+from sphinx import addnodes
+from sphinx.domains.changeset import VersionChange, versionlabel_classes
+from sphinx.locale import _
+
 sys.path.insert(0, os.path.abspath(".."))
 
 import swvo
@@ -96,5 +101,60 @@ html_static_path = ["_static"]
 html_css_files = ["custom.css"]
 
 
+class DeprecatedNoVersion(VersionChange):
+    """Like the built-in ``deprecated::`` directive, but the version argument is optional.
+
+    Renders "Deprecated: ..." instead of "Deprecated since version ...:" when no
+    version is given, for cases where the deprecation isn't tied to a specific
+    version we want to advertise.
+    """
+
+    required_arguments = 0
+    optional_arguments = 2
+    final_argument_whitespace = True
+
+    def run(self):
+        name = "deprecated"
+        node = addnodes.versionmodified()
+        node.document = self.state.document
+        self.set_source_info(node)
+        node["type"] = name
+
+        version = self.arguments[0] if self.arguments else ""
+        node["version"] = version
+        text = _("Deprecated since version %s") % version if version else _("Deprecated")
+
+        messages = []
+        if len(self.arguments) == 2:
+            inodes, messages = self.parse_inline(self.arguments[1], lineno=self.lineno + 1)
+            para = nodes.paragraph(self.arguments[1], "", *inodes, translatable=False)
+            self.set_source_info(para)
+            node.append(para)
+        if self.content:
+            node += self.parse_content_to_nodes()
+
+        classes = ["versionmodified", versionlabel_classes[name]]
+        if len(node) > 0 and isinstance(node[0], nodes.paragraph):
+            if node[0].rawsource:
+                content = nodes.inline(node[0].rawsource, translatable=True)
+                content.source = node[0].source
+                content.line = node[0].line
+                content += node[0].children
+                node[0].replace_self(nodes.paragraph("", "", content, translatable=False))
+            para = node[0]
+            para.insert(0, nodes.inline("", "%s: " % text, classes=classes))
+        elif len(node) > 0:
+            para = nodes.paragraph("", "", nodes.inline("", "%s: " % text, classes=classes), translatable=False)
+            node.insert(0, para)
+        else:
+            para = nodes.paragraph("", "", nodes.inline("", "%s." % text, classes=classes), translatable=False)
+            node.append(para)
+
+        self.env.domains.changeset_domain.note_changeset(node)
+
+        return [node, *messages]
+
+
 def setup(app):
     app.add_css_file("custom.css")
+    app.add_directive("deprecated", DeprecatedNoVersion, override=True)

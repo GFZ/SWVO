@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import datetime as dt
+import logging
+import warnings
 from datetime import timedelta, timezone
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -45,9 +47,22 @@ from swvo.io.RBMDataSet.utils import (
 )
 from swvo.io.utils import enforce_utc_timezone
 
+logger = logging.getLogger(__name__)
+
+_DEPRECATION_MESSAGE = (
+    "RBMDataSet is deprecated; RBM dataset handling has moved to el_paso "
+    "(https://github.com/GFZ/EL_PASO). This class is kept for backward compatibility only."
+)
+
 
 class RBMDataSet:
     """RBMDataSet class supporting .mat, .pickle, and .nc file formats.
+
+    .. deprecated::
+
+        RBM dataset handling has moved to
+        `el_paso <https://github.com/GFZ/EL_PASO>`_. This class is kept here only
+        for backward compatibility and will not receive new features.
 
     This unified class handles loading RBM (Radiation Belt Model) data from multiple
     file formats. It can load data either from files or from a dictionary.
@@ -139,6 +154,8 @@ class RBMDataSet:
         verbose: bool = True,
         enable_dict_loading: bool = False,
     ) -> None:
+        warnings.warn(_DEPRECATION_MESSAGE, DeprecationWarning, stacklevel=2)
+
         self.possible_variables: list[str] = list(VariableLiteral.__args__)
 
         # Handle satellite conversion with special cases for GOES
@@ -601,7 +618,9 @@ class RBMDataSet:
 
         return different_vars
 
-    from .bin_and_interpolate_to_model_grid import bin_and_interpolate_to_model_grid  # noqa: I001
+    from .bin_and_interpolate_to_model_grid import (  # noqa: I001
+        bin_and_interpolate_to_model_grid,
+    )
     from .identify_orbits import identify_orbits
     from .interp_functions import interp_flux, interp_psd
     from .linearize_trajectories import linearize_trajectories
