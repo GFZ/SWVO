@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""Reader for combined plasmasphere-prediction input data (Kp, solar wind)."""
+
 import logging
 import os
 from datetime import datetime, timezone
@@ -18,13 +20,18 @@ class PlasmasphereCombinedInputsReader:
 
     Parameters
     ----------
-    folder : str
-        The folder where the combined inputs files are stored.
+    data_dir : Path, optional
+        The directory where the combined inputs files are stored. If not
+        provided, it is read from the ``PLASMASPHERE_COMBINED_INPUTS_DIR``
+        environment variable.
 
     Raises
     ------
+    ValueError
+        If `data_dir` is not provided and the ``PLASMASPHERE_COMBINED_INPUTS_DIR``
+        environment variable is not set.
     FileNotFoundError
-        If the data folder does not exist.
+        If the data directory does not exist.
     RuntimeError
         If the source of data requested is not among the available ones.
     """
@@ -102,6 +109,11 @@ class PlasmasphereCombinedInputsReader:
         ------
         RuntimeError
             If the source of data requested is not among the available ones.
+
+        Examples
+        --------
+        >>> reader = PlasmasphereCombinedInputsReader(data_dir="/path/to/combined_inputs")
+        >>> reader.read("kp", requested_date)
         """
         if requested_date is None:
             requested_date = datetime.now(timezone.utc).replace(microsecond=0, minute=0, second=0)

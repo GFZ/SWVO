@@ -56,6 +56,8 @@ def read_hp_from_multiple_models(
         End time of the data request.
     model_order : Sequence, optional
         Order in which data will be read from the models, defaults to [OMNI, Niemegk, Ensemble, SWPC].
+    hp_index : str, optional
+        Hp index to read. Possible options are: hp30, hp60. Defaults to "hp30".
     reduce_ensemble : {"mean", "median"} or None, optional
         The method to reduce ensembles to a single time series ("mean" or "median"), defaults to None.
     historical_data_cutoff_time : datetime, optional

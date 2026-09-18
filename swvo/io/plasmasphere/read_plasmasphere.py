@@ -4,6 +4,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""Reader for PAGER plasmasphere electron density prediction data."""
+
 import logging
 import os
 from dataclasses import dataclass
@@ -75,6 +77,20 @@ class PlasmasphereDensityCube:
         return isinstance(other, PlasmasphereDensityCube) and not self.diff(other)
 
     def diff(self, other: object) -> list[str]:
+        """Compare this density cube against another and list what differs.
+
+        Parameters
+        ----------
+        other : object
+            The object to compare against. Non-:class:`PlasmasphereDensityCube`
+            instances are reported as a type mismatch.
+
+        Returns
+        -------
+        list[str]
+            Human-readable descriptions of each field that differs (e.g.
+            ``"time mismatch"``). Empty if the two cubes are equal.
+        """
         issues = []
         if not isinstance(other, PlasmasphereDensityCube):
             issues.append("type mismatch")
@@ -132,13 +148,18 @@ class PlasmaspherePredictionReader:
 
     Parameters
     ----------
-    folder : str
-        The folder where the plasmasphere prediction files are stored.
+    data_dir : Path, optional
+        The directory where the plasmasphere prediction files are stored. If
+        not provided, it is read from the ``PLASMASPHERE_OUTPUT_DIR``
+        environment variable.
 
     Raises
     ------
+    ValueError
+        If `data_dir` is not provided and the ``PLASMASPHERE_OUTPUT_DIR``
+        environment variable is not set.
     FileNotFoundError
-        If the data folder does not exist.
+        If the data directory does not exist.
     RuntimeError
         If the source of data requested is not among the available ones.
     """
@@ -185,6 +206,11 @@ class PlasmaspherePredictionReader:
         -------
         pd.DataFrame or None
             pandas.DataFrame with L, MLT, density and date as columns
+
+        Examples
+        --------
+        >>> reader = PlasmaspherePredictionReader(data_dir="/path/to/plasmasphere")
+        >>> reader.read(requested_date)
         """
 
         requested_date = self._parse_none_date(requested_date)
@@ -278,6 +304,9 @@ class PlasmaspherePredictionReader:
         ----------
         requested_date : datetime.datetime or None
             Date of plasma density prediction that we want to read up to hour precision.
+        density_column : str or None, optional
+            Name of the density column to build the cube from. If None, a cube
+            is built for every density column present in the data.
 
         Returns
         -------

@@ -43,6 +43,11 @@ class KpOMNI(OMNILowRes):
         -------
         :class:`pandas.DataFrame`
             Kp data from OMNI Low Resolution data.
+
+        Examples
+        --------
+        >>> reader = KpOMNI(data_dir="/path/to/omni_low_res")
+        >>> reader.read(start_time, end_time, download=True)
         """
 
         data_out = super().read(start_time, end_time, download=download, variables="kp")

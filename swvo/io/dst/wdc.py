@@ -64,6 +64,11 @@ class DSTWDC(BaseIO):
         Returns
         -------
         None
+
+        Examples
+        --------
+        >>> reader = DSTWDC(data_dir="/path/to/wdc")
+        >>> reader.download_and_process(start_time, end_time)
         """
 
         start_time = enforce_utc_timezone(start_time)
@@ -228,6 +233,11 @@ class DSTWDC(BaseIO):
         -------
         :class:`pandas.DataFrame`
            WDC Dst data.
+
+        Examples
+        --------
+        >>> reader = DSTWDC(data_dir="/path/to/wdc")
+        >>> reader.read(start_time, end_time, download=True)
         """
 
         start_time = enforce_utc_timezone(start_time)

@@ -101,6 +101,11 @@ class SWSWIFTEnsemble:
         -------
         list[:class:`pandas.DataFrame`]
             A list of data frames containing ensemble data for the requested period.
+
+        Examples
+        --------
+        >>> reader = SWSWIFTEnsemble(data_dir="/path/to/swift_ensemble")
+        >>> reader.read(start_time, end_time)
         """
 
         if start_time:

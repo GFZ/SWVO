@@ -229,6 +229,26 @@ def resolve_variable_names(
     Aliases are normalized, duplicates are removed while preserving the first
     occurrence, and ``"all"`` is restricted to the requested cadence.
 
+    Parameters
+    ----------
+    registry : Sequence[OMNIVariable]
+        The variable registry to resolve against (e.g. low- or high-resolution
+        OMNI variables).
+    variables : str or iterable of str or None
+        Variables to resolve. ``None`` selects `default_names`, ``"all"``
+        selects every variable in `registry` available at `cadence`, and a
+        name or iterable of names selects that subset.
+    default_names : Sequence[str]
+        Names to use when `variables` is ``None``.
+    cadence : int, optional
+        Restricts ``"all"`` to variables available at this cadence. ``None``
+        means no cadence restriction.
+
+    Returns
+    -------
+    list[str]
+        Unique canonical variable names, in the order first requested.
+
     Raises
     ------
     ValueError

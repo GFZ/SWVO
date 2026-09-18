@@ -85,6 +85,11 @@ class KpEnsemble:
         ------
         FileNotFoundError
             Raises `FileNotFoundError` if no ensemble files are found for the requested date.
+
+        Examples
+        --------
+        >>> reader = KpEnsemble(data_dir="/path/to/kp_ensemble")
+        >>> reader.read(start_time, end_time)
         """
         # It does not make sense to read KpEnsemble files from different dates
         if start_time is not None:

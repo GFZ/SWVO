@@ -2,6 +2,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""
+Module for handling GFZ Hp data.
+"""
+
 from __future__ import annotations
 
 import json
@@ -100,6 +104,11 @@ class HpGFZ(BaseIO):
         Returns
         -------
         None
+
+        Examples
+        --------
+        >>> reader = Hp30GFZ(data_dir="/path/to/hp_gfz")
+        >>> reader.download_and_process(start_time, end_time)
         """
         temporary_dir = Path("./temp_hp_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
@@ -193,6 +202,11 @@ class HpGFZ(BaseIO):
         -------
         :class:`pandas.DataFrame`
             HpGFZ data for the given time range.
+
+        Examples
+        --------
+        >>> reader = Hp30GFZ(data_dir="/path/to/hp_gfz")
+        >>> reader.read(start_time, end_time, download=True)
         """
         if start_time > end_time:
             msg = "start_time must be before end_time"

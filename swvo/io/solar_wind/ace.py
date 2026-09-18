@@ -82,6 +82,11 @@ class SWACE(BaseIO):
         Returns
         -------
         None
+
+        Examples
+        --------
+        >>> reader = SWACE(data_dir="/path/to/ace")
+        >>> reader.download_and_process(start_time, end_time)
         """
 
         start_time = enforce_utc_timezone(start_time)
@@ -179,6 +184,11 @@ class SWACE(BaseIO):
         ------
         ValueError
             Raises `ValueError` if the start time is after the end time.
+
+        Examples
+        --------
+        >>> reader = SWACE(data_dir="/path/to/ace")
+        >>> reader.read(start_time, end_time, download=True)
         """
 
         if start_time > end_time:

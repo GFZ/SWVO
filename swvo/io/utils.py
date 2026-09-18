@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""Shared helper functions used across swvo.io readers."""
+
 import logging
 from datetime import datetime, timezone
 from typing import Optional, overload
@@ -65,6 +67,7 @@ def construct_updated_data_frame(
     Construct an updated data frame providing the previous data frame and the data frame of the current model call.
 
     Also adds the model label to the data frame.
+
     Parameters
     ----------
     data : list[pd.DataFrame] | pd.DataFrame

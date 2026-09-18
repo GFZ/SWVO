@@ -90,6 +90,11 @@ class DSCOVR(BaseIO):
         Returns
         -------
         None
+
+        Examples
+        --------
+        >>> reader = DSCOVR(data_dir="/path/to/dscovr")
+        >>> reader.download_and_process(start_time, end_time)
         """
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
@@ -219,6 +224,11 @@ class DSCOVR(BaseIO):
         ------
         AssertionError
             Raises `AssertionError` if the end time is before the start time.
+
+        Examples
+        --------
+        >>> reader = DSCOVR(data_dir="/path/to/dscovr")
+        >>> reader.read(start_time, end_time, download=True)
         """
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)

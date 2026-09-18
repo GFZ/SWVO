@@ -95,6 +95,11 @@ class F107SWPC(BaseIO):
         Returns
         -------
         None
+
+        Examples
+        --------
+        >>> reader = F107SWPC(data_dir="/path/to/rt_swpc_f107")
+        >>> reader.download_and_process()
         """
         temp_dir = Path("./temp_f107")
         temp_dir.mkdir(exist_ok=True)
@@ -212,6 +217,11 @@ class F107SWPC(BaseIO):
         ------
         ValueError
             Raises ValueError if `start_time` is `after end_time`.
+
+        Examples
+        --------
+        >>> reader = F107SWPC(data_dir="/path/to/rt_swpc_f107")
+        >>> reader.read(start_time, end_time, download=True)
         """
 
         if start_time > end_time:

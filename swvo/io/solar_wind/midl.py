@@ -208,6 +208,11 @@ class SWMIDL(BaseIO):
         Returns
         -------
         None
+
+        Examples
+        --------
+        >>> reader = SWMIDL(data_dir="/path/to/midl")
+        >>> reader.download_and_process(start_time, end_time)
         """
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)
@@ -414,6 +419,11 @@ class SWMIDL(BaseIO):
             Raises `AssertionError` if the end time is before the start time.
         ValueError
             Raises `ValueError` if `target` or `method` are invalid.
+
+        Examples
+        --------
+        >>> reader = SWMIDL(data_dir="/path/to/midl")
+        >>> reader.read(start_time, end_time, download=True)
         """
         start_time = enforce_utc_timezone(start_time)
         end_time = enforce_utc_timezone(end_time)

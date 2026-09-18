@@ -127,6 +127,11 @@ class OMNIHighRes(BaseIO):
             Raises `AssertionError` if the cadence is not 1 or 5 minutes.
         ValueError
             If ``start_time`` is not before ``end_time``.
+
+        Examples
+        --------
+        >>> reader = OMNIHighRes(data_dir="/path/to/omni_high_res")
+        >>> reader.download_and_process(start_time, end_time, cadence_min=1)
         """
 
         self._validate_cadence(cadence_min)
@@ -264,6 +269,11 @@ class OMNIHighRes(BaseIO):
             If the time range is invalid, a variable is unknown or unavailable
             at the selected cadence, or an existing partial or unreadable cache
             cannot satisfy the request.
+
+        Examples
+        --------
+        >>> reader = OMNIHighRes(data_dir="/path/to/omni_high_res")
+        >>> reader.read(start_time, end_time, cadence_min=1, download=True)
         """
         self._validate_cadence(cadence_min)
         variable_names = resolve_variable_names(

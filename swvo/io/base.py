@@ -135,6 +135,11 @@ class BaseIO(ABC):
         -------
         pd.DataFrame or list[pd.DataFrame]
             Data for the specified parameters.
+
+        Examples
+        --------
+        >>> reader = SomeConcreteReader(data_dir="/path/to/data")
+        >>> data = reader.read(start_time, end_time, download=True)
         """
         pass
 
@@ -159,5 +164,10 @@ class BaseIO(ABC):
         Returns
         -------
         None
+
+        Examples
+        --------
+        >>> reader = SomeConcreteReader(data_dir="/path/to/data")
+        >>> reader.download_and_process(start_time, end_time)
         """
         pass

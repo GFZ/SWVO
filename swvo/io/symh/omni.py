@@ -47,6 +47,11 @@ class SymhOMNI(OMNIHighRes):
         -------
         :class:`pandas.DataFrame`
             OMNI SYM-H data.
+
+        Examples
+        --------
+        >>> reader = SymhOMNI(data_dir="/path/to/omni_high_res")
+        >>> reader.read(start_time, end_time, cadence_min=1, download=True)
         """
 
         data_out = super().read(

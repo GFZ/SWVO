@@ -2,6 +2,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""
+Module for handling SWIFT Hp ensemble data.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -102,6 +106,11 @@ class HpEnsemble:
         ------
         FileNotFoundError
             Returns `FileNotFoundError` if no ensemble file is found for the requested date.
+
+        Examples
+        --------
+        >>> reader = Hp30Ensemble(data_dir="/path/to/hp30_ensemble")
+        >>> reader.read(start_time, end_time)
         """
         if start_time is not None:
             start_time = enforce_utc_timezone(start_time)
@@ -198,6 +207,34 @@ class HpEnsemble:
         return file_list
 
     def read_with_horizon(self, start_time: datetime, end_time: datetime, horizon: Number) -> list[pd.DataFrame]:
+        """Read Ensemble Hp forecast data for a given time range and forecast horizon.
+
+        Parameters
+        ----------
+        start_time : datetime
+            Start time of the period for which to read the data.
+        end_time : datetime
+            End time of the period for which to read the data.
+        horizon : int | float
+            Forecast horizon (in hours).
+
+        Returns
+        -------
+        list[:class:`pandas.DataFrame`]
+            A list of data frames containing ensemble data for the requested period.
+
+        Raises
+        ------
+        ValueError
+            Raises `ValueError` if `start_time` is not before `end_time`, if the
+            horizon is not between 0 and 72 hours, or if the horizon does not
+            match the index's required increment (0.5 hours for hp30, 1 hour for hp60).
+
+        Examples
+        --------
+        >>> reader = Hp30Ensemble(data_dir="/path/to/hp30_ensemble")
+        >>> reader.read_with_horizon(start_time, end_time, horizon=24)
+        """
         if start_time is not None:
             start_time = enforce_utc_timezone(start_time)
         if end_time is not None:
@@ -361,6 +398,11 @@ class Hp30Ensemble(HpEnsemble):
             Raises `ValueError` if the horizon is not between 0 and 72 hours.
         ValueError
             Raises `ValueError` if the horizon is not in 0.5 hour increments.
+
+        Examples
+        --------
+        >>> reader = Hp30Ensemble(data_dir="/path/to/hp30_ensemble")
+        >>> reader.read_with_horizon(start_time, end_time, horizon=24)
         """
         return super().read_with_horizon(start_time, end_time, horizon)
 
@@ -402,5 +444,10 @@ class Hp60Ensemble(HpEnsemble):
             Raises `ValueError` if the horizon is not between 0 and 72 hours.
         ValueError
             Raises `ValueError` if the horizon is not in 1 hour increments.
+
+        Examples
+        --------
+        >>> reader = Hp60Ensemble(data_dir="/path/to/hp60_ensemble")
+        >>> reader.read_with_horizon(start_time, end_time, horizon=24)
         """
         return super().read_with_horizon(start_time, end_time, horizon)
