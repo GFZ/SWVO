@@ -66,10 +66,19 @@ class KpSIDC(BaseIO):
         reprocess_files : bool, optional
             Downloads and processes the files again, defaults to False, by default False
 
+        Returns
+        -------
+        None
+
         Raises
         ------
         FileNotFoundError
             Raise `FileNotFoundError` if the file is not downloaded successfully.
+
+        Examples
+        --------
+        >>> reader = KpSIDC(data_dir="/path/to/kp_sidc")
+        >>> reader.download_and_process()
         """
 
         if start_time is None:
@@ -156,6 +165,11 @@ class KpSIDC(BaseIO):
         -------
         :class:`pandas.DataFrame`
             SIDC Kp dataframe.
+
+        Examples
+        --------
+        >>> reader = KpSIDC(data_dir="/path/to/kp_sidc")
+        >>> reader.read(start_time, end_time, download=True)
         """
 
         if start_time is None:

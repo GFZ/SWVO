@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""Function to read F10.7 from multiple models."""
+
 from __future__ import annotations
 
 import logging

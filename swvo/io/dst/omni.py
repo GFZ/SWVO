@@ -44,6 +44,11 @@ class DSTOMNI(OMNILowRes):
         -------
         :class:`pandas.DataFrame`
             OMNI DST data.
+
+        Examples
+        --------
+        >>> reader = DSTOMNI(data_dir="/path/to/omni_low_res")
+        >>> reader.read(start_time, end_time, download=True)
         """
         data_out = super().read(start_time, end_time, download=download, variables="dst")
         data_out.index.name = "t"

@@ -2,6 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""RBM dataset loading utilities.
+
+.. deprecated::
+
+    This subpackage is deprecated. RBM dataset handling now lives in
+    `el_paso <https://github.com/GFZ/EL_PASO>`_. It is kept here only for
+    backward compatibility and will not receive new features.
+"""
 
 from swvo.io.RBMDataSet.custom_enums import (
     FolderTypeEnum as FolderTypeEnum,

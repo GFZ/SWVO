@@ -68,10 +68,19 @@ class KpSWPC(BaseIO):
         reprocess_files : bool, optional
                         Downloads and processes the files again, defaults to False, by default False
 
+        Returns
+        -------
+        None
+
         Raises
         ------
         ValueError
             Raises `ValueError` if the target date is in the past.
+
+        Examples
+        --------
+        >>> reader = KpSWPC(data_dir="/path/to/kp_swpc")
+        >>> reader.download_and_process(target_date)
         """
         if target_date.date() < datetime.now(timezone.utc).date():
             raise ValueError("We can only download and progress a Kp SWPC file for the current day!")
@@ -153,6 +162,11 @@ class KpSWPC(BaseIO):
         ------
         ValueError
             Raises `ValueError` if the time range is more than 3 days.
+
+        Examples
+        --------
+        >>> reader = KpSWPC(data_dir="/path/to/kp_swpc")
+        >>> reader.read(start_time, end_time, download=True)
         """
         start_time = enforce_utc_timezone(start_time)
         if end_time is not None:

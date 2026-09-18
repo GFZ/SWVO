@@ -62,10 +62,19 @@ class KpBGS(BaseIO):
         reprocess_files : bool, optional
             Downloads and processes the files again, defaults to False, by default False
 
+        Returns
+        -------
+        None
+
         Raises
         ------
         FileNotFoundError
             Raise `FileNotFoundError` if the file is not downloaded successfully.
+
+        Examples
+        --------
+        >>> reader = KpBGS(data_dir="/path/to/kp_bgs")
+        >>> reader.download_and_process()
         """
 
         if request_time is None:
@@ -155,6 +164,11 @@ class KpBGS(BaseIO):
         -------
         :class:`pandas.DataFrame`
             BGS Kp dataframe.
+
+        Examples
+        --------
+        >>> reader = KpBGS(data_dir="/path/to/kp_bgs")
+        >>> reader.read(start_time, end_time, download=True)
         """
 
         if start_time is None:
