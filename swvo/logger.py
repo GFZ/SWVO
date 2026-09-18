@@ -69,6 +69,8 @@ def setup_logging(level: str | int = "INFO", log_file: Optional[Path] = None, fi
         Logging level, by default is INFO
     log_file : Path, optional
         Path to log file. If None, only console logging is enabled.If provided, logs will be written to both console and file., by default None
+    file_mode : str, optional
+        Mode to open `log_file` with (e.g. "w" to overwrite, "a" to append), by default "w".
     """
     try:
         if isinstance(level, str):

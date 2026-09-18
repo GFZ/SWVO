@@ -304,6 +304,9 @@ class PlasmaspherePredictionReader:
         ----------
         requested_date : datetime.datetime or None
             Date of plasma density prediction that we want to read up to hour precision.
+        density_column : str or None, optional
+            Name of the density column to build the cube from. If None, a cube
+            is built for every density column present in the data.
 
         Returns
         -------
