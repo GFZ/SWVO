@@ -32,8 +32,11 @@ exclude = [
     "node_modules",
     "site-packages",
     "venv",
-    "swvo/io/RBMDataSet/interp_functions.py", # exclude file for now
+    "swvo/io/RBMDataSet",
 ]
+
+# Enforce exclusions even for paths passed explicitly (e.g. by pre-commit).
+force-exclude = true
 
 # Same as Black.
 line-length = 120
@@ -85,5 +88,3 @@ docstring-code-format = false
 # This only has an effect when the `docstring-code-format` setting is
 # enabled.
 docstring-code-line-length = "dynamic"
-
-
