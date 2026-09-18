@@ -47,12 +47,6 @@ dependencies = [
     "tqdm>=4.67.3",
     "wget>=3.2",
     "xarray>=2024.10",
-    "pytest>=9.0.2",
-    "pytest-mock>=3.15.1",
-    "reuseify",
-    "ruff",
-    "ty",
-    "pre-commit",
 ]
 dynamic = ["optional-dependencies", "version"]
 
@@ -130,3 +124,17 @@ include = ["swvo"]
 
 [tool.ty.overrides.rules]
 invalid-return-type = "ignore"
+
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",
+    "ipywidgets>=8.1.9",
+    "ty",
+    "ruff",
+    "pre-commit",
+    "reuseify",
+    "coverage>=7.14.0",
+    "pytest>=9.0.2",
+    "pytest-mock>=3.15.1",
+]
