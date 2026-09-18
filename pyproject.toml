@@ -47,11 +47,10 @@ dependencies = [
     "wget>=3.2",
     "xarray>=2024.10",
 ]
-dynamic = ["optional-dependencies", "version"]
+dynamic = ["version"]
 
 [tool.setuptools.dynamic]
 version = { attr = "swvo.__version__" }
-optional-dependencies.docs = { file = ["docs/requirements.txt"] }
 
 [project.urls]
 Homepage = "https://github.com/GFZ/SWVO"
@@ -136,4 +135,17 @@ dev = [
     "coverage>=7.14.0",
     "pytest>=9.0.2",
     "pytest-mock>=3.15.1",
+]
+docs = [
+    "sphinx-copybutton",
+    "sphinx-github-changelog",
+    "sphinx",
+    "pydata-sphinx-theme",
+    "myst-parser",
+    "alabaster",
+    "docutils",
+    "imagesize",
+    "numpydoc",
+    "linkify-it-py",
+    "nbsphinx",
 ]
