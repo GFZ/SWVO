@@ -125,3 +125,7 @@ uv pip install swvo
 ```
 
 All the above `uv` commands assume you have `uv` installed, if not then remove `uv` prefix from the commands and run them directly.
+
+## Test Data
+
+The data used by the test suite is hosted on Zenodo and is not tracked in this repository. Install the `dev` dependency group (`uv sync --group dev`), which pulls in `zenodo_get`, then run `./download_data_for_tests.sh` to fetch and unpack it.
