@@ -66,6 +66,31 @@ jobs:
           uv sync --locked
           uv pip install coveralls coverage pytest-cov
 
+      - name: Resolve zenodo checksum for cache key
+        id: zenodo-record
+        run: |
+          DOI=$(grep -oP 'DOI="\K[^"]+' download_data_for_tests.sh)
+          uv run zenodo_get --doi "${DOI}" --md5 --output-dir /tmp/zenodo-md5
+          echo "id=$(md5sum /tmp/zenodo-md5/md5sums.txt | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache test data
+        id: cache-test-data
+        uses: actions/cache@v6
+        with:
+          path: |
+            tests/io/dst/data
+            tests/io/f10_7/data
+            tests/io/hp/data
+            tests/io/kp/data
+            tests/io/omni/data
+            tests/io/RBMDataSet/data
+            tests/io/solar_wind/data
+          key: zenodo-test-data-${{ steps.zenodo-record.outputs.id }}
+
+      - name: Download test data
+        if: steps.cache-test-data.outputs.cache-hit != 'true'
+        run: ./download_data_for_tests.sh
+
       - name: Run tests
         run: uv run python -m coverage run --source swvo -m pytest -rf tests
 

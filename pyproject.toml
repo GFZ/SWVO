@@ -135,6 +135,7 @@ dev = [
     "coverage>=7.14.0",
     "pytest>=9.0.2",
     "pytest-mock>=3.15.1",
+    "zenodo-get>=3.1.0",
 ]
 docs = [
     "sphinx-copybutton",

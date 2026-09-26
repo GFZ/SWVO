@@ -31,6 +31,8 @@ docs/api/*
 .nfs*
 .env
 
+tests/io/*/data/
+
 
 **/.DS_Store
 *.sif
