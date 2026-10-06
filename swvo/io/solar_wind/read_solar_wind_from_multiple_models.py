@@ -102,12 +102,12 @@ def read_solar_wind_from_multiple_models(
 
     assert reduce_ensemble in (None, "mean", "median"), "reduce_ensemble must be None, `mean` or `median`"
 
+    start_time = enforce_utc_timezone(start_time)
+    end_time = enforce_utc_timezone(end_time)
+
     if start_time > end_time:
         msg = "start_time must be before end_time"
         raise ValueError(msg)
-
-    start_time = enforce_utc_timezone(start_time)
-    end_time = enforce_utc_timezone(end_time)
 
     # Everything here lives on a one minute grid whose phase comes from start_time, while the
     # models themselves are sampled on whole minutes. A start_time carrying seconds would offset

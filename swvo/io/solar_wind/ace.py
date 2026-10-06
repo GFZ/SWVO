@@ -75,7 +75,7 @@ class SWACE(BaseIO):
         Raises
         ------
         AssertionError
-            If the requested interval is invalid or extends into a future UTC date.
+            If `start_time` is after `end_time` or in the future.
         FileNotFoundError
             If the downloaded files are empty.
 
@@ -94,9 +94,9 @@ class SWACE(BaseIO):
 
         current_time = datetime.now(timezone.utc)
 
-        assert end_time < current_time, f"End time: {end_time} cannot be in the future. Current time: {current_time}!"
+        end_time = min(end_time, current_time)
 
-        assert start_time < end_time, "Start time must be before end time!"
+        assert start_time <= end_time, "Start time must not be after end time or in the future!"
 
         temporary_dir = Path("./temp_sw_ace_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)

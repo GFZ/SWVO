@@ -241,7 +241,7 @@ class TestSWIMAP:
 
         def mock_get(url, params=None, **kwargs):
             request_date = params["time_utc_start"][:10]
-            if request_date == "2026-03-15":
+            if request_date == "2026-03-16":
                 response = Mock()
                 response.status_code = 400
                 raise requests.HTTPError(response=response)
@@ -257,11 +257,34 @@ class TestSWIMAP:
             return response
 
         with patch("requests.get", side_effect=mock_get):
-            with pytest.warns(RuntimeWarning, match="2026-03-15"):
+            with pytest.warns(RuntimeWarning, match="2026-03-16"):
                 imap_instance.download_and_process(start_time, end_time)
 
-        assert not (DATA_DIR / "2026/03" / "IMAP_SW_NOWCAST_20260315.csv").exists()
-        assert (DATA_DIR / "2026/03" / "IMAP_SW_NOWCAST_20260316.csv").exists()
+        assert (DATA_DIR / "2026/03" / "IMAP_SW_NOWCAST_20260315.csv").exists()
+        assert not (DATA_DIR / "2026/03" / "IMAP_SW_NOWCAST_20260316.csv").exists()
+
+    def test_download_and_process_no_data_creates_no_file(
+        self, imap_instance, sample_mag_payload, sample_swapi_payload
+    ):
+        start_time = datetime(2026, 3, 15, tzinfo=timezone.utc)
+        end_time = datetime(2026, 3, 16, 23, 59, 59, tzinfo=timezone.utc)
+
+        def mock_get(url, params=None, **kwargs):
+            window_start = datetime.strptime(params["time_utc_start"], "%Y-%m-%dT%H:%M:%S")
+            window_end = datetime.strptime(params["time_utc_end"], "%Y-%m-%dT%H:%M:%S")
+            source = sample_mag_payload if params["instrument"] == "mag" else sample_swapi_payload
+            filtered = _records_in_window(source["data"], window_start, window_end)
+
+            response = Mock()
+            response.raise_for_status = Mock()
+            response.json = Mock(return_value={"meta": {**source["meta"], "count": len(filtered)}, "data": filtered})
+            return response
+
+        with patch("requests.get", side_effect=mock_get):
+            imap_instance.download_and_process(start_time, end_time)
+
+        assert (DATA_DIR / "2026/03" / "IMAP_SW_NOWCAST_20260315.csv").exists()
+        assert not (DATA_DIR / "2026/03" / "IMAP_SW_NOWCAST_20260316.csv").exists()
 
     def test_download_and_process_before_public_data_start_raises(self, imap_instance):
         """Data before `_PUBLIC_DATA_START` requires an API key this reader does not use, so the

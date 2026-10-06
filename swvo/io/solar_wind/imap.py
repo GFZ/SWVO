@@ -160,6 +160,9 @@ class SWIMAP(BaseIO):
 
             mag_df = pd.concat(day.mag) if day.mag else self._empty_instrument_frame("mag")
             swapi_df = pd.concat(day.swapi) if day.swapi else self._empty_instrument_frame("swapi")
+            if mag_df.empty and swapi_df.empty:
+                logger.warning(f"No IMAP data available for {day_start.date()}, not creating a file")
+                continue
             processed_df = self._merge_instrument_data(mag_df, swapi_df, day_start)
             self._save_processed_data(processed_df, day_start.date())
 
