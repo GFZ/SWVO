@@ -128,4 +128,4 @@ All the above `uv` commands assume you have `uv` installed, if not then remove `
 
 ## Test Data
 
-The data used by the test suite is hosted on Zenodo and is not tracked in this repository. Install the `dev` dependency group (`uv sync --group dev`), which pulls in `zenodo_get`, then run `./download_data_for_tests.sh` to fetch and unpack it.
+The data used by the test suite is hosted on Hugging Face ([spsw/SWVO-Test-Data](https://huggingface.co/datasets/spsw/SWVO-Test-Data)) and is not tracked in this repository. Run `./download_data_for_tests.sh` (requires `uv`) to fetch it into `tests/io`.

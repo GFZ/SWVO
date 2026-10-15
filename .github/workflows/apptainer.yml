@@ -43,12 +43,9 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Resolve zenodo checksum for cache key
-        id: zenodo-record
-        run: |
-          DOI=$(grep -oP 'DOI="\K[^"]+' download_data_for_tests.sh)
-          uv run zenodo_get --doi "${DOI}" --md5 --output-dir /tmp/zenodo-md5
-          echo "id=$(md5sum /tmp/zenodo-md5/md5sums.txt | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - name: Resolve test data revision for cache key
+        id: test-data-revision
+        run: echo "id=$(grep -oP 'REVISION="\K[^"]+' download_data_for_tests.sh)" >> "$GITHUB_OUTPUT"
 
       - name: Cache test data
         id: cache-test-data
@@ -62,7 +59,7 @@ jobs:
             tests/io/omni/data
             tests/io/RBMDataSet/data
             tests/io/solar_wind/data
-          key: zenodo-test-data-${{ steps.zenodo-record.outputs.id }}
+          key: hf-test-data-${{ steps.test-data-revision.outputs.id }}
 
       - name: Download test data
         if: steps.cache-test-data.outputs.cache-hit != 'true'

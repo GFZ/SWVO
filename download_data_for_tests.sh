@@ -6,9 +6,15 @@
 
 set -euo pipefail
 
-DOI="10.5281/zenodo.22983305"
+REPO="spsw/SWVO-Test-Data"
+REVISION="ee8e705c77d4a80c3895f79466c0c47f3ee6c523"
 OUTPUT_DIR="."
 
-uv run zenodo_get --doi "${DOI}" --output-dir "${OUTPUT_DIR}"
-unzip -o "${OUTPUT_DIR}/swvo-test-data.zip" -d "${OUTPUT_DIR}"
-rm "${OUTPUT_DIR}/swvo-test-data.zip"
+uvx --from huggingface_hub hf download "${REPO}" --repo-type dataset --revision "${REVISION}" --local-dir "${OUTPUT_DIR}"
+
+# hf leaves its own bookkeeping behind in the output dir
+rm -rf "${OUTPUT_DIR}/.cache"
+rm -f "${OUTPUT_DIR}/.gitattributes"
+
+# Hugging Face cannot store empty directories
+mkdir -p "${OUTPUT_DIR}/tests/io/kp/data/tmp"
