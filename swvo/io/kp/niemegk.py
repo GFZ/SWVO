@@ -49,6 +49,9 @@ class KpNiemegk(BaseIO):
 
     URL = "https://kp.gfz.de/fileadmin/files_for_gfz_cms/"
     NAME = "Kp_ap_nowcast.txt"
+    API_URL = "https://kp.gfz.de/app/json/"
+
+    NOWCAST_DAYS = 30
 
     DAYS_TO_SAVE_EACH_FILE = 3
     LABEL = "niemegk"
@@ -58,6 +61,9 @@ class KpNiemegk(BaseIO):
 
     def download_and_process(self, start_time: datetime, end_time: datetime, reprocess_files: bool = False) -> None:
         """Download and process Niemegk Kp data file.
+
+        Data from the last 30 days is taken from the Niemegk nowcast file. Older data is requested from the
+        GFZ web service API (https://kp.gfz.de/en/data), which provides the definitive Kp.
 
         Parameters
         ----------
@@ -82,30 +88,71 @@ class KpNiemegk(BaseIO):
         >>> reader = KpNiemegk(data_dir="/path/to/kp_niemegk")
         >>> reader.download_and_process(start_time, end_time)
         """
-        if start_time < datetime.now(timezone.utc) - timedelta(days=30):
-            logger.info("We can only download and process a Kp Niemegk file from the last 30 days!")
-            return
+        start_time = enforce_utc_timezone(start_time)
+        end_time = enforce_utc_timezone(end_time)
 
+        self._resolved_urls.clear()
+
+        file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
+        nowcast_cutoff = datetime.now(timezone.utc) - timedelta(days=self.NOWCAST_DAYS)
+
+        nowcast_files = []
+        historical_files = []
+        for file_path, time_interval in zip(file_paths, time_intervals):
+            if file_path.exists() and not reprocess_files:
+                continue
+            if time_interval[0] < nowcast_cutoff:
+                historical_files.append((file_path, time_interval))
+            else:
+                nowcast_files.append((file_path, time_interval))
+
+        if historical_files:
+            self._download_and_process_historical(historical_files)
+        if nowcast_files:
+            self._download_and_process_nowcast(nowcast_files)
+
+    def _download_and_process_nowcast(self, files: List[Tuple[Path, Tuple[datetime, datetime]]]) -> None:
+        """Fill the given files from the Niemegk nowcast file, which covers the last 30 days only."""
         temporary_dir = Path("./temp_kp_niemegk_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
         logger.debug(f"Downloading file {self.URL + self.NAME} ...")
 
-        file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
-        for file_path, time_interval in zip(file_paths, time_intervals):
-            if file_path.exists() and not reprocess_files:
-                continue
+        try:
+            self._download(temporary_dir)
+
+            # check if download was successfull
+            if os.stat(str(temporary_dir / self.NAME)).st_size == 0:
+                raise FileNotFoundError(f"Error while downloading file: {self.URL + self.NAME}!")
+
+            logger.debug("Processing file ...")
+            processed_df = self._process_single_file(temporary_dir)
+        except Exception as e:
+            logger.error(f"Failed to download or process {self.URL + self.NAME}: {e}")
+            rmtree(temporary_dir, ignore_errors=True)
+            return
+
+        self._write_files(processed_df, files)
+
+        rmtree(temporary_dir, ignore_errors=True)
+
+    def _download_and_process_historical(self, files: List[Tuple[Path, Tuple[datetime, datetime]]]) -> None:
+        """Fill the given files from the GFZ web service API, which also serves data older than 30 days."""
+        request_start = min(time_interval[0] for _, time_interval in files)
+        request_end = max(time_interval[1] for _, time_interval in files)
+
+        try:
+            processed_df = self._process_api_response(self._download_api(request_start, request_end))
+        except Exception as e:
+            logger.error(f"Failed to download or process Kp from {self.API_URL}: {e}")
+            return
+
+        self._write_files(processed_df, files)
+
+    def _write_files(self, processed_df: pd.DataFrame, files: List[Tuple[Path, Tuple[datetime, datetime]]]) -> None:
+        for file_path, time_interval in files:
             tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
             try:
-                self._download(temporary_dir)
-
-                # check if download was successfull
-                if os.stat(str(temporary_dir / self.NAME)).st_size == 0:
-                    raise FileNotFoundError(f"Error while downloading file: {self.URL + self.NAME}!")
-
-                logger.debug("Processing file ...")
-                processed_df = self._process_single_file(temporary_dir)
-
                 data_single_file = processed_df[
                     (processed_df.index >= time_interval[0]) & (processed_df.index <= time_interval[1])
                 ]
@@ -124,14 +171,38 @@ class KpNiemegk(BaseIO):
                     tmp_path.unlink()
                 continue
 
-        rmtree(temporary_dir, ignore_errors=True)
-
     def _download(self, temporary_dir):
+        self._record_url(self.URL + self.NAME)
         response = requests.get(self.URL + self.NAME, timeout=10)
         response.raise_for_status()
 
         with open(temporary_dir / self.NAME, "w") as f:
             f.write(response.text)
+
+    def _download_api(self, start_time: datetime, end_time: datetime) -> dict:
+        # only definitive values: the nowcast file covers the last 30 days, which is always newer than the lag of `def`
+        start_str = start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        end_str = end_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        url = f"{self.API_URL}?start={start_str}&end={end_str}&index=Kp&status=def"
+
+        self._record_url(url)
+        logger.debug(f"Downloading data from {url} ...")
+
+        response = requests.get(url, timeout=60)
+        response.raise_for_status()
+
+        return response.json()
+
+    @staticmethod
+    def _process_api_response(response: dict) -> pd.DataFrame:
+        data = pd.DataFrame({"kp": response["Kp"]}, index=pd.to_datetime(response["datetime"], utc=True))
+        data.index.rename("t", inplace=True)
+        data.dropna(inplace=True)
+        data = data[data["kp"] != -1.0]
+
+        data["kp"] = np.round(data["kp"], decimals=2)
+
+        return data
 
     def read(self, start_time: datetime, end_time: datetime, download: bool = False) -> pd.DataFrame:
         """Read Niemegk Kp data for the specified time range.

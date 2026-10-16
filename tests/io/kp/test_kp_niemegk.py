@@ -98,8 +98,46 @@ class TestKpNiemegk:
 
         file_paths, _ = kp_niemegk_instance._get_processed_file_list(past_time, end_time)
 
-        for file_path in file_paths:
-            assert not file_path.exists()
+        existing = [file_path for file_path in file_paths if file_path.exists()]
+        assert len(existing) > 0
+
+        for file_path in existing:
+            df = pd.read_csv(file_path, names=["t", "kp"])
+            assert len(df) > 0
+            assert df["kp"].min() >= 0
+            assert df["kp"].max() <= 9
+
+    def test_download_historical_from_api(self, kp_niemegk_instance, tmp_path):
+        start_time = datetime(2026, 1, 30, tzinfo=timezone.utc)
+        end_time = datetime(2026, 2, 1, tzinfo=timezone.utc)
+
+        instance = KpNiemegk(data_dir=tmp_path)
+        instance.download_and_process(start_time, end_time)
+
+        assert "index=Kp" in str(instance.url)
+        assert "status=def" in str(instance.url)
+
+        data = instance.read(start_time, end_time)
+        assert data["kp"].notna().all()
+        assert data.loc["2026-01-30 00:00:00", "kp"] == pytest.approx(3.67)
+
+    def test_process_api_response(self):
+        response = {
+            "Kp": [3.667, 2.0, None, -1.0],
+            "datetime": [
+                "2026-01-30T00:00:00Z",
+                "2026-01-30T03:00:00Z",
+                "2026-01-30T06:00:00Z",
+                "2026-01-30T09:00:00Z",
+            ],
+            "status": ["def", "def", "def", "pre"],
+        }
+
+        df = KpNiemegk._process_api_response(response)
+
+        assert list(df.columns) == ["kp"]
+        assert list(df["kp"]) == [3.67, 2.0]
+        assert str(df.index.tz) == "UTC"
 
     def test_read_with_download(self, kp_niemegk_instance):
         current_time = datetime.now()

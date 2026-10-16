@@ -252,7 +252,7 @@ class TestReadKpFromMultipleModels:
             model_order=[KpOMNI(), KpNiemegk()],
             rec_model_order=[KpNiemegk()],
             recurrence=True,
-            download=True,
+            download=False,
         )
         assert data.loc["2024-11-27 00:00:00+00:00":].model.unique()[0] == "niemegk_recurrence"
 
@@ -264,7 +264,7 @@ class TestReadKpFromMultipleModels:
             model_order=[KpOMNI(), KpNiemegk()],
             recurrence=True,
             rec_model_order=[KpNiemegk(), KpOMNI()],
-            download=True,
+            download=False,
         )
         assert data.loc["2024-11-25 15:00:00+00:00":"2024-11-26 00:00:00+00:00"].model.unique()[0] == "omni_recurrence"
         assert data.loc["2024-11-27 00:00:00+00:00":].model.unique()[0] == "niemegk_recurrence"
