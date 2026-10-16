@@ -173,7 +173,7 @@ class SWMIDL(BaseIO):
         start_time: datetime,
         end_time: datetime,
         *,
-        target: float | int | str = "L1",
+        target: float | int | str = 14,
         method: Literal["ballistic", "mhd"] = "ballistic",
     ) -> None:
         """
@@ -190,9 +190,10 @@ class SWMIDL(BaseIO):
         end_time : datetime
             End time of the data to download. Must be timezone-aware.
         target : float | int | str, optional
-            Location at which MIDL returns the solar wind: ``"L1"`` (default) for unpropagated L1
-            observations, or a distance in Earth radii along the Sun-Earth line for data MIDL has
-            already propagated.
+            Location at which MIDL returns the solar wind: a distance in Earth radii along the
+            Sun-Earth line for data MIDL has already propagated (default 14, the distance used in
+            the MIDL paper for comparison against OMNI), or ``"L1"`` for unpropagated L1
+            observations.
         method : Literal["ballistic", "mhd"], optional
             MIDL propagation method, either ``"ballistic"`` (default) or ``"mhd"``. Only relevant
             if `target` is not ``"L1"``. MHD targets must be integer Earth radii in ``[-70, 70]``.
@@ -383,7 +384,7 @@ class SWMIDL(BaseIO):
         download: bool = False,
         propagation: bool = False,
         *,
-        target: float | int | str = "L1",
+        target: float | int | str = 14,
         method: Literal["ballistic", "mhd"] = "ballistic",
     ) -> pd.DataFrame:
         """
@@ -401,9 +402,10 @@ class SWMIDL(BaseIO):
             Propagate the data from L1 to near-Earth, defaults to False. Ignored if `target` is
             not ``"L1"``, since MIDL has then already propagated the data.
         target : float | int | str, optional
-            Location at which MIDL returns the solar wind: ``"L1"`` (default) for unpropagated L1
-            observations, or a distance in Earth radii along the Sun-Earth line for data MIDL has
-            already propagated.
+            Location at which MIDL returns the solar wind: a distance in Earth radii along the
+            Sun-Earth line for data MIDL has already propagated (default 14, the distance used in
+            the MIDL paper for comparison against OMNI), or ``"L1"`` for unpropagated L1
+            observations.
         method : Literal["ballistic", "mhd"], optional
             MIDL propagation method, either ``"ballistic"`` (default) or ``"mhd"``. Only relevant
             if `target` is not ``"L1"``. MHD targets must be integer Earth radii in ``[-70, 70]``.
@@ -433,7 +435,7 @@ class SWMIDL(BaseIO):
 
         if propagation and target != "L1":
             logger.warning(
-                f"Ignoring `propagation` because MIDL data is already propagated to {target_token}",
+                f"MIDL data is already propagated with target={target_token}, `propagation` is not needed and is ignored",
             )
             propagation = False
 

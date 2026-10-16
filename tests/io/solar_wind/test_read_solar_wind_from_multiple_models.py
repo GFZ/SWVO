@@ -372,17 +372,15 @@ class TestReadSolarWindFromMultipleModels:
 
     def test_midl_is_read_as_a_historical_model(self, tmp_path, expected_columns):
         """SWMIDL passed in the model order is accepted and read like the other historical
-        models: propagated from L1 and labelled `midl` in the `model` column."""
+        models: read at the default target (14 Re), without further propagation, and labelled `midl`
+        in the `model` column."""
         start_time = datetime(2024, 11, 22, tzinfo=timezone.utc)
         end_time = datetime(2024, 11, 23, tzinfo=timezone.utc)
 
         midl_model = SWMIDL(tmp_path / "midl")
 
-        # One MIDL day file per day, plus the preceding day the propagation shift reaches back to.
-        # The speed ramps slightly across the window: a strictly constant speed would shift every
-        # sample by the same amount and `sw_mag_propagation` would round half the minutes onto
-        # each other, leaving an alternating grid that says nothing about the model wiring.
-        for day in pd.date_range(start_time - timedelta(days=1), end_time, freq="D"):
+        # One MIDL day file per day, already propagated, so no preceding day is needed.
+        for day in pd.date_range(start_time, end_time, freq="D"):
             index = pd.date_range(day, day + timedelta(hours=24) - timedelta(minutes=1), freq="1min", tz="UTC")
             index.name = "t"
             speed = np.linspace(400.0, 401.0, len(index))
@@ -399,7 +397,7 @@ class TestReadSolarWindFromMultipleModels:
                 },
                 index=index,
             )
-            path = midl_model.data_dir / day.strftime("%Y/%m") / midl_model._file_name(day, "L1")
+            path = midl_model.data_dir / day.strftime("%Y/%m") / midl_model._file_name(day, "14Re")
             path.parent.mkdir(parents=True, exist_ok=True)
             df.to_csv(path)
 

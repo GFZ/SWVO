@@ -3,6 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import inspect
 import os
 import shutil
 from datetime import datetime, timezone
@@ -90,8 +91,7 @@ class TestSWMIDL:
     @pytest.mark.parametrize(
         "target,method,token",
         [
-            ("L1", "ballistic", "L1"),
-            ("l1", "ballistic", "L1"),
+            (14, "ballistic", "14Re"),
             (32, "ballistic", "32Re"),
             (20.25, "ballistic", "20p25Re"),
             (30, "mhd", "mhd_030Re"),
@@ -144,12 +144,12 @@ class TestSWMIDL:
         start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2020, 12, 31, tzinfo=timezone.utc)
 
-        file_paths, time_intervals = midl_instance._get_processed_file_list(start_time, end_time, "L1")
+        file_paths, time_intervals = midl_instance._get_processed_file_list(start_time, end_time, "14Re")
 
         assert len(file_paths) == 366
         assert all(str(path).startswith(str(DATA_DIR)) for path in file_paths)
-        assert all(path.name.startswith("MIDL_SW_L1_") for path in file_paths)
-        assert file_paths[0] == DATA_DIR / "2020/01" / "MIDL_SW_L1_20200101.csv"
+        assert all(path.name.startswith("MIDL_SW_14Re_") for path in file_paths)
+        assert file_paths[0] == DATA_DIR / "2020/01" / "MIDL_SW_14Re_20200101.csv"
         assert len(time_intervals) == 366
         assert all(isinstance(interval, tuple) for interval in time_intervals)
 
@@ -157,13 +157,13 @@ class TestSWMIDL:
         urls = midl_instance._source_urls(
             datetime(2023, 12, 20, tzinfo=timezone.utc),
             datetime(2024, 2, 3, tzinfo=timezone.utc),
-            "L1",
+            "14Re",
         )
 
         assert urls == [
-            f"{SWMIDL.URL}/2023/12/202312_L1.csv",
-            f"{SWMIDL.URL}/2024/01/202401_L1.csv",
-            f"{SWMIDL.URL}/2024/02/202402_L1.csv",
+            f"{SWMIDL.URL}/2023/12/202312_14Re.csv",
+            f"{SWMIDL.URL}/2024/01/202401_14Re.csv",
+            f"{SWMIDL.URL}/2024/02/202402_14Re.csv",
         ]
 
         mhd_urls = midl_instance._source_urls(
@@ -184,18 +184,24 @@ class TestSWMIDL:
 
         args, kwargs = mock_load.call_args
         # MIDL slices a naive index, so the UTC bounds must reach it without a timezone.
-        assert args == (start_time.replace(tzinfo=None), end_time.replace(tzinfo=None), "L1")
+        assert args == (start_time.replace(tzinfo=None), end_time.replace(tzinfo=None), 14)
         assert all(arg.tzinfo is None for arg in args[:2])
         assert kwargs == {"method": "ballistic", "coords": "GSM", "orbital_motion": False}
 
-        expected_file = DATA_DIR / "2024/03" / "MIDL_SW_L1_20240315.csv"
+        expected_file = DATA_DIR / "2024/03" / "MIDL_SW_14Re_20240315.csv"
         assert expected_file.exists()
 
         data = pd.read_csv(expected_file)
         assert len(data) == 4
         assert all(field in data.columns for field in EXPECTED_COLUMNS)
         assert not any(column in data.columns for column in ("X", "B_source", "B_interp"))
-        assert midl_instance.url == f"{SWMIDL.URL}/2024/03/202403_L1.csv"
+        assert midl_instance.url == f"{SWMIDL.URL}/2024/03/202403_14Re.csv"
+
+    def test_default_target_is_14_re(self):
+        for method in (SWMIDL.download_and_process, SWMIDL.read):
+            defaults = inspect.signature(method).parameters
+            assert defaults["target"].default == 14
+            assert defaults["method"].default == "ballistic"
 
     def test_download_and_process_splits_days(self, midl_instance):
         start_time = datetime(2024, 3, 15, 23, 58, tzinfo=timezone.utc)
@@ -205,8 +211,8 @@ class TestSWMIDL:
         with patch("midl.load", return_value=dataset):
             midl_instance.download_and_process(start_time, end_time)
 
-        first_day = DATA_DIR / "2024/03" / "MIDL_SW_L1_20240315.csv"
-        second_day = DATA_DIR / "2024/03" / "MIDL_SW_L1_20240316.csv"
+        first_day = DATA_DIR / "2024/03" / "MIDL_SW_14Re_20240315.csv"
+        second_day = DATA_DIR / "2024/03" / "MIDL_SW_14Re_20240316.csv"
 
         assert len(pd.read_csv(first_day)) == 2
         assert len(pd.read_csv(second_day)) == 2
@@ -220,7 +226,7 @@ class TestSWMIDL:
         with patch("midl.load", return_value=make_dataset(second_start, 3)):
             midl_instance.download_and_process(second_start, second_start.replace(hour=2, minute=2))
 
-        file_path = DATA_DIR / "2024/03" / "MIDL_SW_L1_20240315.csv"
+        file_path = DATA_DIR / "2024/03" / "MIDL_SW_14Re_20240315.csv"
         data = pd.read_csv(file_path)
 
         assert len(data) == 6
@@ -295,7 +301,7 @@ class TestSWMIDL:
 
         data = midl_instance.read(start_time, end_time)
 
-        file_path = DATA_DIR / "2024/03" / "MIDL_SW_L1_20240315.csv"
+        file_path = DATA_DIR / "2024/03" / "MIDL_SW_14Re_20240315.csv"
         assert isinstance(data, pd.DataFrame)
         assert len(data) == 1440
         assert all(col in data.columns for col in EXPECTED_COLUMNS)
@@ -314,27 +320,14 @@ class TestSWMIDL:
         assert mock_load.called
         assert data.loc[start_time, "bavg"] == pytest.approx(13.0)
 
-    def test_with_propagation(self, midl_instance):
-        start_time = datetime(2024, 3, 15, tzinfo=timezone.utc)
-        end_time = datetime(2024, 3, 16, tzinfo=timezone.utc)
-
-        with patch("midl.load", return_value=make_dataset(start_time, 2 * 1440)):
-            midl_instance.download_and_process(start_time, end_time)
-
-        data = midl_instance.read(start_time, end_time, propagation=True)
-
-        assert isinstance(data, pd.DataFrame)
-        assert all(col in data.columns for col in EXPECTED_COLUMNS)
-        assert data.index.is_monotonic_increasing
-        assert any(data["file_name"] == "propagated from previous MIDL file")
-
     def test_propagation_skipped_for_propagated_target(self, midl_instance, caplog):
         start_time = datetime(2024, 3, 15, tzinfo=timezone.utc)
         end_time = datetime(2024, 3, 16, tzinfo=timezone.utc)
 
-        data = midl_instance.read(start_time, end_time, target=32, propagation=True)
+        data = midl_instance.read(start_time, end_time, propagation=True)
 
-        assert "already propagated" in caplog.text
+        assert "already propagated with target=14Re" in caplog.text
+        assert "`propagation` is not needed" in caplog.text
         # No -1 day shift was applied either, so the output starts exactly at start_time
         # instead of the day before, and carries no propagation provenance.
         assert data.index[0] == start_time

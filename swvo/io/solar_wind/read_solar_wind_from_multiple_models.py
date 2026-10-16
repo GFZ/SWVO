@@ -382,8 +382,12 @@ def _read_historical_model(
 
     """
     logger.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
+    # OMNI is already propagated, so no L1 propagation is applied.
     if isinstance(model, SWOMNI):
         data_one_model = model.read(start_time, end_time, download=download)
+    # MIDL is requested already propagated to 14 Re (comparable to OMNI), so `propagation` is not needed.
+    elif isinstance(model, SWMIDL):
+        data_one_model = model.read(start_time, end_time, download=download, target=14)
     else:
         data_one_model = model.read(start_time, end_time, download=download, propagation=True)
 
