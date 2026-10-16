@@ -7,7 +7,6 @@
 Module for handling OMNI high resolution data.
 """
 
-import calendar
 import logging
 import re
 from collections.abc import Iterable
@@ -26,7 +25,7 @@ from swvo.io.omni.variables import (
     resolve_variable_names,
 )
 from swvo.io.omni.variables import available_variables as get_available_variables
-from swvo.io.utils import enforce_utc_timezone
+from swvo.io.utils import enforce_utc_timezone, start_of_next_month
 
 logger = logging.getLogger(__name__)
 
@@ -393,14 +392,7 @@ class OMNIHighRes(BaseIO):
 
         # Check if end_time is within cadence_min of the next month boundary
         # This ensures we include the next month's file if needed
-        end_year = end_time.year
-        end_month = end_time.month
-
-        # Calculate next month start
-        if end_month == 12:
-            next_month_start = datetime(end_year + 1, 1, 1, 0, 0, 0, tzinfo=end_time.tzinfo)
-        else:
-            next_month_start = datetime(end_year, end_month + 1, 1, 0, 0, 0, tzinfo=end_time.tzinfo)
+        next_month_start = start_of_next_month(end_time)
 
         time_diff_to_next_month = (next_month_start - end_time).total_seconds() / 3600
 
@@ -422,17 +414,13 @@ class OMNIHighRes(BaseIO):
             # Create time interval for current month
             interval_start = datetime(year, month, 1, 0, 0, 0, tzinfo=current_date.tzinfo)
 
-            # Get last day of the month
-            last_day = calendar.monthrange(year, month)[1]
-            interval_end = datetime(year, month, last_day, 23, 59, 59, tzinfo=current_date.tzinfo)
+            # Last second of the month
+            interval_end = start_of_next_month(current_date) - timedelta(seconds=1)
 
             time_intervals.append((interval_start, interval_end))
 
             # Move to next month
-            if month == 12:
-                current_date = current_date.replace(year=year + 1, month=1)
-            else:
-                current_date = current_date.replace(month=month + 1)
+            current_date = start_of_next_month(current_date)
 
             # Break condition to avoid infinite loop
             if include_next_month and current_date > next_month_start:

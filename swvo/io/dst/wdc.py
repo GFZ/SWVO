@@ -6,11 +6,10 @@
 Module for handling WDC Dst data.
 """
 
+import io
 import logging
-import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from shutil import rmtree
 from typing import List, Tuple
 
 import numpy as np
@@ -18,7 +17,7 @@ import pandas as pd
 import requests
 
 from swvo.io.base import BaseIO
-from swvo.io.utils import enforce_utc_timezone
+from swvo.io.utils import enforce_utc_timezone, start_of_next_month
 
 logger = logging.getLogger(__name__)
 
@@ -46,11 +45,19 @@ class DSTWDC(BaseIO):
 
     ENV_VAR_NAME = "WDC_STREAM_DIR"
 
-    URL = "https://wdc.kugi.kyoto-u.ac.jp/dst_realtime/YYYYMM/"
+    URL = "https://wdc.kugi.kyoto-u.ac.jp/hapi/"
+    # "Best Available" serves, for each period, the highest processing level: final > provisional > real-time
+    DATASET = "hour_dst"
+    FILL_VALUE = 99999
     LABEL = "wdc"
 
     def download_and_process(self, start_time: datetime, end_time: datetime, reprocess_files: bool = False) -> None:
         """Download and process WDC Dst data files.
+
+        The data is requested from the HAPI server of the WDC Kyoto (https://wdc.kugi.kyoto-u.ac.jp/hapi/). Its
+        "Best Available" dataset serves, for each period, the final Dst if available, otherwise the provisional
+        and otherwise the real-time one. A file which was written while only the real-time or provisional values
+        existed is not updated automatically, use `reprocess_files=True` to replace it.
 
         Parameters
         ----------
@@ -76,46 +83,35 @@ class DSTWDC(BaseIO):
 
         assert start_time < end_time, "Start time must be before end time!"
 
-        temporary_dir = Path("./temp_wdc")
-        temporary_dir.mkdir(exist_ok=True, parents=True)
-
         self._resolved_urls = []
         file_paths, time_intervals = self._get_processed_file_list(start_time, end_time)
 
+        files = []
         for file_path, time_interval in zip(file_paths, time_intervals):
-            filename = "index.html"
             if file_path.exists() and not reprocess_files:
+                continue
+            files.append((file_path, time_interval))
+
+        if not files:
+            return
+
+        try:
+            processed_df = self._process_hapi_response(self._download(files[0][1], start_of_next_month(files[-1][1])))
+        except Exception as e:
+            logger.error(f"Failed to download or process WDC Dst from {self.URL}: {e}")
+            return
+
+        for file_path, time_interval in files:
+            month_end = start_of_next_month(time_interval)
+            data_single_file = processed_df[(processed_df.index >= time_interval) & (processed_df.index < month_end)]
+
+            if len(data_single_file.index) == 0:
+                logger.warning(f"WDC Dst data not found for {time_interval.strftime('%Y%m')}")
                 continue
 
             tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
-
-            URL = self.URL.replace("YYYYMM", time_interval.strftime("%Y%m"))
-
-            if file_path.exists():
-                if reprocess_files:
-                    file_path.unlink()
-                else:
-                    continue
-
             try:
-                logger.debug(f"Downloading file {URL} ...")
-                self._record_url(URL)
-                response = requests.get(URL, timeout=10)
-                if response.status_code == 404:
-                    logger.warning(f"WDC Dst data not found at {URL}")
-                    continue
-                response.raise_for_status()
-                data = response.text.splitlines()
-                with open(temporary_dir / filename, "w") as file:
-                    file.write("\n".join(data))
-                logger.debug("Processing file ...")
-
-                processed_df = self._process_single_file(
-                    temporary_dir / filename,
-                    year=time_interval.year,
-                    month=time_interval.month,
-                )
-                processed_df.to_csv(tmp_path, index=True, header=True)
+                data_single_file.to_csv(tmp_path, index=True, header=True)
                 tmp_path.replace(file_path)
             except Exception as e:
                 logger.error(f"Failed to process {file_path}: {e}")
@@ -123,7 +119,36 @@ class DSTWDC(BaseIO):
                     tmp_path.unlink()
                 continue
 
-        rmtree(temporary_dir, ignore_errors=True)
+    def _download(self, start_time: datetime, end_time: datetime) -> str:
+        """Download the WDC Dst of the given range from the HAPI server as CSV.
+
+        The range is clamped to the period covered by the server, since it rejects requests beyond it.
+        """
+        info_url = f"{self.URL}info?id={self.DATASET}"
+        self._record_url(info_url)
+        info = requests.get(info_url, timeout=10)
+        info.raise_for_status()
+        info = info.json()
+
+        available_start = datetime.fromisoformat(info["startDate"].replace("Z", "+00:00"))
+        available_end = datetime.fromisoformat(info["stopDate"].replace("Z", "+00:00"))
+
+        start_time = max(start_time, available_start)
+        end_time = min(end_time, available_end)
+        if start_time >= end_time:
+            return ""
+
+        url = (
+            f"{self.URL}data?id={self.DATASET}&format=csv"
+            f"&start={start_time.strftime('%Y-%m-%dT%H:%M:%SZ')}&stop={end_time.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+        )
+        self._record_url(url)
+        logger.debug(f"Downloading data from {url} ...")
+
+        response = requests.get(url, timeout=120)
+        response.raise_for_status()
+
+        return response.text
 
     def _get_processed_file_list(self, start_time: datetime, end_time: datetime) -> Tuple[List, List]:
         """Get list of file paths and their corresponding time intervals.
@@ -137,11 +162,10 @@ class DSTWDC(BaseIO):
         file_paths = []
         time = []
 
-        current_time = datetime(start_time.year, start_time.month, 1)
-        if end_time.month == 12 and end_time.month == 12:
-            end_time = datetime(end_time.year + 1, 1, 1, 0, 0, 0)
-        else:
-            end_time = datetime(end_time.year, end_time.month + 1, 1)
+        start_time = enforce_utc_timezone(start_time)
+        end_time = start_of_next_month(enforce_utc_timezone(end_time))
+
+        current_time = datetime(start_time.year, start_time.month, 1, tzinfo=timezone.utc)
 
         while current_time < end_time:
             # Create yearly subdirectory
@@ -154,65 +178,32 @@ class DSTWDC(BaseIO):
             file_time = current_time
 
             time.append(file_time)
-            # Increment the month
-            if current_time.month == 12 and current_time.month == 12:
-                current_time = datetime(current_time.year + 1, 1, 1, 0, 0, 0)
-            else:
-                current_time = datetime(current_time.year, current_time.month + 1, 1, 0, 0, 0)
+            current_time = start_of_next_month(current_time)
 
         return file_paths, time
 
-    def _process_single_file(self, file_path: Path, year, month) -> pd.DataFrame:
-        """Process yearly WDC Dst file to a DataFrame.
+    def _process_hapi_response(self, text: str) -> pd.DataFrame:
+        """Process the CSV returned by the HAPI server to a DataFrame.
 
         Parameters
         ----------
-        file_path : Path
-            Path to the file.
+        text : str
+            CSV with the columns time, Dst and version code. The time is the center of the hour.
 
         Returns
         -------
         pd.DataFrame
-            YearlyWDC Dst data.
-
+            WDC Dst data, indexed by the start of the hour.
         """
-        with open(file_path, "r") as file:
-            text = file.read()
+        if not text.strip():
+            df = pd.DataFrame({"dst": pd.Series(dtype=float)}, index=pd.DatetimeIndex([], tz="UTC"))
+        else:
+            df = pd.read_csv(io.StringIO(text), names=["t", "dst", "version"], usecols=["t", "dst"])
+            df.index = pd.to_datetime(df["t"], utc=True).dt.floor("h")
+            df = df[["dst"]].astype(float)
+            df = df[df["dst"] != self.FILL_VALUE]
 
-        data = text.split("DAY")[-1]
-        data = data.split("<!-- vvvvv S yyyymm_part3.html vvvvv -->", 1)[0]
-        lines = data.strip().splitlines()
-
-        records = []
-
-        # Skip header and any non-data lines
-        for line in lines:
-            numbers = re.findall(r"[-+]?\d+", line)
-            if not numbers:
-                continue
-            day = int(numbers[0])
-            dst_values = numbers[1:]
-
-            for hour, val in enumerate(dst_values):
-                if val.startswith("9999"):
-                    continue
-                if len(val) > 4:
-                    val = val[:4] if not val.startswith("9999") else None
-                try:
-                    dst = float(val)  # ty:ignore[invalid-argument-type]
-                except:  # noqa: E722
-                    continue
-                dt = datetime(year, month, day, hour)
-                records.append({"t": dt, "dst": dst})
-
-        df = pd.DataFrame(records)
-        df.reset_index(drop=True, inplace=True)
-        df["t"] = pd.to_datetime(df["t"], utc=True)
-        df.index = df["t"]
-        df.drop(columns=["t"], inplace=True)
         df.index.rename("timestamp", inplace=True)
-
-        file_path.unlink()
 
         return df
 

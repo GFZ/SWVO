@@ -3,11 +3,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
+from datetime import datetime, timezone
 
 import pandas as pd
 import pytest
 
-from swvo.io.utils import any_nans, nan_percentage
+from swvo.io.utils import any_nans, nan_percentage, start_of_next_month
 
 
 def test_any_nans_single_dataframe_with_nans():
@@ -55,3 +56,25 @@ def test_any_nans_invalid_input():
 
 def test_any_nans_empty_list():
     assert any_nans([]) is False
+
+
+@pytest.mark.parametrize(
+    "time, expected",
+    [
+        (datetime(2024, 1, 1), datetime(2024, 2, 1)),
+        (datetime(2024, 2, 29, 23, 59, 59), datetime(2024, 3, 1)),
+        (datetime(2024, 11, 15, 12, 30), datetime(2024, 12, 1)),
+        (datetime(2024, 12, 31, 23, 59, 59), datetime(2025, 1, 1)),
+    ],
+)
+def test_start_of_next_month(time, expected):
+    assert start_of_next_month(time) == expected
+
+
+def test_start_of_next_month_keeps_timezone():
+    time = datetime(2024, 12, 15, 6, tzinfo=timezone.utc)
+
+    result = start_of_next_month(time)
+
+    assert result == datetime(2025, 1, 1, tzinfo=timezone.utc)
+    assert result.tzinfo == timezone.utc

@@ -19,7 +19,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from swvo.io.base import BaseIO
-from swvo.io.utils import enforce_utc_timezone
+from swvo.io.utils import enforce_utc_timezone, start_of_next_month
 
 logger = logging.getLogger(__name__)
 
@@ -244,10 +244,7 @@ class KpBGS(BaseIO):
             tzinfo=timezone.utc,
         )
 
-        if end_time.month == 12:
-            end_of_period = datetime(end_time.year + 1, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
-        else:
-            end_of_period = datetime(end_time.year, end_time.month + 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        end_of_period = start_of_next_month(enforce_utc_timezone(end_time))
 
         while current_time < end_of_period:
             file_path = (
@@ -256,33 +253,10 @@ class KpBGS(BaseIO):
             file_paths.append(file_path)
 
             month_start = current_time
-            if current_time.month == 12:
-                month_end = datetime(
-                    current_time.year + 1,
-                    1,
-                    1,
-                    0,
-                    0,
-                    0,
-                    tzinfo=timezone.utc,
-                )
-            else:
-                month_end = datetime(
-                    current_time.year,
-                    current_time.month + 1,
-                    1,
-                    0,
-                    0,
-                    0,
-                    tzinfo=timezone.utc,
-                )
-            month_end -= timedelta(seconds=1)
+            month_end = start_of_next_month(current_time) - timedelta(seconds=1)
             time_intervals.append((month_start, month_end))
 
-            if current_time.month == 12:
-                current_time = datetime(current_time.year + 1, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
-            else:
-                current_time = datetime(current_time.year, current_time.month + 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+            current_time = start_of_next_month(current_time)
 
         return file_paths, time_intervals
 

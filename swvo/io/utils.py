@@ -15,6 +15,24 @@ from scipy.ndimage import gaussian_filter1d
 logger = logging.getLogger(__name__)
 
 
+def start_of_next_month(time: datetime) -> datetime:
+    """Get the first instant of the month following the month of `time`.
+
+    Parameters
+    ----------
+    time : datetime
+        Any datetime within the month. Its timezone information is kept.
+
+    Returns
+    -------
+    datetime
+        The first day of the next month at 00:00:00.
+    """
+    if time.month == 12:
+        return datetime(time.year + 1, 1, 1, tzinfo=time.tzinfo)
+    return datetime(time.year, time.month + 1, 1, tzinfo=time.tzinfo)
+
+
 def any_nans(data: list[pd.DataFrame] | pd.DataFrame) -> bool:
     """Calculate if a list of data frames contains any nans.
 
@@ -28,18 +46,20 @@ def any_nans(data: list[pd.DataFrame] | pd.DataFrame) -> bool:
     bool
         Bool if any data frame of the list contains any nan values
     """
-    if isinstance(data, list):
-        for df in data:
-            _ = nan_percentage(df)
-
     if isinstance(data, pd.DataFrame):
-        _ = nan_percentage(data)
+        data = [data]
 
-    return any((df.isna().any(axis=None) > 0) for df in data)
+    if not isinstance(data, list):
+        raise TypeError(f"data must be a data frame or a list of data frames, got {type(data).__name__}")
+
+    for df in data:
+        _ = nan_percentage(df)
+
+    return any(bool(df.isna().any(axis=None)) for df in data)
 
 
 def nan_percentage(data: pd.DataFrame) -> float:
-    """Calculate the percentage of NaN values in the data column of data frame and log it.
+    """Calculate the percentage of NaN values in the float columns of the data frame and log it.
 
     Parameters
     ----------
@@ -52,7 +72,7 @@ def nan_percentage(data: pd.DataFrame) -> float:
         Nan percentage in the data frame
     """
     float_columns = data.select_dtypes(include=["float64", "float32"]).columns
-    nan_percentage = (data[float_columns].isna().sum().sum() / (data.shape[0])) * 100
+    nan_percentage = (data[float_columns].isna().sum().sum() / data[float_columns].size) * 100
     logger.info(f"Percentage of NaNs in data frame: {nan_percentage:.2f}%")
 
     return nan_percentage

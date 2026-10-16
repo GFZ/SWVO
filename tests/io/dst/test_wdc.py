@@ -39,16 +39,34 @@ class TestDSTWDC:
 
     @pytest.fixture
     def sample_dst_data(self):
-        return """      unit=nT                                                                                      UT
-      1   2   3   4   5   6   7   8    9  10  11  12  13  14  15  16   17  18  19  20  21  22  23  24
-DAY
- 1    6   8   6   8   8  10  11  14   12  10  11  10   7   6   8  10   11  15  21  27  25  23  23  22
- 2   19   0 -12 -11 -16 -17 -17 -17  -26 -28 -28 -23 -26 -21 -14 -14  -14  -8  -7 -11 -19 -22 -29 -32
- 3  -31 -36 -34 -26 -19 -11 -10  -2   -3   2   6   3  -5 -19 -26 -21  -10  -5  -8 -25 -33 -19 -10 -12
+        return (
+            "2025-01-31T22:29:30Z,-5,20\n"
+            "2025-01-31T23:29:30Z,-6,20\n"
+            "2025-02-01T00:29:30Z,99999,10\n"
+            "2025-02-01T01:29:30Z,3,10\n"
+        )
 
-<!-- vvvvv S yyyymm_part3.html vvvvv -->
-</pre>
-    """
+    @staticmethod
+    def _mock_hapi(data, start="1957-01-01T00:29:30Z", stop="2026-10-16T10:00:00Z", requested=None):
+        class MockResponse:
+            def __init__(self, text="", payload=None):
+                self.text = text
+                self._payload = payload
+
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return self._payload
+
+        def mock_get(url, timeout):
+            if requested is not None:
+                requested.append(url)
+            if "/info" in url:
+                return MockResponse(payload={"startDate": start, "stopDate": stop})
+            return MockResponse(text=data)
+
+        return patch("swvo.io.dst.wdc.requests.get", side_effect=mock_get)
 
     def test_initialization_with_env_var(self):
         with patch.dict("os.environ", {DSTWDC.ENV_VAR_NAME: str(MOCK_DATA_PATH)}):
@@ -84,35 +102,68 @@ DAY
         data = pd.read_csv(expected_files[0])
         assert "dst" in data.columns
 
-    def test_download_and_process_warns_on_404(self, dst_instance, caplog):
-        class MockResponse:
-            status_code = 404
-            text = ""
-
-            def raise_for_status(self):
-                raise AssertionError("raise_for_status should not be called for 404 responses")
-
-        with patch("swvo.io.dst.wdc.requests.get", return_value=MockResponse()):
+    def test_download_and_process_warns_when_no_data(self, dst_instance, caplog):
+        with self._mock_hapi(""):
             with caplog.at_level(logging.WARNING, logger="py.warnings"):
                 dst_instance.download_and_process(datetime(2025, 1, 1), datetime(2025, 1, 2))
 
         assert "WDC Dst data not found" in caplog.text
-        expected_file = MOCK_DATA_PATH / "2025" / "WDC_DST_202501.csv"
-        assert not expected_file.exists()
-        assert dst_instance.url == "https://wdc.kugi.kyoto-u.ac.jp/dst_realtime/202501/"
+        assert not (MOCK_DATA_PATH / "2025" / "WDC_DST_202501.csv").exists()
 
-    def test_process_single_file(self, dst_instance, sample_dst_data):
-        test_file = MOCK_DATA_PATH / "test_dst.txt"
-        test_file.parent.mkdir(exist_ok=True)
+    def test_download_and_process_splits_months(self, dst_instance, sample_dst_data):
+        requested = []
+        with self._mock_hapi(sample_dst_data, requested=requested):
+            dst_instance.download_and_process(datetime(2025, 1, 1), datetime(2025, 2, 2))
 
-        with open(test_file, "w") as f:
-            f.write(sample_dst_data)
+        assert len(requested) == 2
+        assert "id=hour_dst&" in requested[1]
+        assert "start=2025-01-01T00:00:00Z&stop=2025-03-01T00:00:00Z" in requested[1]
 
-        data = dst_instance._process_single_file(test_file, 2025, 1)
+        january = pd.read_csv(MOCK_DATA_PATH / "2025" / "WDC_DST_202501.csv")
+        february = pd.read_csv(MOCK_DATA_PATH / "2025" / "WDC_DST_202502.csv")
+        assert list(january["dst"]) == [-5.0, -6.0]
+        assert list(february["dst"]) == [3.0]
+
+    def test_download_and_process_clamps_to_available_range(self, dst_instance, sample_dst_data):
+        requested = []
+        with self._mock_hapi(
+            sample_dst_data, start="1957-01-01T00:29:30Z", stop="2025-02-01T10:00:00Z", requested=requested
+        ):
+            dst_instance.download_and_process(datetime(1950, 1, 1), datetime(2030, 1, 1))
+
+        assert "start=1957-01-01T00:29:30Z&stop=2025-02-01T10:00:00Z" in requested[1]
+
+    def test_download_and_process_does_not_request_existing_files(self, dst_instance, sample_dst_data):
+        with self._mock_hapi(sample_dst_data):
+            dst_instance.download_and_process(datetime(2025, 1, 1), datetime(2025, 2, 2))
+
+        requested = []
+        with self._mock_hapi("", requested=requested):
+            dst_instance.download_and_process(datetime(2025, 1, 1), datetime(2025, 2, 2))
+        assert requested == []
+
+        with self._mock_hapi(sample_dst_data, requested=requested):
+            dst_instance.download_and_process(datetime(2025, 1, 1), datetime(2025, 2, 2), reprocess_files=True)
+        assert len(requested) == 2
+
+    def test_process_hapi_response(self, dst_instance, sample_dst_data):
+        data = dst_instance._process_hapi_response(sample_dst_data)
 
         assert isinstance(data, pd.DataFrame)
-        assert "dst" in data.columns
-        assert len(data) == 72
+        assert list(data.columns) == ["dst"]
+        assert data.index.name == "timestamp"
+        # fill value dropped, timestamps moved from the center to the start of the hour
+        assert list(data.index.strftime("%Y-%m-%d %H:%M")) == [
+            "2025-01-31 22:00",
+            "2025-01-31 23:00",
+            "2025-02-01 01:00",
+        ]
+        assert list(data["dst"]) == [-5.0, -6.0, 3.0]
+
+    def test_process_hapi_response_empty(self, dst_instance):
+        data = dst_instance._process_hapi_response("")
+        assert len(data) == 0
+        assert list(data.columns) == ["dst"]
 
     def test_read_with_no_data(self, dst_instance, caplog):
         start_time = datetime(2020, 1, 1)
