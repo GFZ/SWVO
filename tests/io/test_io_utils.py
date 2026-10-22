@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 import pandas as pd
 import pytest
 
-from swvo.io.utils import any_nans, nan_percentage, start_of_next_month
+from swvo.io.utils import any_nans, construct_updated_data_frame, nan_percentage, start_of_next_month
 
 
 def test_any_nans_single_dataframe_with_nans():
@@ -78,3 +78,40 @@ def test_start_of_next_month_keeps_timezone():
 
     assert result == datetime(2025, 1, 1, tzinfo=timezone.utc)
     assert result.tzinfo == timezone.utc
+
+
+def _omni_tail_and_ace_frames():
+    index = pd.date_range("2026-09-30 00:00", periods=4, freq="1h", tz="UTC")
+    old = pd.DataFrame(
+        {
+            "speed": [400.0, None, None, None],
+            "bz_gsm": [1.0, None, None, None],
+            "sym-h": [-5.0, -6.0, -7.0, -8.0],
+            "file_name": ["omni.csv"] * 4,
+            "model": ["omni", None, None, None],
+        },
+        index=index,
+    )
+    new = pd.DataFrame({"speed": [410.0, 420.0, 430.0, 440.0], "bz_gsm": [2.0, 3.0, 4.0, 5.0]}, index=index)
+    new["file_name"] = "ace.csv"
+    return old, new
+
+
+def test_construct_updated_data_frame_value_columns_fills_nan_tail():
+    old, new = _omni_tail_and_ace_frames()
+
+    result = construct_updated_data_frame(old, new, "ace", value_columns=["speed", "bz_gsm"])[0]
+
+    assert result["speed"].tolist() == [400.0, 420.0, 430.0, 440.0]
+    assert result["model"].tolist() == ["omni", "ace", "ace", "ace"]
+    assert result["file_name"].tolist() == ["omni.csv", "ace.csv", "ace.csv", "ace.csv"]
+    assert result["sym-h"].tolist() == [-5.0, -6.0, -7.0, -8.0]
+
+
+def test_construct_updated_data_frame_without_value_columns_keeps_rows_with_file_name():
+    old, new = _omni_tail_and_ace_frames()
+
+    result = construct_updated_data_frame(old, new, "ace")[0]
+
+    assert result["speed"].isna().tolist() == [False, True, True, True]
+    assert result["file_name"].tolist() == ["omni.csv"] * 4

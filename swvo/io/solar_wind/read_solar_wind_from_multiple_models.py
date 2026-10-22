@@ -42,6 +42,8 @@ logger = logging.getLogger(__name__)
 SWModel = DSCOVR | SWACE | SWOMNI | SWMIDL | SWIMAP | SWSWIFTEnsemble | SWENLIL_BKG | SWENLIL_CME
 
 ENLIL_MAX_LOOKBACK_DAYS = 5
+    
+SOLAR_WIND_COLUMNS = ["bavg", "bx_gsm", "by_gsm", "bz_gsm", "speed", "proton_density", "temperature", "pdyn"]
 
 logging.captureWarnings(True)
 
@@ -190,7 +192,9 @@ def read_solar_wind_from_multiple_models(
             else:
                 logger.info(f"{active_model.LABEL} data not available for future dates")
 
-        data_out = construct_updated_data_frame(data_out, data_one_model, active_model.LABEL)
+        data_out = construct_updated_data_frame(
+            data_out, data_one_model, active_model.LABEL, value_columns=SOLAR_WIND_COLUMNS
+        )
 
         # A forecast model can stop short of end_time and pin the index there, which would leave
         # the next forecast model nowhere to write and end the loop before it is even read.

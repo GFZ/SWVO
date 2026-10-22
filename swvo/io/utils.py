@@ -82,6 +82,7 @@ def construct_updated_data_frame(
     data: list[pd.DataFrame] | pd.DataFrame,
     data_one_model: list[pd.DataFrame] | pd.DataFrame,
     model_label: str,
+    value_columns: list[str] | None = None,
 ) -> list[pd.DataFrame]:
     """
     Construct an updated data frame providing the previous data frame and the data frame of the current model call.
@@ -96,6 +97,9 @@ def construct_updated_data_frame(
         The data frame or list of data frames from the current model call.
     model_label : str
         The label of the model to add to the data frame.
+    value_columns : list[str] | None, optional
+        Columns that decide whether a row is empty. A row is filled from the new model when all of
+        these columns are NaN, regardless of the other columns. By default, all columns are checked.
 
     Returns
     -------
@@ -135,7 +139,15 @@ def construct_updated_data_frame(
             data_one_model[i].loc[data_one_model[i]["file_name"].isna(), "model"] = None
         if data[i].empty:
             data[i] = data_one_model[i]
-        empty_idx = data[i].index[data[i].isna().all(axis=1)]
+        if value_columns is not None:
+            # use value-columns
+            meta_cols = [c for c in ("model", "file_name") if c in data[i].columns]
+            check_cols = [c for c in value_columns if c in data[i].columns]
+            empty_idx = data[i].index[data[i][check_cols].isna().all(axis=1)]
+            # model and file_name are taken from the source that fills these rows
+            data[i].loc[empty_idx, meta_cols] = None
+        else:
+            empty_idx = data[i].index[data[i].isna().all(axis=1)]
 
         data[i].loc[empty_idx] = (
             data[i].loc[empty_idx].combine_first(data_one_model[i].reindex(data[i].index).loc[empty_idx])
