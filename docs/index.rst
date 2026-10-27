@@ -34,3 +34,4 @@ User Guide
    Complete OMNI variables <omni_variables>
    SuperMAG electrojet indices <supermag_indices>
    SuperMAG substorm-onset catalogues <supermag_substorms>
+   Presentation <presentation>
