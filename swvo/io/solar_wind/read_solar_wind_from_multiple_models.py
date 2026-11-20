@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 SWModel = DSCOVR | SWACE | SWOMNI | SWMIDL | SWIMAP | SWSWIFTEnsemble | SWENLIL_BKG | SWENLIL_CME
 
 ENLIL_MAX_LOOKBACK_DAYS = 5
-    
+
 SOLAR_WIND_COLUMNS = ["bavg", "bx_gsm", "by_gsm", "bz_gsm", "speed", "proton_density", "temperature", "pdyn"]
 
 logging.captureWarnings(True)
@@ -155,6 +155,7 @@ def read_solar_wind_from_multiple_models(
                 download=download,
                 do_interpolation=do_interpolation,
                 swift_read_later=swift_index is not None and swift_index > model_index,
+                keep_propagated_lead=not forecast_indices,
             )
         except ValueError as e:
             # Only DSCOVR has an ACE fallback (it stops being available past a fixed date). A
@@ -183,6 +184,7 @@ def read_solar_wind_from_multiple_models(
                 download=download,
                 do_interpolation=do_interpolation,
                 swift_read_later=swift_index is not None and swift_index > model_index,
+                keep_propagated_lead=not forecast_indices,
             )
 
         if isinstance(active_model, (SWSWIFTEnsemble, SWENLIL)):
@@ -210,7 +212,7 @@ def read_solar_wind_from_multiple_models(
         start_time,
         end_time,
         historical_data_cutoff_time,
-        forecast_models_tried == 0 or forecast_models_with_data > 0,
+        forecast_models_with_data > 0,
         truncate=not fill_average,
     )
 
@@ -273,6 +275,7 @@ def _read_from_model(
     download: bool,
     do_interpolation: bool,
     swift_read_later: bool = False,
+    keep_propagated_lead: bool = False,
 ) -> list[pd.DataFrame] | pd.DataFrame:
     """Reads SW data from a given model within the specified time range.
 
@@ -298,6 +301,8 @@ def _read_from_model(
     swift_read_later : bool, optional
         Whether SWIFT sits after this model in the order and so has not been read yet. Its
         ensemble size is then unknown, and ENLIL keeps to its latest run to stay combinable.
+    keep_propagated_lead : bool, optional
+        Whether L1 propagated models keep their values after the cutoff (see `_read_historical_model`).
 
     Returns
     -------
@@ -314,6 +319,7 @@ def _read_from_model(
             historical_data_cutoff_time,
             download=download,
             do_interpolation=do_interpolation,
+            keep_propagated_lead=keep_propagated_lead,
         )
 
     # Forecasting models are called with synthetic now time
@@ -356,6 +362,7 @@ def _read_historical_model(
     *,
     download: bool,
     do_interpolation: bool,
+    keep_propagated_lead: bool = False,
 ) -> pd.DataFrame:
     """Reads SW data from historical models (DSCOVR, SWACE, SWOMNI, SWMIDL or SWIMAP) within the specified time range.
 
@@ -368,11 +375,15 @@ def _read_historical_model(
     end_time : datetime
         The end time of the data range.
     historical_data_cutoff_time : datetime
-        Represents "now". Data after this time is set to NaN.
+        Represents "now". Data after this time is set to NaN, except for the L1 propagated models (ACE, DSCOVR,
+        IMAP), whose source data ends at this time and whose propagated values (about 1 hour of lead time) are kept.
     download : bool, optional
         Whether to download new data or not.
     do_interpolation : bool, optional
         If True, apply spline interpolation to short gaps (<= 3 hours) in historical data
+    keep_propagated_lead : bool, optional
+        If True, L1 propagated models are read up to the cutoff only and keep their propagated values after it.
+        Meant for model orders without forecast models, which would otherwise own the time after the cutoff.
 
     Returns
     -------
@@ -387,11 +398,21 @@ def _read_historical_model(
     """
     logger.info(f"Reading {model.LABEL} from {start_time} to {end_time}")
     # OMNI is already propagated, so no L1 propagation is applied.
+    # l1_propagated models are read only up to the cutoff, so that no measurement from after "now" is used. Their
+    # propagated output still extends past the cutoff by the L1 to Earth travel time (about 1 hour), which is
+    # real lead time and therefore kept instead of being set to NaN.
+    l1_propagated = (
+        keep_propagated_lead and not isinstance(model, (SWOMNI, SWMIDL)) and start_time <= historical_data_cutoff_time
+    )
     if isinstance(model, SWOMNI):
         data_one_model = model.read(start_time, end_time, download=download)
     # MIDL is requested already propagated to 14 Re (comparable to OMNI), so `propagation` is not needed.
     elif isinstance(model, SWMIDL):
         data_one_model = model.read(start_time, end_time, download=download, target=14)
+    elif l1_propagated:
+        data_one_model = model.read(
+            start_time, min(end_time, historical_data_cutoff_time), download=download, propagation=True
+        )
     else:
         data_one_model = model.read(start_time, end_time, download=download, propagation=True)
 
@@ -423,7 +444,7 @@ def _read_historical_model(
                 f"Applied spline interpolation to short gaps (<= 3 hours) in {model.LABEL} historical data",
             )
 
-    if historical_data_cutoff_time < end_time:
+    if historical_data_cutoff_time < end_time and not l1_propagated:
         data_one_model.loc[historical_data_cutoff_time + timedelta(minutes=1) : end_time] = np.nan
         logger.info(f"Setting NaNs in {model.LABEL} from {historical_data_cutoff_time} to {end_time}")
 
@@ -826,7 +847,8 @@ def _ensure_continuous_dataframe(
     historical_data_cutoff_time : datetime
         Time representing "now"
     forecast_data_available : bool
-        Whether forecast data (SWIFT or ENLIL) is available for future dates
+        Whether forecast data (SWIFT or ENLIL) is available for future dates. If not, the data frames are truncated
+        to the last available data point (at least the cutoff).
 
     Returns
     -------
@@ -849,9 +871,18 @@ def _ensure_continuous_dataframe(
 
     # Determine actual end time based on forecast availability
     if ((not forecast_data_available or future_data_all_nan) and (historical_data_cutoff_time < end_time)) and truncate:
-        actual_end_time = historical_data_cutoff_time
+        # Truncate to the last available data point, but never before the cutoff. L1 propagated data can extend
+        # past the cutoff by the travel time (about 1 hour), which is kept as lead time.
+        last_valid_times = []
+        for df in data_out:
+            numeric_cols = df.select_dtypes(include=[np.number]).columns
+            if not df.empty and len(numeric_cols) > 0:
+                valid_index = df.index[df[numeric_cols].notna().any(axis=1)]
+                if len(valid_index) > 0:
+                    last_valid_times.append(valid_index.max())
+        actual_end_time = min(max([historical_data_cutoff_time, *last_valid_times]), end_time)
         logger.info(
-            f"Since no forecast model is available for future dates, final dataframe truncated to {historical_data_cutoff_time}"
+            f"Since no forecast model is available for future dates, final dataframe truncated to {actual_end_time}"
         )
     else:
         actual_end_time = end_time
