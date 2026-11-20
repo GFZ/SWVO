@@ -13,6 +13,7 @@ import shutil
 import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Final
 
 import numpy as np
 import pandas as pd
@@ -41,7 +42,7 @@ class F107SWPC(BaseIO):
     """
 
     ENV_VAR_NAME = "RT_SWPC_F107_DIR"
-    URL = "https://services.swpc.noaa.gov/text/"
+    URL: Final = "https://services.swpc.noaa.gov/text/"
     NAME_F107 = "daily-solar-indices.txt"
 
     LABEL = "swpc"

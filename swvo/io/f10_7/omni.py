@@ -26,7 +26,7 @@ class F107OMNI(OMNILowRes):
     _READ_TIME_PADDING = timedelta(hours=23.9999)
 
     # data is downloaded along with OMNI data, check file name in parent class
-    def read(  # ty: ignore[invalid-method-override]
+    def read(  # ty: ignore[incompatible-method-override]
         self, start_time: datetime, end_time: datetime, download: bool = False
     ) -> pd.DataFrame:
         """
@@ -60,7 +60,7 @@ class F107OMNI(OMNILowRes):
         f107_df["file_name"] = data_out["file_name"]
 
         # we return it just every 24 hours
-        f107_df = f107_df.drop(f107_df[data_out.index.hour % 24 != 0].index, axis=0)  # ty: ignore[unresolved-attribute]
+        f107_df = f107_df.drop(f107_df[data_out.index.hour % 24 != 0].index, axis=0)  # ty: ignore[missing-attribute]
         f107_df = f107_df.replace(999.9, np.nan)
         f107_df.loc[f107_df["f107"].isna(), "file_name"] = None
         return f107_df  # noqa: RET504

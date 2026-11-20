@@ -22,7 +22,7 @@ class SymhOMNI(OMNIHighRes):
     Inherits the `download_and_process`, other private methods and attributes from OMNIHighRes.
     """
 
-    def read(  # ty: ignore[invalid-method-override]
+    def read(  # ty: ignore[incompatible-method-override]
         self,
         start_time: datetime,
         end_time: datetime,

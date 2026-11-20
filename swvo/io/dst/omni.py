@@ -25,7 +25,7 @@ class DSTOMNI(OMNILowRes):
     _READ_TIME_PADDING = timedelta(hours=0.9999)
 
     # data is downloaded along with OMNI data, check file name in parent class
-    def read(  # ty: ignore[invalid-method-override]
+    def read(  # ty: ignore[incompatible-method-override]
         self, start_time: datetime, end_time: datetime, download: bool = False
     ) -> pd.DataFrame:
         """

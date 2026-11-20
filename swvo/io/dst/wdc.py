@@ -10,7 +10,7 @@ import io
 import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import List, Tuple
+from typing import Final, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -45,7 +45,7 @@ class DSTWDC(BaseIO):
 
     ENV_VAR_NAME = "WDC_STREAM_DIR"
 
-    URL = "https://wdc.kugi.kyoto-u.ac.jp/hapi/"
+    URL: Final = "https://wdc.kugi.kyoto-u.ac.jp/hapi/"
     # "Best Available" serves, for each period, the highest processing level: final > provisional > real-time
     DATASET = "hour_dst"
     FILL_VALUE = 99999

@@ -12,7 +12,7 @@ import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Tuple
+from typing import Final, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -47,7 +47,7 @@ class DSCOVR(BaseIO):
 
     ENV_VAR_NAME = "SW_DSCOVR_STREAM_DIR"
 
-    URL = "https://www.ncei.noaa.gov/cloud-access/space-weather-portal/api/v1/values"
+    URL: Final = "https://www.ncei.noaa.gov/cloud-access/space-weather-portal/api/v1/values"
     NAME_DATA = "dscovr.json"
 
     SWEPAM_FIELDS = ["speed", "proton_density", "temperature"]
@@ -115,7 +115,7 @@ class DSCOVR(BaseIO):
         logger.debug("Processing file ...")
         processed_df = self._process_single_file(temporary_dir)
 
-        unique_dates = np.unique(processed_df.index.date)  # ty: ignore[unresolved-attribute]
+        unique_dates = np.unique(processed_df.index.date)  # ty: ignore[missing-attribute]
 
         for date in unique_dates:
             file_path = self.data_dir / date.strftime("%Y/%m") / f"DSCOVR_SW_NOWCAST_{date.strftime('%Y%m%d')}.csv"
@@ -418,5 +418,5 @@ class DSCOVR(BaseIO):
 
         file_date_str = Path(row["file_name"]).stem.split("_")[-1]
         file_date = pd.to_datetime(file_date_str, format="%Y%m%d").date()
-        index_date = row.name.date()  # ty: ignore[unresolved-attribute]
+        index_date = row.name.date()  # ty: ignore[missing-attribute]
         return "propagated from previous DSCOVR NOWCAST file" if file_date != index_date else row["file_name"]

@@ -16,6 +16,7 @@ from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from time import sleep
+from typing import Final
 
 import numpy as np
 import pandas as pd
@@ -58,7 +59,7 @@ class SMESuperMAG(BaseIO):
     """
 
     ENV_VAR_NAME = "SUPERMAG_STREAM_DIR"
-    URL = "https://supermag.jhuapl.edu/services/indices.php"
+    URL: Final = "https://supermag.jhuapl.edu/services/indices.php"
     LABEL = "supermag"
 
     _VARIABLES = ("sme", "sml", "smu")

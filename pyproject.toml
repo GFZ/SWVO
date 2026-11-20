@@ -121,7 +121,7 @@ exclude = ["tests", "swvo/io/RBMDataSet"]
 include = ["swvo"]
 
 [tool.ty.overrides.rules]
-invalid-return-type = "ignore"
+invalid-explicit-return = "ignore"
 
 
 [dependency-groups]
