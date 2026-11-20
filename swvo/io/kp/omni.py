@@ -24,7 +24,7 @@ class KpOMNI(OMNILowRes):
 
     _READ_TIME_PADDING = timedelta(hours=2.9999)
 
-    def read(  # ty: ignore[invalid-method-override]
+    def read(  # ty: ignore[incompatible-method-override]
         self, start_time: datetime, end_time: datetime, download: bool = False
     ) -> pd.DataFrame:
         """
@@ -56,5 +56,5 @@ class KpOMNI(OMNILowRes):
         kp_df["kp"] = data_out["kp"]
         kp_df["file_name"] = data_out["file_name"]
         # we return it just every 3 hours
-        kp_df = kp_df.drop(kp_df[data_out.index.hour % 3 != 0].index, axis=0)  # ty: ignore[unresolved-attribute]
+        kp_df = kp_df.drop(kp_df[data_out.index.hour % 3 != 0].index, axis=0)  # ty: ignore[missing-attribute]
         return kp_df  # noqa: RET504

@@ -49,6 +49,12 @@ class SWACE(BaseIO):
     ENV_VAR_NAME = "RT_SW_ACE_STREAM_DIR"
 
     URL = "https://sohoftp.nascom.nasa.gov/sdb/goes/ace/daily/"
+    # SWPC rolling file with the latest 2 hours, updated every minute. The SOHO daily files above lag by 1 to 2 hours.
+    REALTIME_URL = "https://services.swpc.noaa.gov/text/"
+    REALTIME_NAME_MAG = "ace-magnetometer.txt"
+    REALTIME_NAME_SWEPAM = "ace-swepam.txt"
+    REALTIME_WINDOW = timedelta(hours=2)
+
     NAME_MAG = "{date:%Y%m%d}_ace_mag_1m.txt"
     NAME_SWEPAM = "{date:%Y%m%d}_ace_swepam_1m.txt"
 
@@ -59,11 +65,20 @@ class SWACE(BaseIO):
 
     def _fallback_url(self) -> list[str]:
         """Source URL templates, one per file (`{date}` is unresolved until a download has run)."""
-        return [self.URL + self.NAME_MAG, self.URL + self.NAME_SWEPAM]
+        return [
+            self.URL + self.NAME_MAG,  # ty: ignore[unsupported-operator]
+            self.URL + self.NAME_SWEPAM,  # ty: ignore[unsupported-operator]
+            self.REALTIME_URL + self.REALTIME_NAME_MAG,
+            self.REALTIME_URL + self.REALTIME_NAME_SWEPAM,
+        ]
 
     def download_and_process(self, start_time: datetime, end_time: datetime) -> None:
         """
         Download and process ACE data, splitting data across midnight into appropriate day files.
+
+        Data older than `REALTIME_WINDOW` (2 hours) is taken from the SOHO daily archive files. If the requested
+        range reaches into the last 2 hours, the SWPC real-time files are downloaded as well, since the SOHO
+        files lag behind by 1 to 2 hours. Real-time values take precedence over archive values.
 
         Parameters
         ----------
@@ -101,18 +116,32 @@ class SWACE(BaseIO):
         temporary_dir = Path("./temp_sw_ace_wget")
         temporary_dir.mkdir(exist_ok=True, parents=True)
 
+        realtime_cutoff = current_time - self.REALTIME_WINDOW
+        archive_end = min(end_time, realtime_cutoff)
+
         self._resolved_urls = []
         try:
-            for date in pd.date_range(start=start_time.date(), end=end_time.date(), freq="D"):
-                request_date = date.to_pydatetime().replace(tzinfo=timezone.utc)
-                mag_file_name = self._dated_file_name(self.NAME_MAG, request_date)
-                swepam_file_name = self._dated_file_name(self.NAME_SWEPAM, request_date)
+            if start_time <= archive_end:
+                for date in pd.date_range(start=start_time.date(), end=archive_end.date(), freq="D"):
+                    request_date = date.to_pydatetime().replace(tzinfo=timezone.utc)
+                    mag_file_name = self._dated_file_name(self.NAME_MAG, request_date)
+                    swepam_file_name = self._dated_file_name(self.NAME_SWEPAM, request_date)
 
-                self._download(temporary_dir, mag_file_name)
-                self._download(temporary_dir, swepam_file_name)
+                    self._download(temporary_dir, mag_file_name)
+                    self._download(temporary_dir, swepam_file_name)
 
-                logger.debug(f"Processing ACE source files for {request_date.date()} ...")
-                processed_df = self._process_single_file(temporary_dir, mag_file_name, swepam_file_name)
+                    logger.debug(f"Processing ACE source files for {request_date.date()} ...")
+                    processed_df = self._process_single_file(temporary_dir, mag_file_name, swepam_file_name)
+                    self._save_processed_data(processed_df)
+
+            if end_time >= realtime_cutoff:
+                logger.debug("Downloading ACE real-time files from SWPC ...")
+                self._download(temporary_dir, self.REALTIME_NAME_MAG, self.REALTIME_URL)
+                self._download(temporary_dir, self.REALTIME_NAME_SWEPAM, self.REALTIME_URL)
+
+                processed_df = self._process_single_file(
+                    temporary_dir, self.REALTIME_NAME_MAG, self.REALTIME_NAME_SWEPAM
+                )
                 self._save_processed_data(processed_df)
         except Exception as e:
             logger.error(f"Failed to download and process: {e}")
@@ -122,7 +151,7 @@ class SWACE(BaseIO):
         finally:
             rmtree(temporary_dir, ignore_errors=True)
 
-    def _download(self, temporary_dir: Path, file_name: str) -> None:
+    def _download(self, temporary_dir: Path, file_name: str, base_url: str | None = None) -> None:
         """Download a file from ACE server.
 
         Parameters
@@ -131,6 +160,8 @@ class SWACE(BaseIO):
             Temporary directory to store the downloaded file.
         file_name : str
             Name of the file to download.
+        base_url : str, optional
+            Base URL of the server. Defaults to the SOHO archive (`URL`).
 
         Raises
         ------
@@ -139,16 +170,17 @@ class SWACE(BaseIO):
         FileNotFoundError
             If the downloaded file is empty.
         """
-        logger.debug(f"Downloading file {self.URL + file_name} ...")
-        self._record_url(self.URL + file_name)
-        response = requests.get(self.URL + file_name, timeout=10)
+        url = (base_url or self.URL) + file_name  # ty: ignore[unsupported-operator]
+        logger.debug(f"Downloading file {url} ...")
+        self._record_url(url)
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
 
         with open(temporary_dir / file_name, "wb") as f:
             f.write(response.content)
 
         if (temporary_dir / file_name).stat().st_size == 0:
-            raise FileNotFoundError(f"Error while downloading file: {self.URL + file_name}!")
+            raise FileNotFoundError(f"Error while downloading file: {url}!")
 
     def _dated_file_name(self, template: str, request_time: datetime) -> str:
         request_time = enforce_utc_timezone(request_time)
@@ -224,7 +256,10 @@ class SWACE(BaseIO):
             },
         )
 
-        if download and any(not file_path.exists() for file_path in file_paths):
+        # Files covering the last 2 hours are always refreshed, as they keep changing while new data arrives.
+        needs_realtime = end_time >= datetime.now(timezone.utc) - self.REALTIME_WINDOW
+
+        if download and (needs_realtime or any(not file_path.exists() for file_path in file_paths)):
             try:
                 self.download_and_process(start_time, end_time)
             except AssertionError as e:
@@ -299,7 +334,7 @@ class SWACE(BaseIO):
 
         file_date_str = Path(row["file_name"]).stem.split("_")[-1]
         file_date = pd.to_datetime(file_date_str, format="%Y%m%d").date()
-        index_date = row.name.date()  # ty: ignore[unresolved-attribute]
+        index_date = row.name.date()  # ty: ignore[missing-attribute]
         return "propagated from previous ACE NOWCAST file" if file_date != index_date else row["file_name"]
 
     def _read_single_file(self, file_path) -> pd.DataFrame:
@@ -327,7 +362,7 @@ class SWACE(BaseIO):
         return df
 
     def _save_processed_data(self, processed_df: pd.DataFrame) -> None:
-        unique_dates = np.unique(processed_df.index.date)  # ty: ignore[unresolved-attribute]
+        unique_dates = np.unique(processed_df.index.date)  # ty: ignore[missing-attribute]
 
         for date in unique_dates:
             file_path = self.data_dir / date.strftime("%Y/%m") / f"ACE_SW_NOWCAST_{date.strftime('%Y%m%d')}.csv"

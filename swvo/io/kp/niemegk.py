@@ -12,7 +12,7 @@ import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Tuple
+from typing import Final, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -47,7 +47,7 @@ class KpNiemegk(BaseIO):
 
     ENV_VAR_NAME = "RT_KP_NIEMEGK_STREAM_DIR"
 
-    URL = "https://kp.gfz.de/fileadmin/files_for_gfz_cms/"
+    URL: Final = "https://kp.gfz.de/fileadmin/files_for_gfz_cms/"
     NAME = "Kp_ap_nowcast.txt"
     API_URL = "https://kp.gfz.de/app/json/"
 

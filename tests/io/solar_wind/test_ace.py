@@ -4,7 +4,7 @@
 
 import os
 import shutil
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -156,6 +156,34 @@ class TestSWACE:
             SWACE.URL + "20240316_ace_mag_1m.txt",
             SWACE.URL + "20240316_ace_swepam_1m.txt",
         ]
+
+    def test_download_recent_data_uses_swpc_realtime(self, swace_instance):
+        now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+        start_time = now - timedelta(minutes=30)
+
+        swace_instance.download_and_process(start_time, now)
+
+        assert swace_instance.url == [
+            SWACE.REALTIME_URL + SWACE.REALTIME_NAME_MAG,
+            SWACE.REALTIME_URL + SWACE.REALTIME_NAME_SWEPAM,
+        ]
+        data = swace_instance.read(start_time, now)
+        assert data["bavg"].notna().any()
+        assert data["speed"].notna().any()
+
+    def test_download_old_data_does_not_use_swpc_realtime(self, swace_instance, sample_mag_data, sample_swepam_data):
+        start_time = datetime(2024, 3, 15, 1, 0, tzinfo=timezone.utc)
+
+        def mock_get(url, **kwargs):
+            mock_response = Mock()
+            mock_response.content = (sample_mag_data if "mag" in url else sample_swepam_data).encode()
+            mock_response.raise_for_status = Mock()
+            return mock_response
+
+        with patch("requests.get", side_effect=mock_get) as mock_requests_get:
+            swace_instance.download_and_process(start_time, start_time)
+
+        assert all(call.args[0].startswith(SWACE.URL) for call in mock_requests_get.call_args_list)
 
     def test_process_mag_file(self, swace_instance, sample_mag_data):
         request_time = datetime(2024, 3, 15, 1, 0, tzinfo=timezone.utc)

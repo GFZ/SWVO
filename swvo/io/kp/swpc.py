@@ -12,7 +12,7 @@ import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import Optional
+from typing import Final, Optional
 
 import numpy as np
 import pandas as pd
@@ -49,7 +49,7 @@ class KpSWPC(BaseIO):
 
     ENV_VAR_NAME = "RT_KP_SWPC_STREAM_DIR"
 
-    URL = "https://services.swpc.noaa.gov/text/"
+    URL: Final = "https://services.swpc.noaa.gov/text/"
     NAME = "3-day-forecast.txt"
 
     LABEL = "swpc"
@@ -263,7 +263,10 @@ class KpSWPC(BaseIO):
             lines = f.readlines()
             for line in lines:
                 if ":Issued:" in line:
-                    year = int(re.search(r"(\d{4})", line).group(1))  # ty: ignore[unresolved-attribute]
+                    year_match = re.search(r"(\d{4})", line)
+                    if year_match is None:
+                        raise ValueError(f"Could not parse the issue year from line: {line!r}")
+                    year = int(year_match.group(1))
                     break
 
             for i, line in enumerate(lines):

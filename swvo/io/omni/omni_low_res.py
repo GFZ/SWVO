@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import List, Tuple
+from typing import Final, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -49,7 +49,7 @@ class OMNILowRes(BaseIO):
 
     ENV_VAR_NAME = "OMNI_LOW_RES_STREAM_DIR"
 
-    URL = "https://spdf.gsfc.nasa.gov/pub/data/omni/low_res_omni/"
+    URL: Final = "https://spdf.gsfc.nasa.gov/pub/data/omni/low_res_omni/"
     LABEL = "omni"
 
     TIME_COLUMNS = ("year", "day", "hour")

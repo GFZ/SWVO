@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Optional, Tuple
+from typing import Final, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -47,7 +47,7 @@ class KpBGS(BaseIO):
 
     ENV_VAR_NAME = "RT_KP_BGS_STREAM_DIR"
 
-    URL = "https://geomag.bgs.ac.uk/cgi-bin/solar"
+    URL: Final = "https://geomag.bgs.ac.uk/cgi-bin/solar"
     NAME = "kp.html"
 
     LABEL = "bgs"
