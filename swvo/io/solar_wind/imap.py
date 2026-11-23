@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from time import sleep
-from typing import List, Literal, Tuple
+from typing import Final, List, Literal, Tuple
 
 import numpy as np
 import pandas as pd
@@ -67,7 +67,7 @@ class SWIMAP(BaseIO):
 
     ENV_VAR_NAME = "SW_IMAP_STREAM_DIR"
 
-    URL = "https://ialirt.imap-mission.com/space-weather"
+    URL: Final = "https://ialirt.imap-mission.com/space-weather"
 
     MAG_FIELDS = ["bx_gsm", "by_gsm", "bz_gsm", "bavg"]
     SWAPI_FIELDS = ["speed", "proton_density", "temperature"]
@@ -308,6 +308,9 @@ class SWIMAP(BaseIO):
                     f"(attempt {attempt + 1}/{self._MAX_DOWNLOAD_ATTEMPTS})"
                 )
                 sleep(backoff)
+
+        # Unreachable: the last attempt either returns or raises above.
+        raise RuntimeError(f"IMAP {instrument} download did not complete after {self._MAX_DOWNLOAD_ATTEMPTS} attempts")
 
     def _parse_instrument_payload(self, instrument: Instrument, payload: dict) -> pd.DataFrame:
         """Convert one instrument's `space-weather` JSON payload to a DataFrame.
@@ -632,5 +635,5 @@ class SWIMAP(BaseIO):
 
         file_date_str = Path(row["file_name"]).stem.split("_")[-1]
         file_date = pd.to_datetime(file_date_str, format="%Y%m%d").date()
-        index_date = row.name.date()  # ty: ignore[unresolved-attribute]
+        index_date = row.name.date()  # ty: ignore[missing-attribute]
         return "propagated from previous IMAP NOWCAST file" if file_date != index_date else row["file_name"]

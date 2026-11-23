@@ -1091,3 +1091,110 @@ class TestRecursiveFill27dHistorical:
         }
         df = pd.DataFrame(data, index=times)
         return df
+
+
+class TestL1PropagatedLeadTime:
+    """Propagated L1 data after the cutoff is real lead time and must survive, but only up to the cutoff in the source."""
+
+    @staticmethod
+    def _fake_ace(calls):
+        class FakeACE(SWACE):
+            def __init__(self):
+                pass
+
+            def read(self, start_time, end_time, download=False, propagation=False):
+                calls.append((start_time, end_time, propagation))
+                # Mimic propagation: data observed until `end_time` is shifted 60 minutes later.
+                index = pd.date_range(
+                    start_time + timedelta(minutes=60), end_time + timedelta(minutes=60), freq="1min", tz="UTC"
+                )
+                return pd.DataFrame({"speed": 400.0, "file_name": "x"}, index=index)
+
+        return FakeACE()
+
+    def test_propagated_values_after_cutoff_are_kept(self):
+        calls = []
+        start_time = datetime(2024, 11, 25, 0, 0, tzinfo=timezone.utc)
+        cutoff = start_time + timedelta(hours=2)
+        end_time = cutoff + timedelta(hours=1)
+
+        result = READ_SW_MODULE._read_historical_model(
+            self._fake_ace(calls),
+            start_time,
+            end_time,
+            cutoff,
+            download=False,
+            do_interpolation=False,
+            keep_propagated_lead=True,
+        )
+
+        assert calls[0][1] == cutoff
+        assert result.loc[cutoff + timedelta(minutes=1) : end_time, "speed"].notna().all()
+
+    def test_values_beyond_propagated_lead_are_nan(self):
+        calls = []
+        start_time = datetime(2024, 11, 25, 0, 0, tzinfo=timezone.utc)
+        cutoff = start_time + timedelta(hours=2)
+        end_time = cutoff + timedelta(hours=3)
+
+        result = READ_SW_MODULE._read_historical_model(
+            self._fake_ace(calls),
+            start_time,
+            end_time,
+            cutoff,
+            download=False,
+            do_interpolation=False,
+            keep_propagated_lead=True,
+        )
+
+        assert result.loc[cutoff + timedelta(minutes=61) :, "speed"].isna().all()
+
+    def test_final_frame_is_truncated_to_last_propagated_point(self):
+        start_time = datetime(2024, 11, 25, 0, 0, tzinfo=timezone.utc)
+        cutoff = start_time + timedelta(hours=2)
+        end_time = cutoff + timedelta(hours=3)
+
+        result = read_solar_wind_from_multiple_models(
+            start_time=start_time,
+            end_time=end_time,
+            model_order=[self._fake_ace([])],
+            historical_data_cutoff_time=cutoff,
+        )
+
+        assert result.index.max() == cutoff + timedelta(minutes=60)
+        assert result["speed"].notna().iloc[-1]
+
+    def test_hard_cutoff_when_forecast_models_are_in_the_chain(self):
+        calls = []
+        start_time = datetime(2024, 11, 25, 0, 0, tzinfo=timezone.utc)
+        cutoff = start_time + timedelta(hours=2)
+        end_time = cutoff + timedelta(hours=3)
+
+        result = READ_SW_MODULE._read_historical_model(
+            self._fake_ace(calls), start_time, end_time, cutoff, download=False, do_interpolation=False
+        )
+
+        assert result.loc[:cutoff, "speed"].notna().any()
+        assert result.loc[cutoff + timedelta(minutes=1) :, "speed"].isna().all()
+
+    def test_forecast_in_chain_disables_propagated_lead(self, monkeypatch):
+        seen = []
+        start_time = datetime(2024, 11, 25, 0, 0, tzinfo=timezone.utc)
+        cutoff = start_time + timedelta(hours=2)
+
+        def fake_read_from_model(model, *args, **kwargs):
+            seen.append(kwargs["keep_propagated_lead"])
+            return pd.DataFrame()
+
+        monkeypatch.setattr(READ_SW_MODULE, "_read_from_model", fake_read_from_model)
+
+        for order, expected in (([SWOMNI(), SWACE()], True), ([SWOMNI(), SWACE(), SWSWIFTEnsemble()], False)):
+            seen.clear()
+            read_solar_wind_from_multiple_models(
+                start_time=start_time,
+                end_time=cutoff + timedelta(hours=3),
+                model_order=order,
+                historical_data_cutoff_time=cutoff,
+            )
+            assert seen
+            assert set(seen) == {expected}

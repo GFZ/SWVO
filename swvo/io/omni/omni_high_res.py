@@ -12,7 +12,7 @@ import re
 from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
 from functools import partial
-from typing import List, Optional, Tuple
+from typing import Final, List, Optional, Tuple
 
 import pandas as pd
 import requests
@@ -51,7 +51,7 @@ class OMNIHighRes(BaseIO):
 
     ENV_VAR_NAME = "OMNI_HIGH_RES_STREAM_DIR"
 
-    URL = "https://omniweb.gsfc.nasa.gov/cgi/nx1.cgi"
+    URL: Final = "https://omniweb.gsfc.nasa.gov/cgi/nx1.cgi"
 
     START_YEAR = 1981
     LABEL = "omni"

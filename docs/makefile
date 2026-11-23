@@ -116,6 +116,6 @@ coverage:
 
 .PHONY: apidoc
 apidoc:
-	sphinx-apidoc -o api/ ../swvo/ 
+	sphinx-apidoc -o api/ ../swvo/
 	@echo
 	@echo "APIdoc run is complete."

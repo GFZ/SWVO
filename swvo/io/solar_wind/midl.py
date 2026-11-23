@@ -11,7 +11,7 @@ import logging
 import warnings
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Literal, Tuple, cast
+from typing import Final, List, Literal, Tuple, cast
 
 import midl as midl_client
 import numpy as np
@@ -57,7 +57,7 @@ class SWMIDL(BaseIO):
 
     ENV_VAR_NAME = "SW_MIDL_STREAM_DIR"
 
-    URL = "https://csem.engin.umich.edu/MIDL/data"
+    URL: Final = "https://csem.engin.umich.edu/MIDL/data"
 
     # MIDL is a merged product with no instrument split, so it keeps a single field list rather
     # than the MAG/SWEPAM pair the single spacecraft readers inherit from ACE's instruments.
@@ -253,11 +253,11 @@ class SWMIDL(BaseIO):
             return
 
         # groupby avoids re-scanning the whole frame per day
-        day_groups = processed_df.groupby(processed_df.index.date)  # ty: ignore[unresolved-attribute]
+        day_groups = processed_df.groupby(processed_df.index.date)  # ty: ignore[missing-attribute]
         logger.info(f"Saving {len(day_groups)} daily MIDL file(s) to {self.data_dir} ...")
 
         for date, day_data in day_groups:
-            file_path = self.data_dir / date.strftime("%Y/%m") / self._file_name(date, target_token)  # ty: ignore[unresolved-attribute]
+            file_path = self.data_dir / date.strftime("%Y/%m") / self._file_name(date, target_token)  # ty: ignore[missing-attribute]
             tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
 
             try:
@@ -562,5 +562,5 @@ class SWMIDL(BaseIO):
 
         file_date_str = Path(row["file_name"]).stem.split("_")[-1]
         file_date = pd.to_datetime(file_date_str, format="%Y%m%d").date()
-        index_date = row.name.date()  # ty: ignore[unresolved-attribute]
+        index_date = row.name.date()  # ty: ignore[missing-attribute]
         return "propagated from previous MIDL file" if file_date != index_date else row["file_name"]

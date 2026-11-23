@@ -12,7 +12,7 @@ import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import List, Optional, Tuple
+from typing import Final, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -47,7 +47,7 @@ class KpSIDC(BaseIO):
 
     ENV_VAR_NAME = "FC_KP_SIDC_STREAM_DIR"
 
-    URL = "https://ssa.sidc.be/prod/API/index.php?component=latest&pc=G158&psc=a"
+    URL: Final = "https://ssa.sidc.be/prod/API/index.php?component=latest&pc=G158&psc=a"
     NAME = "kp.json"
 
     LABEL = "sidc"
