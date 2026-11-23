@@ -270,7 +270,7 @@ class F107SWPC(BaseIO):
 
         if not data_out.empty:
             data_out.index = enforce_utc_timezone(data_out.index)
-        data_out.drop("date", axis=1, inplace=True)
+        data_out = data_out.drop(columns="date")
         data_out = data_out.truncate(
             before=start_time - timedelta(hours=23.9999),
             after=end_time + timedelta(hours=23.9999),
