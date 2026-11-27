@@ -23,6 +23,7 @@ from swvo.io.solar_wind import (
     SWIMAP,
     SWMIDL,
     SWOMNI,
+    SWSOLAR1,
     SWSWIFTEnsemble,
     read_solar_wind_from_multiple_models,
 )
@@ -418,13 +419,17 @@ class TestReadSolarWindFromMultipleModels:
         assert data["bavg"].dropna().eq(13.0).all()
         assert data["speed"].dropna().between(400.0, 401.0).all()
 
-    def test_imap_is_read_as_a_historical_model(self, tmp_path, expected_columns):
-        """SWIMAP passed in the model order is accepted and read like the other historical
-        models: propagated from L1 and labelled `imap` in the `model` column."""
+    @pytest.mark.parametrize(
+        "model_class,file_prefix",
+        [(SWIMAP, "IMAP_SW_NOWCAST"), (SWSOLAR1, "SOLAR1_SW_NOWCAST")],
+    )
+    def test_l1_model_is_read_as_a_historical_model(self, tmp_path, expected_columns, model_class, file_prefix):
+        """SWIMAP and SWSOLAR1 passed in the model order are accepted and read like the other
+        historical models: propagated from L1 and labelled with their LABEL in the `model` column."""
         start_time = datetime(2024, 11, 22, tzinfo=timezone.utc)
         end_time = datetime(2024, 11, 23, tzinfo=timezone.utc)
 
-        imap_model = SWIMAP(tmp_path / "imap")
+        l1_model = model_class(tmp_path / model_class.LABEL)
 
         for day in pd.date_range(start_time - timedelta(days=1), end_time, freq="D"):
             index = pd.date_range(day, day + timedelta(hours=24) - timedelta(minutes=1), freq="1min", tz="UTC")
@@ -443,20 +448,20 @@ class TestReadSolarWindFromMultipleModels:
                 },
                 index=index,
             )
-            path = imap_model.data_dir / day.strftime("%Y/%m") / f"IMAP_SW_NOWCAST_{day.strftime('%Y%m%d')}.csv"
+            path = l1_model.data_dir / day.strftime("%Y/%m") / f"{file_prefix}_{day.strftime('%Y%m%d')}.csv"
             path.parent.mkdir(parents=True, exist_ok=True)
             df.to_csv(path)
 
         data = read_solar_wind_from_multiple_models(
             start_time=start_time,
             end_time=end_time,
-            model_order=[imap_model],
+            model_order=[l1_model],
             historical_data_cutoff_time=end_time,
         )
 
         assert isinstance(data, pd.DataFrame)
         assert all(col in data.columns for col in expected_columns)
-        assert (data["model"].dropna() == "imap").all()
+        assert (data["model"].dropna() == model_class.LABEL).all()
         assert data["speed"].notna().mean() > 0.99
         assert data["bavg"].dropna().eq(13.0).all()
         assert data["speed"].dropna().between(400.0, 401.0).all()
@@ -1177,7 +1182,7 @@ class TestL1PropagatedLeadTime:
         assert result.loc[:cutoff, "speed"].notna().any()
         assert result.loc[cutoff + timedelta(minutes=1) :, "speed"].isna().all()
 
-    def test_forecast_in_chain_disables_propagated_lead(self, monkeypatch):
+    def test_forecast_in_chain_disables_propagated_lead(self, monkeypatch, tmp_path):
         seen = []
         start_time = datetime(2024, 11, 25, 0, 0, tzinfo=timezone.utc)
         cutoff = start_time + timedelta(hours=2)
@@ -1188,7 +1193,11 @@ class TestL1PropagatedLeadTime:
 
         monkeypatch.setattr(READ_SW_MODULE, "_read_from_model", fake_read_from_model)
 
-        for order, expected in (([SWOMNI(), SWACE()], True), ([SWOMNI(), SWACE(), SWSWIFTEnsemble()], False)):
+        solar1 = SWSOLAR1(tmp_path / "solar1")
+        for order, expected in (
+            ([SWOMNI(), solar1, SWACE()], True),
+            ([SWOMNI(), solar1, SWACE(), SWSWIFTEnsemble()], False),
+        ):
             seen.clear()
             read_solar_wind_from_multiple_models(
                 start_time=start_time,

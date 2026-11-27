@@ -164,8 +164,8 @@ class TestSWACE:
         swace_instance.download_and_process(start_time, now)
 
         assert swace_instance.url == [
-            SWACE.REALTIME_URL + SWACE.REALTIME_NAME_MAG,
-            SWACE.REALTIME_URL + SWACE.REALTIME_NAME_SWEPAM,
+            SWACE.RTSW_URL + SWACE.RTSW_NAME_MAG,
+            SWACE.RTSW_URL + SWACE.RTSW_NAME_WIND,
         ]
         data = swace_instance.read(start_time, now)
         assert data["bavg"].notna().any()
