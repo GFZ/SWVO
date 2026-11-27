@@ -255,6 +255,9 @@ def sw_mag_propagation(sw_data: pd.DataFrame) -> pd.DataFrame:
     sw_data["t"] = [t.timestamp() for t in sw_data.index.to_pydatetime()]  # ty: ignore[missing-attribute]
     sw_data = sw_data.dropna(how="any")
 
+    if sw_data.empty:
+        return sw_data.drop(columns=["t"])
+
     distance = 1.5e6
     shifted_time = distance / sw_data["speed"]
 

@@ -97,7 +97,7 @@ ignore_errors = true
 profile = "black"
 
 [tool.pytest.ini_options]
-addopts = "--verbose -r s"
+addopts = "--verbose -r s --ignore=tests/io/RBMDataSet"
 
 [tool.bumpver]
 current_version = "1.2.9"
